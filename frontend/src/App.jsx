@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Camera, Heart, MessageCircle, ChevronRight, Hash, User, MapIcon } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Heart, MessageCircle, ChevronRight, User, MapIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('stack'); 
-  const [viewMode, setViewMode] = useState('tower'); // 'tower' or 'list'
+  const [activeTab, setActiveTab] = useState('stack');
+  const [viewMode, setViewMode] = useState('tower');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -18,37 +18,19 @@ function App() {
   const [currentBookPages, setCurrentBookPages] = useState(250);
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('bookstory_user')) || null);
 
-  const [regForm, setRegForm] = useState({
-    name: '',
-    gender: '남성',
-    age: 20,
-    location: '',
-    lat: null,
-    lng: null
-  });
-
+  const [regForm, setRegForm] = useState({ name: '', gender: '남성', age: 20, location: '', lat: null, lng: null });
   const [selectedClub, setSelectedClub] = useState(null);
   const [isCreatingClub, setIsCreatingClub] = useState(false);
-  const [clubForm, setClubForm] = useState({
-    name: '', description: '', category: '독서/기록', location: '', lat: null, lng: null, image: ''
-  });
+  const [clubForm, setClubForm] = useState({ name: '', description: '', category: '독서/기록', location: '', lat: null, lng: null, image: '' });
   const [isSavingClub, setIsSavingClub] = useState(false);
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-  };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     setSearchResults([]);
-    setActiveTab('search'); // Switch to search tab when searching
+    setActiveTab('search');
     try {
       const response = await fetch(`http://localhost:5001/api/books/search?query=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
@@ -76,16 +58,14 @@ function App() {
     }
   };
 
-  const handleKeyPress = (e) => { if (e.key === 'Enter') handleSearch(); };
+  const handleKeyDown = (e) => { if (e.key === 'Enter') handleSearch(); };
 
-  React.useEffect(() => { 
-    fetchReadBooks(); 
+  React.useEffect(() => {
+    fetchReadBooks();
     fetchCommunityPosts();
   }, []);
 
-  React.useEffect(() => {
-    fetchClubs();
-  }, [user]); // Re-fetch and sort when user changes (e.g. after login/reg)
+  React.useEffect(() => { fetchClubs(); }, [user]);
 
   const fetchReadBooks = async () => {
     try {
@@ -97,27 +77,21 @@ function App() {
 
   const getDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
-    const R = 6371; // km
+    const R = 6371;
     const dLat = (parseFloat(lat2) - parseFloat(lat1)) * Math.PI / 180;
     const dLon = (parseFloat(lon2) - parseFloat(lon1)) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(parseFloat(lat1) * Math.PI / 180) * Math.cos(parseFloat(lat2) * Math.PI / 180) * 
+              Math.cos(parseFloat(lat1) * Math.PI / 180) * Math.cos(parseFloat(lat2) * Math.PI / 180) *
               Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return parseFloat((R * c).toFixed(1));
+    return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1));
   };
 
   const fetchClubs = async () => {
     try {
       const response = await fetch('http://localhost:5001/api/clubs');
       const data = await response.json();
-      
-      // If user exists, sort by distance
       if (user && user.lat && user.lng) {
-        const sorted = data.map(club => ({
-          ...club,
-          distance: getDistance(user.lat, user.lng, club.lat, club.lng)
-        })).sort((a, b) => a.distance - b.distance);
+        const sorted = data.map(club => ({ ...club, distance: getDistance(user.lat, user.lng, club.lat, club.lng) })).sort((a, b) => a.distance - b.distance);
         setClubs(sorted);
       } else {
         setClubs(data);
@@ -133,10 +107,7 @@ function App() {
     } catch (error) { console.error('Failed to fetch posts'); }
   };
 
-  const [locationSuggestions, setLocationSuggestions] = useState([]);
-  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
-
-  const searchLocation = (keyword, type) => {
+  const searchLocation = (keyword, _type) => {
     if (!keyword.trim()) return setLocationSuggestions([]);
     setIsSearchingLocation(true);
     const ps = new window.kakao.maps.services.Places();
@@ -151,21 +122,11 @@ function App() {
   };
 
   const selectLocation = (item, type) => {
-    const simplifiedAddr = item.address_name.split(' ').slice(1, 3).join(' '); // e.g., "마포구 합정동"
+    const simplifiedAddr = item.address_name.split(' ').slice(1, 3).join(' ');
     if (type === 'reg') {
-      setRegForm({ 
-        ...regForm, 
-        location: simplifiedAddr, 
-        lat: parseFloat(item.y), 
-        lng: parseFloat(item.x) 
-      });
+      setRegForm({ ...regForm, location: simplifiedAddr, lat: parseFloat(item.y), lng: parseFloat(item.x) });
     } else {
-      setClubForm({ 
-        ...clubForm, 
-        location: simplifiedAddr, 
-        lat: parseFloat(item.y), 
-        lng: parseFloat(item.x) 
-      });
+      setClubForm({ ...clubForm, location: simplifiedAddr, lat: parseFloat(item.y), lng: parseFloat(item.x) });
     }
     setLocationSuggestions([]);
   };
@@ -187,42 +148,13 @@ function App() {
     } catch (error) { alert('가입 중 오류가 발생했습니다.'); }
   };
 
-  const openAddressSearch = () => {
-    new window.daum.Postcode({
-      oncomplete: (data) => {
-        const fullAddr = data.sigungu + ' ' + data.bname;
-        // Search coords using Kakao Map Geocoder
-        const geocoder = new window.kakao.maps.services.Geocoder();
-        geocoder.addressSearch(data.address, (result, status) => {
-          if (status === window.kakao.maps.services.Status.OK) {
-            setRegForm({ 
-              ...regForm, 
-              location: fullAddr,
-              lat: parseFloat(result[0].y),
-              lng: parseFloat(result[0].x)
-            });
-          } else {
-            setRegForm({ ...regForm, location: fullAddr });
-          }
-        });
-      }
-    }).open();
-  };
-
   const handleRegisterBook = async (book) => {
     setIsSaving(true);
     try {
       const response = await fetch('http://localhost:5001/api/books/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: book.title,
-          author: book.author,
-          image: book.image,
-          publisher: book.publisher,
-          isbn: book.isbn,
-          pages: currentBookPages
-        })
+        body: JSON.stringify({ title: book.title, author: book.author, image: book.image, publisher: book.publisher, isbn: book.isbn, pages: currentBookPages })
       });
       if (response.ok) {
         await fetchReadBooks();
@@ -233,25 +165,6 @@ function App() {
     } catch (error) { alert('등록 중 오류가 발생했습니다.'); } finally { setIsSaving(false); }
   };
 
-  const openClubAddressSearch = () => {
-    new window.daum.Postcode({
-      oncomplete: (data) => {
-        const fullAddr = data.address;
-        const geocoder = new window.kakao.maps.services.Geocoder();
-        geocoder.addressSearch(fullAddr, (result, status) => {
-          if (status === window.kakao.maps.services.Status.OK) {
-            setClubForm({ 
-              ...clubForm, 
-              location: data.sigungu + ' ' + data.bname,
-              lat: parseFloat(result[0].y),
-              lng: parseFloat(result[0].x)
-            });
-          }
-        });
-      }
-    }).open();
-  };
-
   const handleCreateClub = async () => {
     if (!clubForm.name || !clubForm.location) return alert('모집 정보를 모두 입력해주세요.');
     setIsSavingClub(true);
@@ -259,10 +172,7 @@ function App() {
       const response = await fetch('http://localhost:5001/api/clubs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...clubForm,
-          image: clubForm.image || `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000)}?q=80&w=800`
-        })
+        body: JSON.stringify({ ...clubForm, image: clubForm.image || `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000)}?q=80&w=800` })
       });
       if (response.ok) {
         await fetchClubs();
@@ -272,835 +182,674 @@ function App() {
     } catch (error) { alert('모임 개설 중 오류가 발생했습니다.'); } finally { setIsSavingClub(false); }
   };
 
-  const handleJoinClub = async (clubId) => {
+  const handleJoinClub = async (_clubId) => {
     alert('참여 신청이 완료되었습니다! 모임장과 곧 연결해 드릴게요.');
   };
 
-  // Kakao Map Effect for Detail Modal
   React.useEffect(() => {
     if (selectedClub && selectedClub.lat && selectedClub.lng) {
       setTimeout(() => {
         const container = document.getElementById('club-map');
         if (container) {
-          const options = {
-            center: new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng),
-            level: 3
-          };
+          const options = { center: new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng), level: 3 };
           const map = new window.kakao.maps.Map(container, options);
-          const markerPosition  = new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng); 
-          const marker = new window.kakao.maps.Marker({ position: markerPosition });
+          const marker = new window.kakao.maps.Marker({ position: new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng) });
           marker.setMap(map);
         }
-      }, 300); // Wait for modal animation
+      }, 300);
     }
   }, [selectedClub]);
 
-  const stackColors = [
-    'bg-indigo-500', 'bg-pink-500', 'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 
-    'bg-rose-500', 'bg-amber-500', 'bg-sky-500', 'bg-purple-500', 'bg-teal-500'
+  const hexColors = ['#6366f1', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f43f5e', '#f59e0b', '#0ea5e9', '#a855f7', '#14b8a6'];
+
+  const navTabs = [
+    { id: 'stack', label: '책쌓기', icon: <BookOpen size={15} /> },
+    { id: 'clubs', label: '모임찾기', icon: <Users size={15} /> },
+    { id: 'community', label: '커뮤니티', icon: <MessageSquare size={15} /> },
   ];
 
   return (
-    <div className="min-h-screen p-6 md:p-12 text-slate-100 flex flex-col items-center">
-      {/* Background decoration */}
-      <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-pink-600/5 blur-[120px] rounded-full pointer-events-none -z-10" />
+    <div className="min-h-screen" style={{ color: '#f1f5f9' }}>
+      {/* Background blobs */}
+      <div className="fixed pointer-events-none -z-10" style={{ top: '10%', left: '-5%', width: '500px', height: '500px', background: 'rgba(99,102,241,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+      <div className="fixed pointer-events-none -z-10" style={{ bottom: '10%', right: '-5%', width: '500px', height: '500px', background: 'rgba(236,72,153,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
 
-      {/* SEARCH BAR (Sketch Top) */}
-      <div className="w-full max-w-5xl mb-10 relative group">
-        <input 
-          type="text" 
-          placeholder="책 검색하기" 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => setActiveTab('search')}
-          onKeyPress={handleKeyPress}
-          className="w-full bg-slate-900/60 border border-white/20 rounded-2xl py-6 px-16 text-xl font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-500/50 transition-all shadow-2xl backdrop-blur-md"
-        />
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500" size={24} />
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-4">
-          <Camera className="text-slate-500 hover:text-white cursor-pointer transition-colors" size={24} />
-          {isSearching && <Loader2 className="animate-spin text-indigo-400" size={20} />}
-        </div>
-      </div>
-
-      {/* Main Navigation (Sketch Tabs) */}
-      <div className="w-full max-w-5xl flex items-center justify-between gap-4 mb-10">
-        <div className="flex gap-2">
-          {[
-            { id: 'clubs', label: '모임찾기', icon: <Users size={18} /> },
-            { id: 'community', label: '커뮤니티', icon: <MessageSquare size={18} /> },
-            { id: 'stack', label: '책쌓기', icon: <BookOpen size={18} /> }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-8 py-3 rounded-xl font-black text-sm flex items-center gap-2 border transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-white text-slate-900 border-white shadow-xl' 
-                  : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        
-        {/* User Info / Profile Button */}
-        <div className="flex items-center gap-4 bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
-           <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs">
-              {user?.name[0]}
-           </div>
-           <div className="hidden md:block">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Active Reader</p>
-              <p className="text-sm font-black">{user?.name}</p>
-           </div>
-        </div>
-        
-        {/* View Toggle (Sub-Tabs for Stack) */}
-        {activeTab === 'stack' && (
-          <div className="flex bg-white/5 rounded-xl p-1 border border-white/10">
-            <button
-              onClick={() => setViewMode('tower')}
-              className={`px-6 py-2 rounded-lg text-xs font-black transition-all ${viewMode === 'tower' ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-500 hover:text-white'}`}
-            >
-              쌓아보기
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-6 py-2 rounded-lg text-xs font-black transition-all ${viewMode === 'list' ? 'bg-white text-slate-900 shadow-lg' : 'text-slate-500 hover:text-white'}`}
-            >
-              리스트형보기
-            </button>
-          </div>
-        )}
-      </div>
-
-      <main className="w-full max-w-5xl">
-        {/* STACK TAB (Default) */}
-        {activeTab === 'stack' && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="flex flex-col items-center"
-          >
-            {viewMode === 'tower' ? (
-              <div 
-                className="mx-auto" 
-                style={{ 
-                  width: '100%', 
-                  maxWidth: '480px', 
-                  height: '70vh', 
-                  maxHeight: '650px',
-                  minHeight: '400px',
-                  backgroundColor: '#0a0f1e', 
-                  borderRadius: '2.5rem',
-                  border: '3px solid rgba(255, 255, 255, 0.05)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.6)',
-                  marginBottom: '40px'
-                }}
-              >
-                {/* Scrollable Book Tower Area */}
-                <div 
-                  className="w-full flex-1" 
-                  style={{ 
-                    overflowY: 'auto', 
-                    display: 'block', // Use block for the scrollable container
-                    position: 'relative'
-                  }}
-                >
-                  <div 
-                    style={{ 
-                      minHeight: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      justifyContent: 'flex-end',
-                      alignItems: 'center',
-                      padding: '60px 15px 4px 15px' 
-                    }}
-                  >
-                    {readBooks && readBooks.length > 0 ? (
-                      [...readBooks].map((book, idx) => {
-                        const hexColors = ['#6366f1', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f43f5e', '#f59e0b', '#0ea5e9', '#a855f7', '#14b8a6'];
-                        const bookColor = hexColors[idx % 10];
-                        return (
-                          <div
-                            key={book.id || idx}
-                            className="hover:scale-[1.03] hover:brightness-110 group"
-                            style={{ 
-                              width: `${Math.min(96, 82 + (idx % 4) * 4)}%`,
-                              height: `${Math.max(34, (book.pages || 250) / 6)}px`,
-                              marginBottom: '2px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              borderRadius: '3px 8px 8px 3px',
-                              backgroundColor: bookColor,
-                              backgroundImage: `linear-gradient(90deg, 
-                                rgba(0,0,0,0.4) 0%, 
-                                rgba(255,255,255,0.2) 2%, 
-                                rgba(0,0,0,0.1) 4%, 
-                                transparent 10%, 
-                                transparent 90%, 
-                                rgba(0,0,0,0.2) 100%)`,
-                              borderLeft: '5px solid rgba(0,0,0,0.3)',
-                              borderTop: '1px solid rgba(255,255,255,0.2)',
-                              borderBottom: '1px solid rgba(0,0,0,0.3)',
-                              boxShadow: '0 6px 8px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-                              cursor: 'pointer',
-                              transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                              position: 'relative',
-                              zIndex: idx + 1,
-                              flexShrink: 0
-                            }}
-                          >
-                             {/* Page highlights on edges */}
-                             <div style={{ position: 'absolute', left: '8px', top: '15%', bottom: '15%', width: '2px', backgroundColor: 'rgba(255,255,255,0.1)', filter: 'blur(0.5px)' }} />
-                             
-                             <span className="text-[12px] font-black tracking-tight text-white px-8 select-none uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)] truncate max-w-[85%] italic">
-                                {book.title.replace(/<\/?[^>]+(>|$)/g, "")}
-                             </span>
-                             
-                             {/* Floating Book Detail Tag */}
-                             <div className="hidden group-hover:flex absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900 border-2 border-white/20 px-4 py-2 rounded-2xl text-[11px] font-black z-[200] whitespace-nowrap shadow-2xl items-center gap-3 scale-110">
-                                <span style={{ backgroundColor: bookColor }} className="w-3 h-3 rounded-full shadow-inner" />
-                                <span className="text-white">{book.author}</span>
-                             </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="mb-40 text-center color-[#475569]">
-                         <Sparkles size={48} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
-                         <p className="font-black text-xl tracking-wider text-slate-400">당신만의 지식 타워를 세우세요</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Heavy Wooden Shelf Floor (Fixed at bottom) */}
-                <div style={{ 
-                  width: '100%', 
-                  height: '24px', 
-                  backgroundImage: 'linear-gradient(to bottom, #451a03, #1a0a01)',
-                  borderRadius: '0 0 2.5rem 2.5rem', 
-                  borderTop: '2px solid rgba(255,255,255,0.1)',
-                  boxShadow: '0 -4px 10px rgba(0,0,0,0.3)',
-                  position: 'relative',
-                  zIndex: 10
-                }}>
-                   <div style={{ position: 'absolute', top: '1px', left: 0, right: 0, height: '1px', backgroundColor: 'rgba(255,255,255,0.05)' }} />
-                </div>
-              </div>
-
-
-            ) : (
-              <div className="w-full space-y-3">
-                {readBooks.map(book => (
-                  <div key={book.id} className="glass-card p-4 flex items-center gap-4 border border-white/5 hover:bg-white/5 transition-all group rounded-2xl">
-                     <img src={book.image} className="w-14 h-20 object-cover rounded-lg shadow-xl" alt="" />
-                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-black text-base group-hover:text-indigo-400 transition-colors truncate" dangerouslySetInnerHTML={{ __html: book.title }}></h4>
-                          <span className="text-[9px] text-indigo-400 font-black tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-md uppercase">
-                            {new Date(book.read_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 font-bold mb-2">{book.author}</p>
-                        <div className="flex items-center gap-2">
-                           <span className="text-[9px] text-slate-400 border border-white/10 px-2 py-0.5 rounded-full">{book.pages || 250}p</span>
-                           <span className="text-[9px] text-slate-400 border border-white/10 px-2 py-0.5 rounded-full">{book.publisher}</span>
-                        </div>
-                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-
-        {/* SEARCH RESULTS TAB */}
-        {activeTab === 'search' && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full mt-10">
-            <div 
-              style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
-                gap: '2.5rem 1.5rem',
-                width: '100%'
-              }}
-            >
-              {searchResults.map((book, index) => (
-                <div 
-                  key={index}
-                  onClick={() => handleBookClick(book)}
-                  className="premium-card p-3 cursor-pointer group flex flex-col items-center"
-                  style={{ minWidth: 0 }}
-                >
-                  <div className="w-full aspect-[3/4] mb-4 overflow-hidden rounded-2xl relative shadow-2xl border border-white/5 bg-slate-800">
-                    <img 
-                      src={book.image} 
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                      alt="" 
-                    />
-                    <div className="absolute inset-0 bg-indigo-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <Sparkles className="text-white" size={32} />
-                    </div>
-                  </div>
-                  <div className="w-full text-center space-y-1">
-                    <h4 className="font-black text-sm leading-tight px-1 line-clamp-2" dangerouslySetInnerHTML={{ __html: book.title }}></h4>
-                    <p className="text-[11px] text-slate-500 font-bold truncate px-2">{book.author}</p>
-                  </div>
-                </div>
-              ))}
+      {/* STICKY HEADER */}
+      <header className="app-header">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div style={{ width: '2.25rem', height: '2.25rem', background: 'linear-gradient(135deg, #6366f1, #ec4899)', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}>
+              <BookOpen size={17} color="white" />
             </div>
-            {searchResults.length === 0 && searchQuery && !isSearching && (
-              <div className="text-center py-20 bg-white/5 rounded-[3rem] border border-white/5">
-                <p className="text-slate-500 font-bold">검색 결과가 없습니다.</p>
-              </div>
-            )}
-          </motion.div>
-        )}
-        {/* CLUBS TAB */}
-        {activeTab === 'clubs' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-16">
-             {/* Header with Search/Action */}
-             <div className="flex items-center justify-between">
-                <div>
-                   <h2 className="text-4xl font-black mb-2 flex items-center gap-4 italic tracking-tighter">
-                      <Users className="text-indigo-400" size={40} />
-                      독서 커뮤니티
-                   </h2>
-                   <p className="text-slate-500 font-bold ml-1">지하철 한 정거장 거리의 이웃과 함께 책을 읽어보세요.</p>
-                </div>
-                <button 
-                  onClick={() => setIsCreatingClub(true)}
-                  className="premium-button text-sm px-8 py-3.5 flex items-center gap-2"
-                >
-                   <Plus size={20} />
-                   모임 개설하기
-                </button>
-             </div>
-
-             {/* Section 1: Nearest Clubs */}
-             {user && (
-               <div className="space-y-6">
-                  <div className="flex items-center gap-3">
-                     <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
-                     <h3 className="text-xl font-black uppercase tracking-widest text-white italic">🏃‍♂️ 내 주변 가장 가까운 모임</h3>
-                  </div>
-                  <div className="flex flex-nowrap overflow-x-auto gap-6 pb-8 -mx-4 px-4 snap-x snap-mandatory custom-scroll">
-                     {clubs.slice(0, 5).map((club) => (
-                       <div 
-                         key={club.id} 
-                         onClick={() => setSelectedClub(club)}
-                         className="premium-card overflow-hidden group border-white/5 hover:border-indigo-500/50 transition-all flex flex-col cursor-pointer bg-slate-900/60 shrink-0 snap-start shadow-2xl"
-                         style={{ width: '300px', height: '360px', minWidth: '300px' }}
-                       >
-                          <div className="w-full relative overflow-hidden bg-slate-800 shrink-0" style={{ height: '180px' }}>
-                             <img 
-                               src={club.image} 
-                               className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-90 group-hover:opacity-100" 
-                               alt={club.name} 
-                               style={{ height: '100%', width: '100%' }}
-                             />
-                             <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-                                <div className="bg-indigo-600/90 text-white px-3 py-1 rounded-lg text-[10px] font-black shadow-2xl flex items-center gap-1.5 backdrop-blur-md border border-white/10">
-                                   <MapPin size={10} />
-                                   {club.distance || 0}km
-                                </div>
-                             </div>
-                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-90" />
-                          </div>
-                          <div className="p-5 flex-1 flex flex-col justify-between">
-                             <div className="space-y-2">
-                                <h3 className="text-sm font-black group-hover:text-indigo-400 transition-colors uppercase italic truncate tracking-tight text-white mb-0">{club.name}</h3>
-                                <p className="text-[11px] text-slate-500 font-bold line-clamp-2 leading-relaxed h-[36px] overflow-hidden">{club.description}</p>
-                             </div>
-                             <div className="flex justify-between items-center text-[10px] font-black italic tracking-widest border-t border-white/5 pt-4">
-                                <span className="text-slate-500 uppercase truncate max-w-[120px]">{club.location}</span>
-                                <span className="text-indigo-400/80">{club.member_count} MBRS</span>
-                             </div>
-                          </div>
-                       </div>
-                     ))}
-                  </div>
-               </div>
-             )}
-
-             {/* Section 2: All Clubs */}
-             <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                   <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-6 bg-slate-700 rounded-full" />
-                      <h3 className="text-xl font-black uppercase tracking-widest text-slate-400 italic">📢 모든 독서 모임 목록</h3>
-                   </div>
-                   <p className="text-xs font-bold text-slate-600">총 {clubs.length}개의 모임이 활동 중입니다.</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-70 hover:opacity-100 transition-opacity">
-                   {clubs.slice(5).map((club) => (
-                     <div 
-                       key={club.id} 
-                       onClick={() => setSelectedClub(club)}
-                       className="glass-card p-5 hover:bg-white/5 transition-all flex flex-col justify-between border-white/5 cursor-pointer group h-[140px]"
-                     >
-                        <div className="flex items-center gap-4">
-                           <div className="w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shrink-0 bg-slate-800">
-                              <img 
-                                src={club.image} 
-                                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" 
-                                alt="" 
-                              />
-                           </div>
-                           <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-black truncate group-hover:text-indigo-400 transition-colors">{club.name}</h4>
-                              <p className="text-[11px] text-slate-500 font-bold flex items-center gap-1 mt-1">
-                                 <MapPin size={10} /> {club.location}
-                              </p>
-                           </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                           <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-md">{club.category}</span>
-                           <span className="text-[10px] font-black text-indigo-500/70 italic">{club.distance || 0}km away</span>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-             </div>
-          </motion.div>
-        )}
-        {/* COMMUNITY TAB */}
-        {activeTab === 'community' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-10">
-             <div className="flex items-center justify-between">
-                <div>
-                   <h2 className="text-3xl font-black mb-2 flex items-center gap-3">
-                      <MessageSquare className="text-indigo-400" size={32} />
-                      지식 나눔 광장
-                   </h2>
-                   <p className="text-slate-500 font-bold">책을 통해 더 넓은 세상을 만나는 곳입니다.</p>
-                </div>
-                <button className="px-6 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
-                   <Plus size={18} />
-                   글쓰기
-                </button>
-             </div>
-
-             <div className="space-y-4">
-                {communityPosts.map((post) => (
-                  <div key={post.id} className="glass-card p-8 border-white/5 hover:bg-white/5 transition-all group flex flex-col md:flex-row gap-6 relative overflow-hidden">
-                     <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
-                        <MessageSquare size={120} />
-                     </div>
-                     <div className="flex-1 space-y-4 relative z-10">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                             <Hash size={14} className="text-indigo-400" />
-                             <span className="text-[10px] font-black text-indigo-400 tracking-widest uppercase">General Discussion</span>
-                          </div>
-                          <h3 className="text-2xl font-black group-hover:text-indigo-400 transition-colors">{post.title}</h3>
-                          <p className="text-slate-400 font-medium leading-relaxed line-clamp-2">{post.content}</p>
-                        </div>
-                        
-                        <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                           <div className="flex items-center gap-6">
-                              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                                 <Heart size={16} className="text-rose-500/60" />
-                                 {post.likes}
-                              </div>
-                              <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                                 <MessageCircle size={16} className="text-sky-500/60" />
-                                 {post.comments}
-                              </div>
-                           </div>
-                           <div className="flex items-center gap-3 text-xs font-bold">
-                              <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
-                                 {post.author[0]}
-                              </div>
-                              <span className="text-slate-300">{post.author}</span>
-                              <span className="text-slate-600 ml-2">{new Date(post.date).toLocaleDateString()}</span>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-                ))}
-             </div>
-          </motion.div>
-        )}
-      </main>
-
-      {/* Registration Modal Overlay */}
-      <AnimatePresence>
-        {!user && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950 p-6"
-          >
-            {/* Background design for login */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-               <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 blur-[150px] rounded-full" />
-               <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-pink-600/20 blur-[150px] rounded-full" />
-            </div>
-
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="w-full max-w-lg glass-card p-10 relative z-10 border-white/10"
-            >
-              <div className="text-center mb-10 space-y-3">
-                 <div className="w-20 h-20 bg-gradient-to-tr from-indigo-500 to-pink-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl rotate-3 mb-6">
-                    <BookOpen size={40} className="text-white" />
-                 </div>
-                 <h2 className="text-4xl font-black italic tracking-tighter">bookStory</h2>
-                 <p className="text-slate-400 font-bold">당신만의 독서 여정을 시작하기 위해<br/>회원 정보를 입력해주세요.</p>
-              </div>
-
-              <div className="space-y-6">
-                 {/* Name Input */}
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">닉네임 또는 이름</label>
-                    <div className="relative">
-                       <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                       <input 
-                          type="text" 
-                          placeholder="어떻게 불러드릴까요?"
-                          value={regForm.name}
-                          onChange={(e) => setRegForm({...regForm, name: e.target.value})}
-                          className="w-full bg-slate-900 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold"
-                       />
-                    </div>
-                 </div>
-
-                 {/* Gender & Age Row */}
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">성별</label>
-                       <select 
-                          className="w-full bg-slate-900 border border-white/10 rounded-xl py-4 px-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold appearance-none"
-                          value={regForm.gender}
-                          onChange={(e) => setRegForm({...regForm, gender: e.target.value})}
-                       >
-                          <option>남성</option>
-                          <option>여성</option>
-                          <option>기타</option>
-                       </select>
-                    </div>
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2">나이</label>
-                       <input 
-                          type="number" 
-                          placeholder="20"
-                          value={regForm.age}
-                          onChange={(e) => setRegForm({...regForm, age: parseInt(e.target.value)})}
-                          className="w-full bg-slate-900 border border-white/10 rounded-xl py-4 px-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold"
-                       />
-                    </div>
-                 </div>
-
-                 {/* Location Search */}
-                 <div className="space-y-2 relative">
-                    <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] ml-2 font-black">주 활동 지역 (검색어 입력)</label>
-                    <div className="relative">
-                       <MapIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                       <input 
-                          type="text" 
-                          placeholder="동네나 역 이름 검색 (예: 합정역)"
-                          onChange={(e) => searchLocation(e.target.value, 'reg')}
-                          className="w-full bg-slate-900 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold"
-                       />
-                       {isSearchingLocation && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="animate-spin text-slate-500" size={16}/></div>}
-                    </div>
-
-                    {/* Suggestions Dropdown */}
-                    {locationSuggestions.length > 0 && (
-                      <div className="absolute z-[1100] top-full left-0 right-0 mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto overflow-x-hidden">
-                        {locationSuggestions.map((item, i) => (
-                          <div 
-                            key={i} 
-                            onClick={() => {
-                               selectLocation(item, 'reg');
-                               document.querySelector('input[placeholder="동네나 역 이름 검색 (예: 합정역)"]').value = item.place_name;
-                            }}
-                            className="p-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0"
-                          >
-                            <p className="text-sm font-bold text-white mb-0.5">{item.place_name}</p>
-                            <p className="text-[10px] text-slate-500">{item.address_name}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {regForm.location && (
-                      <div className="mt-2 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-center gap-2">
-                        <MapPin size={12} className="text-indigo-400" />
-                        <span className="text-xs font-bold text-indigo-400">선택됨: {regForm.location}</span>
-                      </div>
-                    )}
-                 </div>
-
-                 <button 
-                    onClick={handleRegisterUser}
-                    className="w-full premium-button py-5 text-lg flex items-center justify-center gap-3 mt-4"
-                  >
-                    <span>bookStory 시작하기</span>
-                    <ChevronRight size={20} />
-                 </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <footer className="mt-40 text-center border-t border-white/5 py-16 space-y-4">
-        <h2 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-500">bookStory</h2>
-        <p className="text-slate-500 font-medium">© 2026 bookStory. Elevating your reading experience with Intelligence.</p>
-        <div className="flex justify-center gap-6 pt-4">
-          <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer text-slate-400 hover:text-white">
-            <Bookmark size={20} />
+            <span className="font-black text-xl gradient-text">bookStory</span>
           </div>
-          <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer text-slate-400 hover:text-white">
-            <Users size={20} />
+
+          {user && (
+            <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
+                {user.name[0]}
+              </div>
+              <div className="sm:block hidden">
+                <p style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
+                <p style={{ fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1.3, marginTop: '2px' }}>{user.name}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* MAIN WRAPPER */}
+      <div className="max-w-5xl mx-auto px-6">
+
+        {/* SEARCH BAR */}
+        <div style={{ paddingTop: '2rem', paddingBottom: '1.5rem' }}>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="책 제목, 저자를 검색하세요"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setActiveTab('search')}
+              onKeyDown={handleKeyDown}
+              className="search-input w-full rounded-2xl font-bold outline-none"
+              style={{ padding: '1.125rem 1rem 1.125rem 3.25rem', fontSize: '1rem', color: 'white' }}
+            />
+            <Search style={{ position: 'absolute', left: '1.1rem', top: '50%', transform: 'translateY(-50%)', color: '#475569' }} size={20} />
+            <div style={{ position: 'absolute', right: '1.1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {isSearching ? (
+                <Loader2 className="animate-spin" size={18} style={{ color: '#818cf8' }} />
+              ) : (
+                <kbd className="sm:flex hidden items-center gap-1 px-2 py-1 rounded-md" style={{ fontSize: '10px', color: '#475569', fontWeight: 700, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>↵ Enter</kbd>
+              )}
+            </div>
           </div>
         </div>
-      </footer>
 
-      {/* Create Club Modal */}
-      <AnimatePresence>
-        {isCreatingClub && (
-          <div className="modal-backdrop overflow-y-auto" onClick={() => setIsCreatingClub(false)}>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="modal-content relative my-auto shadow-2xl"
-              style={{ maxWidth: '500px' }}
-            >
-               <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-black italic">모임 개설하기</h2>
-                  <button onClick={() => setIsCreatingClub(false)} className="text-slate-500 hover:text-white"><X /></button>
-               </div>
-               
-               <div className="space-y-5">
-                  <div className="space-y-1.5">
-                     <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">모임 이름</label>
-                     <input 
-                        className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold"
-                        placeholder="예: 강남 심리학 독서회"
-                        value={clubForm.name}
-                        onChange={(e) => setClubForm({...clubForm, name: e.target.value})}
-                     />
-                  </div>
-                  <div className="space-y-1.5">
-                     <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">카테고리</label>
-                     <select 
-                        className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold"
-                        value={clubForm.category}
-                        onChange={(e) => setClubForm({...clubForm, category: e.target.value})}
-                     >
-                        <option>독서/기록</option>
-                        <option>소설/토론</option>
-                        <option>인문/철학</option>
-                        <option>자기계발</option>
-                        <option>비즈니스</option>
-                     </select>
-                  </div>
-                  <div className="space-y-1.5">
-                     <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">모임 설명</label>
-                     <textarea 
-                        className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold h-24"
-                        placeholder="어떤 활동을 하는 모임인지 알려주세요"
-                        value={clubForm.description}
-                        onChange={(e) => setClubForm({...clubForm, description: e.target.value})}
-                     />
-                  </div>
-                  <div className="space-y-1.5 relative">
-                     <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1 font-black">활동 지역 (검색어 입력)</label>
-                     <div className="relative">
-                        <input 
-                           className="w-full bg-slate-900 border border-white/10 rounded-xl py-3 px-4 focus:ring-2 ring-indigo-500 outline-none transition-all font-bold"
-                           placeholder="동네, 역 이름 또는 장소명 (예: 합정역)"
-                           onChange={(e) => searchLocation(e.target.value, 'club')}
-                        />
-                        <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-400" size={18} />
-                     </div>
-                     
-                     {/* Suggestions Dropdown for Club */}
-                     {locationSuggestions.length > 0 && (
-                       <div className="absolute z-[1200] top-full left-0 right-0 mt-2 bg-slate-900 border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                         {locationSuggestions.map((item, i) => (
-                           <div 
-                             key={i} 
-                             onClick={() => {
-                                selectLocation(item, 'club');
-                                document.querySelector('input[placeholder="동네, 역 이름 또는 장소명 (예: 합정역)"]').value = item.place_name;
-                             }}
-                             className="p-3 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0"
-                           >
-                             <p className="text-sm font-bold text-white mb-0.5">{item.place_name}</p>
-                             <p className="text-[10px] text-slate-500">{item.address_name}</p>
-                           </div>
-                         ))}
-                       </div>
-                     )}
-                     {clubForm.location && (
-                       <div className="mt-2 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex items-center gap-2">
-                         <span className="text-xs font-bold text-indigo-400">선택됨: {clubForm.location}</span>
-                       </div>
-                     )}
-                  </div>
-                  
-                  <button 
-                    onClick={handleCreateClub}
-                    disabled={isSavingClub}
-                    className="w-full premium-button py-4 mt-4 flex items-center justify-center gap-2"
-                  >
-                     {isSavingClub ? <Loader2 className="animate-spin" /> : <Plus />}
-                     <span>모임 개설 완료</span>
-                  </button>
-               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Club Detail Modal */}
-      <AnimatePresence>
-        {selectedClub && (
-          <div className="modal-backdrop overflow-y-auto" onClick={() => setSelectedClub(null)}>
-            <motion.div 
-               initial={{ opacity: 0, scale: 0.9, y: 40 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-               onClick={(e) => e.stopPropagation()}
-               className="modal-content relative my-auto shadow-2xl p-0 overflow-hidden"
-               style={{ maxWidth: '600px' }}
-            >
-               <div className="h-48 relative">
-                  <img src={selectedClub.image} className="w-full h-full object-cover" alt="" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent" />
-                  <button onClick={() => setSelectedClub(null)} className="absolute top-4 right-4 bg-black/40 p-2 rounded-full text-white hover:bg-black/60"><X size={18}/></button>
-               </div>
-               
-               <div className="p-8 space-y-6">
-                  <div className="flex items-center justify-between">
-                     <div className="space-y-1">
-                        <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-[9px] font-black rounded uppercase tracking-widest border border-indigo-500/20">{selectedClub.category}</span>
-                        <h2 className="text-2xl font-black">{selectedClub.name}</h2>
-                        <p className="text-slate-500 text-sm font-bold flex items-center gap-1">
-                           <MapPin size={12} /> {selectedClub.location}
-                        </p>
-                     </div>
-                     <div className="text-right">
-                        <p className="text-indigo-400 font-black text-xl italic">{selectedClub.member_count}명</p>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase">Members</p>
-                     </div>
-                  </div>
-
-                  <p className="text-slate-300 leading-relaxed font-medium bg-white/5 p-4 rounded-xl border border-white/5">{selectedClub.description}</p>
-                  
-                  <div className="space-y-3">
-                     <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest py-1 border-b border-white/5">모임 위치 파악</h4>
-                     <div id="club-map" className="w-full h-40 rounded-xl overflow-hidden border border-white/10 bg-slate-900" />
-                  </div>
-
-                  <button 
-                    onClick={() => handleJoinClub(selectedClub.id)}
-                    className="w-full premium-button py-4 mt-2 flex items-center justify-center gap-2"
-                  >
-                     <Users size={18} />
-                     <span>모임 참여하기</span>
-                  </button>
-               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Analysis Modal */}
-      <AnimatePresence>
-        {selectedBook && (
-          <div className="modal-backdrop overflow-y-auto" onClick={() => setSelectedBook(null)}>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              onClick={(e) => e.stopPropagation()}
-              className="modal-content relative my-auto shadow-[0_0_80px_rgba(99,102,241,0.15)]"
-            >
-              <button 
-                onClick={() => setSelectedBook(null)}
-                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-all text-slate-400 z-10"
+        {/* NAV TABS */}
+        <div className="flex items-center justify-between mb-8" style={{ gap: '1rem' }}>
+          <div className="nav-pill-group">
+            {navTabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`nav-pill ${activeTab === tab.id ? 'nav-pill-active' : ''}`}
               >
-                <X size={20} />
+                {tab.icon}
+                <span>{tab.label}</span>
               </button>
+            ))}
+          </div>
 
-              <div className="space-y-6">
-                {/* Modal Header: Thumbnail and Basic Info */}
-                <div className="flex items-center gap-5 border-b border-white/5 pb-5">
-                  <div className="w-14 shrink-0">
-                    <div className="aspect-[2/3] rounded-md overflow-hidden shadow-lg border border-white/10">
-                      {selectedBook.image ? (
-                        <img src={selectedBook.image} alt={selectedBook.title} className="w-full h-full object-cover" />
+          {activeTab === 'stack' && (
+            <div className="flex p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <button
+                onClick={() => setViewMode('tower')}
+                className="rounded-lg font-black transition-all"
+                style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'tower' ? 'white' : 'transparent', color: viewMode === 'tower' ? '#0f172a' : '#64748b', boxShadow: viewMode === 'tower' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none' }}
+              >
+                쌓아보기
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className="rounded-lg font-black transition-all"
+                style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'list' ? 'white' : 'transparent', color: viewMode === 'list' ? '#0f172a' : '#64748b', boxShadow: viewMode === 'list' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none' }}
+              >
+                리스트
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* MAIN CONTENT */}
+        <main style={{ paddingBottom: '5rem' }}>
+
+          {/* STACK TAB */}
+          {activeTab === 'stack' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {viewMode === 'tower' ? (
+                <div style={{ width: '100%', maxWidth: '460px', height: '70vh', maxHeight: '640px', minHeight: '380px', backgroundColor: '#07090f', borderRadius: '2rem', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', boxShadow: '0 32px 64px -16px rgba(0,0,0,0.7)', marginBottom: '2.5rem' }}>
+                  <div style={{ width: '100%', flex: 1, overflowY: 'auto', display: 'block', position: 'relative' }}>
+                    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', padding: '60px 16px 4px 16px' }}>
+                      {readBooks && readBooks.length > 0 ? (
+                        [...readBooks].map((book, idx) => {
+                          const bookColor = hexColors[idx % 10];
+                          return (
+                            <div
+                              key={book.id || idx}
+                              className="hover:scale-[1.03] hover:brightness-110 group"
+                              style={{ width: `${Math.min(96, 82 + (idx % 4) * 4)}%`, height: `${Math.max(34, (book.pages || 250) / 6)}px`, marginBottom: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px 8px 8px 3px', backgroundColor: bookColor, backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(255,255,255,0.18) 2%, rgba(0,0,0,0.08) 4%, transparent 10%, transparent 90%, rgba(0,0,0,0.2) 100%)`, borderLeft: '5px solid rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.18)', borderBottom: '1px solid rgba(0,0,0,0.3)', boxShadow: '0 6px 8px -2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', position: 'relative', zIndex: idx + 1, flexShrink: 0 }}
+                            >
+                              <div style={{ position: 'absolute', left: '8px', top: '15%', bottom: '15%', width: '2px', backgroundColor: 'rgba(255,255,255,0.08)', filter: 'blur(0.5px)' }} />
+                              <span style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '-0.01em', color: 'white', padding: '0 2rem', userSelect: 'none', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%', fontStyle: 'italic', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}>
+                                {book.title.replace(/<\/?[^>]+(>|$)/g, "")}
+                              </span>
+                              <div className="hidden group-hover:flex" style={{ position: 'absolute', top: '-52px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', border: '1px solid rgba(255,255,255,0.15)', padding: '6px 14px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, zIndex: 200, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ backgroundColor: bookColor, width: '8px', height: '8px', borderRadius: '9999px', display: 'inline-block' }} />
+                                <span style={{ color: 'white' }}>{book.author}</span>
+                              </div>
+                            </div>
+                          );
+                        })
                       ) : (
-                        <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                          <BookOpen size={16} className="text-slate-600" />
+                        <div style={{ marginBottom: '8rem', textAlign: 'center' }}>
+                          <div style={{ width: '64px', height: '64px', margin: '0 auto 1rem', borderRadius: '1.25rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <BookOpen size={28} color="#334155" />
+                          </div>
+                          <p style={{ fontWeight: 900, fontSize: '1rem', color: '#475569', marginBottom: '0.375rem' }}>당신만의 지식 타워를 세우세요</p>
+                          <p style={{ fontSize: '0.8125rem', color: '#334155' }}>검색으로 책을 찾아 서재에 추가해보세요</p>
                         </div>
                       )}
                     </div>
                   </div>
-                  
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 text-indigo-400 font-black mb-0.5">
-                      <Sparkles size={12} />
-                      <span className="tracking-[0.15em] text-[9px] uppercase opacity-70">AI Insight Platform</span>
+                  <div style={{ width: '100%', height: '22px', backgroundImage: 'linear-gradient(to bottom, #3d1a00, #1a0900)', borderRadius: '0 0 2rem 2rem', borderTop: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 -4px 12px rgba(0,0,0,0.4)', position: 'relative', zIndex: 10 }}>
+                    <div style={{ position: 'absolute', top: '1px', left: 0, right: 0, height: '1px', backgroundColor: 'rgba(255,255,255,0.04)' }} />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                  {readBooks.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '4rem 2rem', borderRadius: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <BookOpen size={36} style={{ margin: '0 auto 1rem', color: '#334155' }} />
+                      <p style={{ color: '#475569', fontWeight: 700 }}>아직 기록된 책이 없습니다.</p>
                     </div>
-                    <h2 className="text-lg font-black leading-tight tracking-tight" dangerouslySetInnerHTML={{ __html: selectedBook.title }}></h2>
-                    <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-bold text-slate-400">{selectedBook.author}</span>
-                       <span className="w-1 h-1 rounded-full bg-white/10" />
-                       <span className="text-[10px] font-bold text-slate-500">{selectedBook.publisher}</span>
+                  )}
+                  {readBooks.map(book => (
+                    <div key={book.id} className="book-list-item group">
+                      <img src={book.image} style={{ width: '3rem', height: '4.25rem', objectFit: 'cover', borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0 }} alt="" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                          <h4 className="group-hover:text-indigo-300 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{ __html: book.title }} />
+                          <span style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 8px', borderRadius: '6px', flexShrink: 0, letterSpacing: '0.05em' }}>
+                            {new Date(book.read_at).toLocaleDateString('ko-KR')}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 700, marginBottom: '0.5rem' }}>{book.author}</p>
+                        <div style={{ display: 'flex', gap: '0.375rem' }}>
+                          <span style={{ fontSize: '9px', color: '#475569', border: '1px solid rgba(255,255,255,0.07)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(255,255,255,0.02)' }}>{book.pages || 250}p</span>
+                          {book.publisher && <span style={{ fontSize: '9px', color: '#475569', border: '1px solid rgba(255,255,255,0.07)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(255,255,255,0.02)' }}>{book.publisher}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* SEARCH RESULTS TAB */}
+          {activeTab === 'search' && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ width: '100%', marginTop: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '2rem 1.25rem', width: '100%' }}>
+                {searchResults.map((book, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleBookClick(book)}
+                    className="premium-card group"
+                    style={{ padding: '0.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}
+                  >
+                    <div style={{ width: '100%', aspectRatio: '3/4', marginBottom: '0.875rem', overflow: 'hidden', borderRadius: '0.875rem', position: 'relative', boxShadow: '0 16px 32px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.05)', background: '#1e293b' }}>
+                      <img src={book.image} className="group-hover:scale-110 transition-transform duration-700" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                      <div className="group-hover:opacity-100 opacity-0 transition-opacity" style={{ position: 'absolute', inset: 0, background: 'rgba(79,70,229,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Sparkles color="white" size={28} />
+                      </div>
+                    </div>
+                    <div style={{ width: '100%', textAlign: 'center' }}>
+                      <h4 style={{ fontWeight: 900, fontSize: '0.8125rem', lineHeight: 1.35, padding: '0 0.25rem', marginBottom: '0.25rem' }} className="line-clamp-2" dangerouslySetInnerHTML={{ __html: book.title }} />
+                      <p style={{ fontSize: '11px', color: '#475569', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 0.5rem' }}>{book.author}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {searchResults.length === 0 && searchQuery && !isSearching && (
+                <div style={{ textAlign: 'center', padding: '5rem 2rem', borderRadius: '2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', marginTop: '1rem' }}>
+                  <Search size={36} style={{ margin: '0 auto 1rem', color: '#334155' }} />
+                  <p style={{ color: '#475569', fontWeight: 700 }}>검색 결과가 없습니다.</p>
+                  <p style={{ color: '#334155', fontSize: '0.8125rem', marginTop: '0.375rem' }}>다른 키워드로 검색해보세요.</p>
+                </div>
+              )}
+              {searchResults.length === 0 && !searchQuery && !isSearching && (
+                <div style={{ textAlign: 'center', padding: '5rem 2rem' }}>
+                  <Search size={48} style={{ margin: '0 auto 1rem', color: '#1e293b' }} />
+                  <p style={{ color: '#334155', fontWeight: 700 }}>읽고 싶은 책을 검색해보세요</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* CLUBS TAB */}
+          {activeTab === 'clubs' && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '3.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.75rem', letterSpacing: '-0.03em' }}>
+                    <Users style={{ color: '#818cf8' }} size={32} />
+                    독서 커뮤니티
+                  </h2>
+                  <p style={{ color: '#475569', fontWeight: 700, fontSize: '0.875rem' }}>지하철 한 정거장 거리의 이웃과 함께 책을 읽어보세요.</p>
+                </div>
+                <button onClick={() => setIsCreatingClub(true)} className="premium-button" style={{ fontSize: '0.8125rem', padding: '0.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                  <Plus size={17} />
+                  모임 개설
+                </button>
+              </div>
+
+              {user && (
+                <div>
+                  <div className="section-header">
+                    <div className="section-accent" />
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f1f5f9' }}>내 주변 가까운 모임</h3>
+                  </div>
+                  <div className="custom-scroll" style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '1.25rem', paddingBottom: '1.5rem', scrollSnapType: 'x mandatory', margin: '0 -1.5rem', padding: '0 1.5rem 1.5rem' }}>
+                    {clubs.slice(0, 5).map((club) => (
+                      <div
+                        key={club.id}
+                        onClick={() => setSelectedClub(club)}
+                        className="premium-card group"
+                        style={{ width: '280px', minWidth: '280px', height: '340px', display: 'flex', flexDirection: 'column', cursor: 'pointer', scrollSnapAlign: 'start', background: 'rgba(15,20,35,0.8)', flexShrink: 0 }}
+                      >
+                        <div style={{ width: '100%', height: '160px', position: 'relative', overflow: 'hidden', background: '#1e293b', flexShrink: 0 }}>
+                          <img src={club.image} className="group-hover:scale-110 transition-transform duration-700" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} alt={club.name} />
+                          <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 10 }}>
+                            <div style={{ background: 'rgba(79,70,229,0.9)', backdropFilter: 'blur(8px)', color: 'white', padding: '3px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(255,255,255,0.15)' }}>
+                              <MapPin size={9} />
+                              {club.distance || 0}km
+                            </div>
+                          </div>
+                          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,9,15,0.85), transparent)' }} />
+                        </div>
+                        <div style={{ padding: '1.1rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <h3 className="group-hover:text-indigo-300 transition-colors" style={{ fontSize: '0.875rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '0.375rem' }}>{club.name}</h3>
+                            <p style={{ fontSize: '11px', color: '#475569', fontWeight: 700, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.5 }}>{club.description}</p>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', fontWeight: 900, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.875rem', marginTop: '0.5rem' }}>
+                            <span style={{ color: '#475569', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{club.location}</span>
+                            <span style={{ color: 'rgba(129,140,248,0.8)' }}>{club.member_count}명</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+                  <div className="section-header" style={{ marginBottom: 0 }}>
+                    <div className="section-accent" style={{ background: '#334155' }} />
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b' }}>모든 독서 모임</h3>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>총 {clubs.length}개 활동 중</p>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.875rem' }}>
+                  {clubs.slice(5).map((club) => (
+                    <div
+                      key={club.id}
+                      onClick={() => setSelectedClub(club)}
+                      className="glass-card group"
+                      style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer', height: '130px' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        <div style={{ width: '3.25rem', height: '3.25rem', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, background: '#1e293b' }}>
+                          <img src={club.image} className="w-full h-full grayscale group-hover:grayscale-0 transition-all" style={{ objectFit: 'cover' }} alt="" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h4 className="group-hover:text-indigo-400 transition-colors" style={{ fontSize: '0.8125rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.name}</h4>
+                          <p style={{ fontSize: '11px', color: '#475569', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px', marginTop: '3px' }}>
+                            <MapPin size={9} /> {club.location}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '6px' }}>{club.category}</span>
+                        <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(99,102,241,0.6)', fontStyle: 'italic' }}>{club.distance || 0}km</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* COMMUNITY TAB */}
+          {activeTab === 'community' && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.625rem', letterSpacing: '-0.03em' }}>
+                    <MessageSquare style={{ color: '#818cf8' }} size={28} />
+                    지식 나눔 광장
+                  </h2>
+                  <p style={{ color: '#475569', fontWeight: 700, fontSize: '0.875rem' }}>책을 통해 더 넓은 세상을 만나는 곳입니다.</p>
+                </div>
+                <button style={{ padding: '0.625rem 1.25rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.75rem', fontSize: '0.8125rem', fontWeight: 800, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem', transition: 'all 0.2s ease', flexShrink: 0 }}>
+                  <Plus size={16} />
+                  글쓰기
+                </button>
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                {communityPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="group"
+                    style={{ position: 'relative', padding: '1.75rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  >
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(to bottom, #6366f1, #ec4899)', opacity: 0, borderRadius: '0 2px 2px 0', transition: 'opacity 0.2s ease' }} className="group-hover:opacity-100" />
+                    <div style={{ paddingLeft: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 900, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 8px', borderRadius: '6px' }}>General</span>
+                      </div>
+                      <h3 className="group-hover:text-indigo-300 transition-colors" style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: '0.5rem', lineHeight: 1.3, letterSpacing: '-0.01em' }}>{post.title}</h3>
+                      <p style={{ color: '#64748b', lineHeight: 1.6, fontSize: '0.875rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{post.content}</p>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                          <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#475569', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-rose-400">
+                            <Heart size={14} />
+                            {post.likes}
+                          </button>
+                          <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#475569', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-sky-400">
+                            <MessageCircle size={14} />
+                            {post.comments}
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.75rem' }}>
+                          <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px' }}>
+                            {post.author[0]}
+                          </div>
+                          <span style={{ color: '#94a3b8', fontWeight: 700 }}>{post.author}</span>
+                          <span style={{ color: '#1e293b' }}>·</span>
+                          <span style={{ color: '#334155', fontSize: '11px' }}>{new Date(post.date).toLocaleDateString('ko-KR')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </main>
+      </div>
+
+      {/* FOOTER */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '3rem 0' }}>
+        <div className="max-w-5xl mx-auto px-6" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.875rem', alignItems: 'center' }}>
+          <span className="font-black text-xl gradient-text">bookStory</span>
+          <p style={{ color: '#334155', fontSize: '0.8125rem', fontWeight: 500 }}>© 2026 bookStory. Elevating your reading experience with Intelligence.</p>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+            <div style={{ width: '2.25rem', height: '2.25rem', background: 'rgba(255,255,255,0.04)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.2s ease', color: '#334155' }} className="hover:bg-white\/10 hover:text-white">
+              <Bookmark size={16} />
+            </div>
+            <div style={{ width: '2.25rem', height: '2.25rem', background: 'rgba(255,255,255,0.04)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.2s ease', color: '#334155' }} className="hover:bg-white\/10 hover:text-white">
+              <Users size={16} />
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* REGISTRATION MODAL */}
+      <AnimatePresence>
+        {!user && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#07090f', padding: '1.5rem' }}>
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+              <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: '55%', height: '55%', background: 'rgba(99,102,241,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+              <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '55%', height: '55%', background: 'rgba(236,72,153,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+            </div>
+
+            <motion.div
+              initial={{ scale: 0.93, y: 24 }}
+              animate={{ scale: 1, y: 0 }}
+              style={{ width: '100%', maxWidth: '420px', background: 'rgba(15,20,35,0.9)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '1.75rem', padding: '2.5rem', position: 'relative', zIndex: 10, boxShadow: '0 40px 80px rgba(0,0,0,0.6)' }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <div style={{ width: '4.5rem', height: '4.5rem', background: 'linear-gradient(135deg, #6366f1, #ec4899)', borderRadius: '1.25rem', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(99,102,241,0.4)', transform: 'rotate(3deg)' }}>
+                  <BookOpen size={36} color="white" />
+                </div>
+                <h2 className="font-black gradient-text" style={{ fontSize: '2rem', letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>bookStory</h2>
+                <p style={{ color: '#64748b', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.6 }}>당신만의 독서 여정을 시작하기 위해<br />회원 정보를 입력해주세요.</p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label className="form-label">닉네임 또는 이름</label>
+                  <div style={{ position: 'relative' }}>
+                    <User style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#334155' }} size={16} />
+                    <input type="text" placeholder="어떻게 불러드릴까요?" value={regForm.name} onChange={(e) => setRegForm({...regForm, name: e.target.value})} className="form-input" style={{ paddingLeft: '2.75rem', color: 'white' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+                  <div>
+                    <label className="form-label">성별</label>
+                    <select className="form-input appearance-none" style={{ color: 'white' }} value={regForm.gender} onChange={(e) => setRegForm({...regForm, gender: e.target.value})}>
+                      <option>남성</option>
+                      <option>여성</option>
+                      <option>기타</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">나이</label>
+                    <input type="number" placeholder="20" value={regForm.age} onChange={(e) => setRegForm({...regForm, age: parseInt(e.target.value)})} className="form-input" style={{ color: 'white' }} />
+                  </div>
+                </div>
+
+                <div style={{ position: 'relative' }}>
+                  <label className="form-label">주 활동 지역</label>
+                  <div style={{ position: 'relative' }}>
+                    <MapIcon style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#334155' }} size={16} />
+                    <input type="text" placeholder="동네나 역 이름 검색 (예: 합정역)" onChange={(e) => searchLocation(e.target.value, 'reg')} className="form-input" style={{ paddingLeft: '2.75rem', color: 'white' }} />
+                    {isSearchingLocation && <Loader2 style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#334155' }} size={15} className="animate-spin" />}
+                  </div>
+                  {locationSuggestions.length > 0 && (
+                    <div style={{ position: 'absolute', zIndex: 1100, top: '100%', left: 0, right: 0, marginTop: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.875rem', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', maxHeight: '180px', overflowY: 'auto' }}>
+                      {locationSuggestions.map((item, i) => (
+                        <div key={i} onClick={() => { selectLocation(item, 'reg'); document.querySelector('input[placeholder="동네나 역 이름 검색 (예: 합정역)"]').value = item.place_name; }} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
+                          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'white', marginBottom: '2px' }}>{item.place_name}</p>
+                          <p style={{ fontSize: '10px', color: '#475569' }}>{item.address_name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {regForm.location && (
+                    <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.875rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <MapPin size={11} style={{ color: '#818cf8' }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#818cf8' }}>선택됨: {regForm.location}</span>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={handleRegisterUser} className="premium-button" style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginTop: '0.5rem' }}>
+                  <span>bookStory 시작하기</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CREATE CLUB MODAL */}
+      <AnimatePresence>
+        {isCreatingClub && (
+          <div className="modal-backdrop overflow-y-auto" onClick={() => setIsCreatingClub(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              onClick={(e) => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ maxWidth: '480px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.02em' }}>모임 개설하기</h2>
+                <button onClick={() => setIsCreatingClub(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s ease' }} className="hover:bg-white\/10 hover:text-white"><X size={16} /></button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
+                <div>
+                  <label className="form-label">모임 이름</label>
+                  <input className="form-input" style={{ color: 'white' }} placeholder="예: 강남 심리학 독서회" value={clubForm.name} onChange={(e) => setClubForm({...clubForm, name: e.target.value})} />
+                </div>
+                <div>
+                  <label className="form-label">카테고리</label>
+                  <select className="form-input appearance-none" style={{ color: 'white' }} value={clubForm.category} onChange={(e) => setClubForm({...clubForm, category: e.target.value})}>
+                    <option>독서/기록</option>
+                    <option>소설/토론</option>
+                    <option>인문/철학</option>
+                    <option>자기계발</option>
+                    <option>비즈니스</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">모임 설명</label>
+                  <textarea className="form-input" style={{ height: '5.5rem', resize: 'none', color: 'white' }} placeholder="어떤 활동을 하는 모임인지 알려주세요" value={clubForm.description} onChange={(e) => setClubForm({...clubForm, description: e.target.value})} />
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <label className="form-label">활동 지역</label>
+                  <div style={{ position: 'relative' }}>
+                    <input className="form-input" style={{ color: 'white', paddingRight: '3rem' }} placeholder="동네, 역 이름 또는 장소명 (예: 합정역)" onChange={(e) => searchLocation(e.target.value, 'club')} />
+                    <MapPin style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#818cf8' }} size={16} />
+                  </div>
+                  {locationSuggestions.length > 0 && (
+                    <div style={{ position: 'absolute', zIndex: 1200, top: '100%', left: 0, right: 0, marginTop: '0.5rem', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.875rem', boxShadow: '0 16px 40px rgba(0,0,0,0.5)', maxHeight: '180px', overflowY: 'auto' }}>
+                      {locationSuggestions.map((item, i) => (
+                        <div key={i} onClick={() => { selectLocation(item, 'club'); document.querySelector('input[placeholder="동네, 역 이름 또는 장소명 (예: 합정역)"]').value = item.place_name; }} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
+                          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'white', marginBottom: '2px' }}>{item.place_name}</p>
+                          <p style={{ fontSize: '10px', color: '#475569' }}>{item.address_name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {clubForm.location && (
+                    <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.875rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#818cf8' }}>선택됨: {clubForm.location}</span>
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={handleCreateClub} disabled={isSavingClub} className="premium-button disabled:opacity-50" style={{ width: '100%', padding: '0.9rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  {isSavingClub ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+                  <span>모임 개설 완료</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CLUB DETAIL MODAL */}
+      <AnimatePresence>
+        {selectedClub && (
+          <div className="modal-backdrop overflow-y-auto" onClick={() => setSelectedClub(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ maxWidth: '560px', padding: 0, overflow: 'hidden' }}
+            >
+              <div style={{ height: '11rem', position: 'relative' }}>
+                <img src={selectedClub.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0d1424, transparent 60%)' }} />
+                <button onClick={() => setSelectedClub(null)} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(0,0,0,0.5)', border: 'none', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }} className="hover:bg-black\/60"><X size={16} /></button>
+              </div>
+
+              <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.12em', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block', width: 'fit-content' }}>{selectedClub.category}</span>
+                    <h2 style={{ fontSize: '1.375rem', fontWeight: 900, lineHeight: 1.2, letterSpacing: '-0.02em' }}>{selectedClub.name}</h2>
+                    <p style={{ color: '#475569', fontSize: '0.8125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MapPin size={11} /> {selectedClub.location}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <p className="gradient-text-accent" style={{ fontSize: '1.5rem', fontWeight: 900, fontStyle: 'italic', lineHeight: 1 }}>{selectedClub.member_count}명</p>
+                    <p style={{ fontSize: '9px', color: '#475569', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>Members</p>
+                  </div>
+                </div>
+
+                <p style={{ color: '#94a3b8', lineHeight: 1.65, fontWeight: 500, fontSize: '0.875rem', background: 'rgba(255,255,255,0.03)', padding: '0.875rem 1rem', borderRadius: '0.875rem', border: '1px solid rgba(255,255,255,0.05)' }}>{selectedClub.description}</p>
+
+                <div>
+                  <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingBottom: '0.625rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>모임 위치</h4>
+                  <div id="club-map" style={{ width: '100%', height: '9rem', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0f172a' }} />
+                </div>
+
+                <button onClick={() => handleJoinClub(selectedClub.id)} className="premium-button" style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <Users size={16} />
+                  <span>모임 참여하기</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* BOOK ANALYSIS MODAL */}
+      <AnimatePresence>
+        {selectedBook && (
+          <div className="modal-backdrop overflow-y-auto" onClick={() => setSelectedBook(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ boxShadow: '0 0 80px rgba(99,102,241,0.12), 0 40px 80px rgba(0,0,0,0.6)' }}
+            >
+              <button onClick={() => setSelectedBook(null)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', width: '2rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '9999px', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s ease', zIndex: 10 }} className="hover:bg-red-500\/20 hover:text-red-400"><X size={16} /></button>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.125rem', paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ width: '3.5rem', flexShrink: 0 }}>
+                    <div style={{ aspectRatio: '2/3', borderRadius: '0.5rem', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      {selectedBook.image ? (
+                        <img src={selectedBook.image} alt={selectedBook.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BookOpen size={16} color="#334155" /></div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
+                      <Sparkles size={11} style={{ color: '#818cf8' }} />
+                      <span style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>AI Insight</span>
+                    </div>
+                    <h2 style={{ fontSize: '1.05rem', fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '0.375rem' }} dangerouslySetInnerHTML={{ __html: selectedBook.title }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{selectedBook.author}</span>
+                      <span style={{ width: '3px', height: '3px', borderRadius: '9999px', background: 'rgba(255,255,255,0.12)', display: 'inline-block' }} />
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>{selectedBook.publisher}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Modal Content: Analysis & Actions */}
-                <div className="space-y-4">
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/5 min-h-[100px] relative">
-                    {isAnalyzing ? (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                        <Loader2 className="animate-spin text-indigo-500" size={20} />
-                        <p className="text-indigo-400 text-[10px] font-bold animate-pulse">데이터 분석 중...</p>
+                <div style={{ padding: '1rem', background: 'rgba(99,102,241,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(99,102,241,0.1)', minHeight: '6rem', position: 'relative' }}>
+                  {isAnalyzing ? (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                      <Loader2 className="animate-spin" size={20} style={{ color: '#6366f1' }} />
+                      <p className="animate-pulse" style={{ color: '#818cf8', fontSize: '10px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase' }}>분석 중...</p>
+                    </div>
+                  ) : (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
+                        <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6366f1, #ec4899)', borderRadius: '9999px' }} />
+                        <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em' }}>The Insight</h3>
                       </div>
-                    ) : (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
-                         <div className="flex items-center gap-1.5 mb-1">
-                            <div className="w-1 h-3 bg-indigo-500 rounded-full" />
-                            <h3 className="text-[11px] font-black text-indigo-300 uppercase tracking-wider">The Insight</h3>
-                         </div>
-                        <p className="text-[13px] leading-relaxed text-slate-300 font-medium whitespace-pre-wrap">{analysisResult}</p>
-                      </motion.div>
-                    )}
-                  </div>
+                      <p style={{ fontSize: '0.8125rem', lineHeight: 1.7, color: '#94a3b8', fontWeight: 500, whiteSpace: 'pre-wrap' }}>{analysisResult}</p>
+                    </motion.div>
+                  )}
+                </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <button 
-                      onClick={() => handleRegisterBook(selectedBook)}
-                      disabled={isSaving}
-                      className="premium-button flex-1 py-2.5 flex items-center justify-center gap-2 disabled:opacity-50 text-xs shadow-lg"
-                    >
-                      {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
-                      <span>내 서재에 기록하기</span>
-                    </button>
-                    <button className="px-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl py-2.5 font-bold transition-all text-xs">
-                       상세보기
-                    </button>
-                  </div>
+                <div style={{ display: 'flex', gap: '0.625rem' }}>
+                  <button onClick={() => handleRegisterBook(selectedBook)} disabled={isSaving} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    {isSaving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}
+                    <span>내 서재에 기록하기</span>
+                  </button>
+                  <button style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.875rem', fontWeight: 800, fontSize: '0.8125rem', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap' }} className="hover:bg-white\/10">상세보기</button>
                 </div>
               </div>
             </motion.div>
