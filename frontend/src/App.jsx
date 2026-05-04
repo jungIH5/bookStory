@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Heart, MessageCircle, ChevronRight, User, MapIcon } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Heart, MessageCircle, ChevronRight, User, MapIcon, Send, Mic, Upload, FileAudio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const API_URL = import.meta.env.VITE_API_URL || '';
+
+const stripHtml = (str) => str?.replace(/<\/?[^>]+(>|$)/g, '') ?? '';
 
 function App() {
   const [activeTab, setActiveTab] = useState('stack');
@@ -10,6 +14,7 @@ function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
   const [analysisResult, setAnalysisResult] = useState('');
+  const [questions, setQuestions] = useState({ thematic: [], perspective_shift: [] });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [readBooks, setReadBooks] = useState([]);
   const [clubs, setClubs] = useState([]);
@@ -23,8 +28,29 @@ function App() {
   const [isCreatingClub, setIsCreatingClub] = useState(false);
   const [clubForm, setClubForm] = useState({ name: '', description: '', category: '독서/기록', location: '', lat: null, lng: null, image: '' });
   const [isSavingClub, setIsSavingClub] = useState(false);
+  const [joinedClubs, setJoinedClubs] = useState(new Set());
+  const [isWritingPost, setIsWritingPost] = useState(false);
+  const [postForm, setPostForm] = useState({ title: '', content: '', book_title: '' });
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+
+  const [recordingFile, setRecordingFile] = useState(null);
+  const [isAnalyzingRecording, setIsAnalyzingRecording] = useState(false);
+  const [recordingResult, setRecordingResult] = useState(null);
+  const [voiceSampleUploading, setVoiceSampleUploading] = useState(false);
+
+  const [tendencyResult, setTendencyResult] = useState(null);
+  const [isFetchingTendency, setIsFetchingTendency] = useState(false);
+  const [showTendencyModal, setShowTendencyModal] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [isFetchingRecs, setIsFetchingRecs] = useState(false);
+
+  const [sessionId, setSessionId] = useState(null);
+  const [sessionQA, setSessionQA] = useState([]);
+  const [isConversing, setIsConversing] = useState(false);
+  const [conversationInput, setConversationInput] = useState('');
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -32,7 +58,7 @@ function App() {
     setSearchResults([]);
     setActiveTab('search');
     try {
-      const response = await fetch(`http://localhost:5001/api/books/search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
       setSearchResults(data.items || []);
     } catch (error) {
@@ -46,11 +72,13 @@ function App() {
     setSelectedBook(book);
     setIsAnalyzing(true);
     setAnalysisResult('');
+    setQuestions({ thematic: [], perspective_shift: [] });
     try {
-      const response = await fetch(`http://localhost:5001/api/books/analyze?title=${encodeURIComponent(book.title.replace(/<\/?[^>]+(>|$)/g, ""))}&author=${encodeURIComponent(book.author)}`);
+      const response = await fetch(`${API_URL}/api/books/analyze?title=${encodeURIComponent(stripHtml(book.title))}&author=${encodeURIComponent(book.author)}`);
       const data = await response.json();
       setAnalysisResult(data.analysis);
       setCurrentBookPages(data.pages || 250);
+      setQuestions(data.questions || { thematic: [], perspective_shift: [] });
     } catch (error) {
       setAnalysisResult('도서 분석 중 오류가 발생했습니다.');
     } finally {
@@ -65,11 +93,14 @@ function App() {
     fetchCommunityPosts();
   }, []);
 
-  React.useEffect(() => { fetchClubs(); }, [user]);
+  React.useEffect(() => {
+    fetchClubs();
+    fetchJoinedClubs();
+  }, [user]);
 
   const fetchReadBooks = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/books/read');
+      const response = await fetch(`${API_URL}/api/books/read`);
       const data = await response.json();
       setReadBooks(data);
     } catch (error) { console.error('Failed to fetch books'); }
@@ -88,7 +119,7 @@ function App() {
 
   const fetchClubs = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/clubs');
+      const response = await fetch(`${API_URL}/api/clubs`);
       const data = await response.json();
       if (user && user.lat && user.lng) {
         const sorted = data.map(club => ({ ...club, distance: getDistance(user.lat, user.lng, club.lat, club.lng) })).sort((a, b) => a.distance - b.distance);
@@ -101,10 +132,20 @@ function App() {
 
   const fetchCommunityPosts = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/community/posts');
+      const uid = user?.id ? `?user_id=${user.id}` : '';
+      const response = await fetch(`${API_URL}/api/community/posts${uid}`);
       const data = await response.json();
       setCommunityPosts(data);
     } catch (error) { console.error('Failed to fetch posts'); }
+  };
+
+  const fetchJoinedClubs = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await fetch(`${API_URL}/api/clubs/joined?user_id=${user.id}`);
+      const data = await response.json();
+      setJoinedClubs(new Set(data));
+    } catch (error) { console.error('Failed to fetch joined clubs'); }
   };
 
   const searchLocation = (keyword, _type) => {
@@ -134,7 +175,7 @@ function App() {
   const handleRegisterUser = async () => {
     if (!regForm.name || !regForm.location) return alert('이름과 지역을 입력해주세요.');
     try {
-      const response = await fetch('http://localhost:5001/api/users', {
+      const response = await fetch(`${API_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(regForm)
@@ -151,7 +192,7 @@ function App() {
   const handleRegisterBook = async (book) => {
     setIsSaving(true);
     try {
-      const response = await fetch('http://localhost:5001/api/books/read', {
+      const response = await fetch(`${API_URL}/api/books/read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: book.title, author: book.author, image: book.image, publisher: book.publisher, isbn: book.isbn, pages: currentBookPages })
@@ -169,7 +210,7 @@ function App() {
     if (!clubForm.name || !clubForm.location) return alert('모집 정보를 모두 입력해주세요.');
     setIsSavingClub(true);
     try {
-      const response = await fetch('http://localhost:5001/api/clubs', {
+      const response = await fetch(`${API_URL}/api/clubs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...clubForm, image: clubForm.image || `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000)}?q=80&w=800` })
@@ -182,8 +223,168 @@ function App() {
     } catch (error) { alert('모임 개설 중 오류가 발생했습니다.'); } finally { setIsSavingClub(false); }
   };
 
-  const handleJoinClub = async (_clubId) => {
-    alert('참여 신청이 완료되었습니다! 모임장과 곧 연결해 드릴게요.');
+  const handleJoinClub = async (clubId) => {
+    if (!user) return alert('로그인이 필요합니다.');
+    const isJoined = joinedClubs.has(clubId);
+    try {
+      if (isJoined) {
+        await fetch(`${API_URL}/api/clubs/${clubId}/leave`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id })
+        });
+        setJoinedClubs(prev => { const s = new Set(prev); s.delete(clubId); return s; });
+        if (selectedClub?.id === clubId) setSelectedClub(prev => ({ ...prev, member_count: prev.member_count - 1 }));
+      } else {
+        await fetch(`${API_URL}/api/clubs/${clubId}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: user.id })
+        });
+        setJoinedClubs(prev => new Set([...prev, clubId]));
+        if (selectedClub?.id === clubId) setSelectedClub(prev => ({ ...prev, member_count: prev.member_count + 1 }));
+      }
+      await fetchClubs();
+    } catch (error) { alert('오류가 발생했습니다.'); }
+  };
+
+  const handleLikePost = async (postId) => {
+    if (!user) return;
+    try {
+      await fetch(`${API_URL}/api/community/posts/${postId}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id })
+      });
+      await fetchCommunityPosts();
+    } catch (error) { console.error('Like error:', error); }
+  };
+
+  const handleWritePost = async () => {
+    if (!postForm.title.trim() || !postForm.content.trim()) return alert('제목과 내용을 입력해주세요.');
+    setIsSubmittingPost(true);
+    try {
+      const response = await fetch(`${API_URL}/api/community/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user?.id, ...postForm })
+      });
+      if (response.ok) {
+        await fetchCommunityPosts();
+        setIsWritingPost(false);
+        setPostForm({ title: '', content: '', book_title: '' });
+      }
+    } catch (error) { alert('글 작성 중 오류가 발생했습니다.'); }
+    finally { setIsSubmittingPost(false); }
+  };
+
+  const handleFetchTendency = async () => {
+    if (!user) return alert('로그인이 필요합니다.');
+    setIsFetchingTendency(true);
+    try {
+      const res = await fetch(`${API_URL}/api/tendency/${user.id}`);
+      const data = await res.json();
+      setTendencyResult(data);
+      setShowTendencyModal(true);
+    } catch { alert('성향 분석 중 오류가 발생했습니다.'); }
+    finally { setIsFetchingTendency(false); }
+  };
+
+  const handleFetchRecommendations = async () => {
+    if (!user) return;
+    setIsFetchingRecs(true);
+    try {
+      const res = await fetch(`${API_URL}/api/recommendations/${user.id}`);
+      const data = await res.json();
+      setRecommendations(data.recommendations || []);
+    } catch { console.error('추천 로드 실패'); }
+    finally { setIsFetchingRecs(false); }
+  };
+
+  const handleUploadRecording = async () => {
+    if (!recordingFile) return;
+    setIsAnalyzingRecording(true);
+    setRecordingResult(null);
+    const formData = new FormData();
+    formData.append('file', recordingFile);
+    if (user?.id) formData.append('user_id', user.id);
+    try {
+      const response = await fetch(`${API_URL}/api/recordings`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) throw new Error('분석 실패');
+      const data = await response.json();
+      setRecordingResult(data);
+    } catch (error) {
+      alert('녹음 분석 중 오류가 발생했습니다.');
+    } finally {
+      setIsAnalyzingRecording(false);
+    }
+  };
+
+  const handleUploadVoiceSample = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+    setVoiceSampleUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`${API_URL}/api/users/${user.id}/voice-sample`, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error();
+      alert('목소리 샘플이 등록되었습니다.');
+    } catch {
+      alert('목소리 샘플 등록 중 오류가 발생했습니다.');
+    } finally {
+      setVoiceSampleUploading(false);
+    }
+  };
+
+  const handleStartDiscussion = async () => {
+    if (!questions.thematic.length) return;
+    const firstQuestion = questions.thematic[0];
+    try {
+      const response = await fetch(`${API_URL}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user?.id || null,
+          book_title: stripHtml(selectedBook.title),
+          book_author: selectedBook.author,
+          book_analysis: analysisResult,
+          first_question: firstQuestion,
+        }),
+      });
+      const data = await response.json();
+      setSessionId(data.session_id);
+      setSessionQA([{ question: firstQuestion, answer: null, turn_order: 1 }]);
+      setIsConversing(true);
+    } catch (error) {
+      alert('토론 세션 시작 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSubmitAnswer = async () => {
+    if (!conversationInput.trim() || !sessionId) return;
+    setIsSubmittingAnswer(true);
+    const answer = conversationInput.trim();
+    setConversationInput('');
+    setSessionQA(prev => prev.map((qa, i) =>
+      i === prev.length - 1 ? { ...qa, answer } : qa
+    ));
+    try {
+      const response = await fetch(`${API_URL}/api/sessions/${sessionId}/answer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answer, user_id: user?.id || null }),
+      });
+      const data = await response.json();
+      setSessionQA(prev => [...prev, { question: data.next_question, answer: null, turn_order: data.turn }]);
+    } catch (error) {
+      alert('답변 제출 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmittingAnswer(false);
+    }
   };
 
   React.useEffect(() => {
@@ -206,6 +407,7 @@ function App() {
     { id: 'stack', label: '책쌓기', icon: <BookOpen size={15} /> },
     { id: 'clubs', label: '모임찾기', icon: <Users size={15} /> },
     { id: 'community', label: '커뮤니티', icon: <MessageSquare size={15} /> },
+    { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
   ];
 
   return (
@@ -225,13 +427,19 @@ function App() {
           </div>
 
           {user && (
-            <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
-                {user.name[0]}
-              </div>
-              <div className="sm:block hidden">
-                <p style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
-                <p style={{ fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1.3, marginTop: '2px' }}>{user.name}</p>
+            <div className="flex items-center gap-2">
+              <label title="목소리 샘플 등록" style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {voiceSampleUploading ? <Loader2 className="animate-spin" size={13} style={{ color: '#818cf8' }} /> : <Mic size={13} style={{ color: '#818cf8' }} />}
+                <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleUploadVoiceSample} disabled={voiceSampleUploading} />
+              </label>
+              <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
+                  {user.name[0]}
+                </div>
+                <div className="sm:block hidden">
+                  <p style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
+                  <p style={{ fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1.3, marginTop: '2px' }}>{user.name}</p>
+                </div>
               </div>
             </div>
           )}
@@ -358,7 +566,7 @@ function App() {
                       <img src={book.image} style={{ width: '3rem', height: '4.25rem', objectFit: 'cover', borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0 }} alt="" />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                          <h4 className="group-hover:text-indigo-300 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{ __html: book.title }} />
+                          <h4 className="group-hover:text-indigo-300 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(book.title)}</h4>
                           <span style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 8px', borderRadius: '6px', flexShrink: 0, letterSpacing: '0.05em' }}>
                             {new Date(book.read_at).toLocaleDateString('ko-KR')}
                           </span>
@@ -372,6 +580,55 @@ function App() {
                     </div>
                   ))}
                 </div>
+              )}
+
+              {/* 독서 성향 분석 버튼 */}
+              {user && readBooks.length > 0 && (
+                <div style={{ width: '100%', maxWidth: '460px', marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={handleFetchTendency}
+                    disabled={isFetchingTendency}
+                    style={{ flex: 1, padding: '0.75rem', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '0.875rem', color: '#a5b4fc', fontWeight: 800, fontSize: '0.8125rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease' }}
+                  >
+                    {isFetchingTendency ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                    내 독서 성향 분석
+                  </button>
+                  <button
+                    onClick={handleFetchRecommendations}
+                    disabled={isFetchingRecs}
+                    style={{ flex: 1, padding: '0.75rem', background: 'rgba(236,72,153,0.08)', border: '1px solid rgba(236,72,153,0.2)', borderRadius: '0.875rem', color: '#f9a8d4', fontWeight: 800, fontSize: '0.8125rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', transition: 'all 0.2s ease' }}
+                  >
+                    {isFetchingRecs ? <Loader2 className="animate-spin" size={14} /> : <BookOpen size={14} />}
+                    추천 도서 보기
+                  </button>
+                </div>
+              )}
+
+              {/* 추천 도서 섹션 */}
+              {recommendations.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%', marginTop: '2rem' }}>
+                  <div className="section-header" style={{ marginBottom: '1rem' }}>
+                    <div className="section-accent" />
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f1f5f9' }}>당신을 위한 추천 도서</h3>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                    {recommendations.map((book, i) => (
+                      <div key={i} onClick={() => handleBookClick(book)} className="book-list-item group" style={{ cursor: 'pointer' }}>
+                        {book.image ? (
+                          <img src={book.image} style={{ width: '3rem', height: '4.25rem', objectFit: 'cover', borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0 }} alt="" />
+                        ) : (
+                          <div style={{ width: '3rem', height: '4.25rem', borderRadius: '0.5rem', background: 'rgba(99,102,241,0.15)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BookOpen size={18} style={{ color: '#818cf8' }} /></div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h4 className="group-hover:text-indigo-300 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.title}</h4>
+                          <p style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>
+                          <p style={{ fontSize: '11px', color: '#818cf8', lineHeight: 1.5 }}>{book.reason}</p>
+                        </div>
+                        <ChevronRight size={14} style={{ color: '#334155', flexShrink: 0 }} />
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
               )}
             </motion.div>
           )}
@@ -394,7 +651,7 @@ function App() {
                       </div>
                     </div>
                     <div style={{ width: '100%', textAlign: 'center' }}>
-                      <h4 style={{ fontWeight: 900, fontSize: '0.8125rem', lineHeight: 1.35, padding: '0 0.25rem', marginBottom: '0.25rem' }} className="line-clamp-2" dangerouslySetInnerHTML={{ __html: book.title }} />
+                      <h4 style={{ fontWeight: 900, fontSize: '0.8125rem', lineHeight: 1.35, padding: '0 0.25rem', marginBottom: '0.25rem' }} className="line-clamp-2">{stripHtml(book.title)}</h4>
                       <p style={{ fontSize: '11px', color: '#475569', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 0.5rem' }}>{book.author}</p>
                     </div>
                   </div>
@@ -522,7 +779,7 @@ function App() {
                   </h2>
                   <p style={{ color: '#475569', fontWeight: 700, fontSize: '0.875rem' }}>책을 통해 더 넓은 세상을 만나는 곳입니다.</p>
                 </div>
-                <button style={{ padding: '0.625rem 1.25rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.75rem', fontSize: '0.8125rem', fontWeight: 800, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem', transition: 'all 0.2s ease', flexShrink: 0 }}>
+                <button onClick={() => setIsWritingPost(true)} style={{ padding: '0.625rem 1.25rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.75rem', fontSize: '0.8125rem', fontWeight: 800, color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem', transition: 'all 0.2s ease', flexShrink: 0 }}>
                   <Plus size={16} />
                   글쓰기
                 </button>
@@ -545,8 +802,8 @@ function App() {
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                          <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#475569', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-rose-400">
-                            <Heart size={14} />
+                          <button onClick={() => handleLikePost(post.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: post.liked ? '#fb7185' : '#475569', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-rose-400">
+                            <Heart size={14} fill={post.liked ? '#fb7185' : 'none'} />
                             {post.likes}
                           </button>
                           <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#475569', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-sky-400">
@@ -556,11 +813,11 @@ function App() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.75rem' }}>
                           <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px' }}>
-                            {post.author[0]}
+                            {(post.author || '?')[0]}
                           </div>
-                          <span style={{ color: '#94a3b8', fontWeight: 700 }}>{post.author}</span>
+                          <span style={{ color: '#94a3b8', fontWeight: 700 }}>{post.author || '익명'}</span>
                           <span style={{ color: '#1e293b' }}>·</span>
-                          <span style={{ color: '#334155', fontSize: '11px' }}>{new Date(post.date).toLocaleDateString('ko-KR')}</span>
+                          <span style={{ color: '#334155', fontSize: '11px' }}>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
                         </div>
                       </div>
                     </div>
@@ -569,6 +826,146 @@ function App() {
               </div>
             </motion.div>
           )}
+          {/* RECORDING TAB */}
+          {activeTab === 'recording' && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%' }}>
+              <div style={{ marginBottom: '2rem' }}>
+                <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.625rem', letterSpacing: '-0.03em' }}>
+                  <Mic style={{ color: '#818cf8' }} size={28} />
+                  녹음 분석
+                </h2>
+                <p style={{ color: '#475569', fontWeight: 700, fontSize: '0.875rem' }}>독서모임 녹음 파일을 업로드하면 AI가 토론 내용을 분석하고 다음 모임 질문을 생성합니다.</p>
+              </div>
+
+              {/* 업로드 영역 */}
+              <div
+                onClick={() => document.getElementById('recording-file-input').click()}
+                style={{ border: `2px dashed ${recordingFile ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '1.25rem', padding: '3rem 2rem', textAlign: 'center', cursor: 'pointer', background: recordingFile ? 'rgba(99,102,241,0.05)' : 'rgba(255,255,255,0.02)', transition: 'all 0.2s ease', marginBottom: '1.25rem' }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setRecordingFile(f); }}
+              >
+                <input
+                  id="recording-file-input"
+                  type="file"
+                  accept="audio/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => setRecordingFile(e.target.files[0] || null)}
+                />
+                {recordingFile ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                    <FileAudio size={36} style={{ color: '#818cf8' }} />
+                    <p style={{ fontWeight: 900, fontSize: '1rem', color: '#a5b4fc' }}>{recordingFile.name}</p>
+                    <p style={{ fontSize: '0.8125rem', color: '#475569' }}>{(recordingFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                    <button onClick={(e) => { e.stopPropagation(); setRecordingFile(null); setRecordingResult(null); }} style={{ fontSize: '11px', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>파일 변경</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                    <Upload size={36} style={{ color: '#334155' }} />
+                    <p style={{ fontWeight: 900, color: '#475569' }}>녹음 파일을 드래그하거나 클릭해서 업로드</p>
+                    <p style={{ fontSize: '0.8125rem', color: '#334155' }}>MP3, MP4, WAV, OGG, WebM 지원</p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleUploadRecording}
+                disabled={!recordingFile || isAnalyzingRecording}
+                className="premium-button disabled:opacity-40"
+                style={{ width: '100%', padding: '1rem', fontSize: '0.9375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginBottom: '2rem' }}
+              >
+                {isAnalyzingRecording ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>전사 및 분석 중... (수 분 소요될 수 있습니다)</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={18} />
+                    <span>분석 시작하기</span>
+                  </>
+                )}
+              </button>
+
+              {/* 분석 결과 */}
+              {recordingResult && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* 전사 텍스트 (화자 레이블 있으면 우선 표시) */}
+                  <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                      <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6366f1, #ec4899)', borderRadius: '9999px' }} />
+                      <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                        {recordingResult.labeled_transcript ? '화자별 전사 텍스트' : '전사 텍스트'}
+                      </h3>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', lineHeight: 1.75, color: '#64748b', maxHeight: '10rem', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                      {recordingResult.labeled_transcript || recordingResult.transcript}
+                    </p>
+                  </div>
+
+                  {/* 내 발언 (화자 식별 성공 시) */}
+                  {recordingResult.user_contributions?.length > 0 && (
+                    <div style={{ padding: '1.25rem', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                        <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #818cf8, #6366f1)', borderRadius: '9999px' }} />
+                        <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em' }}>내 발언</h3>
+                      </div>
+                      <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                        {recordingResult.user_contributions.map((line, i) => (
+                          <li key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                            <span style={{ flexShrink: 0, width: '1.25rem', height: '1.25rem', borderRadius: '9999px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 900, color: '#a5b4fc', marginTop: '2px' }}>{i + 1}</span>
+                            <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#c7d2fe', fontWeight: 500 }}>{line}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* 요약 */}
+                  <div style={{ padding: '1.25rem', background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                      <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6366f1, #ec4899)', borderRadius: '9999px' }} />
+                      <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em' }}>토론 요약</h3>
+                    </div>
+                    <p style={{ fontSize: '0.875rem', lineHeight: 1.7, color: '#94a3b8', fontWeight: 500 }}>{recordingResult.summary}</p>
+                  </div>
+
+                  {/* 핵심 주제 */}
+                  {recordingResult.key_topics?.length > 0 && (
+                    <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                        <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6366f1, #ec4899)', borderRadius: '9999px' }} />
+                        <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em' }}>핵심 주제</h3>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {recordingResult.key_topics.map((topic, i) => (
+                          <span key={i} style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '4px 12px', borderRadius: '9999px' }}>{topic}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 후속 질문 */}
+                  {recordingResult.followup_questions?.length > 0 && (
+                    <div style={{ padding: '1.25rem', background: 'rgba(236,72,153,0.04)', border: '1px solid rgba(236,72,153,0.15)', borderRadius: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                        <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #ec4899, #f59e0b)', borderRadius: '9999px' }} />
+                        <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#f9a8d4', textTransform: 'uppercase', letterSpacing: '0.12em' }}>다음 모임을 위한 질문</h3>
+                      </div>
+                      <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {recordingResult.followup_questions.map((q, i) => (
+                          <li key={i} style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                            <span style={{ flexShrink: 0, width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 900, color: '#f9a8d4', marginTop: '2px' }}>{i + 1}</span>
+                            <p style={{ fontSize: '0.875rem', lineHeight: 1.65, color: '#cbd5e1', fontWeight: 500 }}>{q}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </motion.div>
+          )}
+
         </main>
       </div>
 
@@ -778,11 +1175,228 @@ function App() {
                   <div id="club-map" style={{ width: '100%', height: '9rem', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0f172a' }} />
                 </div>
 
-                <button onClick={() => handleJoinClub(selectedClub.id)} className="premium-button" style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                <button
+                  onClick={() => handleJoinClub(selectedClub.id)}
+                  className="premium-button"
+                  style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: joinedClubs.has(selectedClub.id) ? 'rgba(255,255,255,0.06)' : undefined, boxShadow: joinedClubs.has(selectedClub.id) ? 'none' : undefined }}
+                >
                   <Users size={16} />
-                  <span>모임 참여하기</span>
+                  <span>{joinedClubs.has(selectedClub.id) ? '모임 탈퇴하기' : '모임 참여하기'}</span>
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* WRITE POST MODAL */}
+      <AnimatePresence>
+        {isWritingPost && (
+          <div className="modal-backdrop overflow-y-auto" onClick={() => setIsWritingPost(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              onClick={(e) => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ maxWidth: '520px' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.02em' }}>글쓰기</h2>
+                <button onClick={() => setIsWritingPost(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }} className="hover:bg-white\/10 hover:text-white"><X size={16} /></button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label className="form-label">제목</label>
+                  <input
+                    className="form-input"
+                    style={{ color: 'white' }}
+                    placeholder="어떤 이야기를 나누고 싶으신가요?"
+                    value={postForm.title}
+                    onChange={(e) => setPostForm({ ...postForm, title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">관련 책 (선택)</label>
+                  <input
+                    className="form-input"
+                    style={{ color: 'white' }}
+                    placeholder="관련 책 제목을 입력하세요"
+                    value={postForm.book_title}
+                    onChange={(e) => setPostForm({ ...postForm, book_title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">내용</label>
+                  <textarea
+                    className="form-input"
+                    style={{ height: '8rem', resize: 'none', color: 'white' }}
+                    placeholder="생각, 질문, 감상을 자유롭게 나눠보세요."
+                    value={postForm.content}
+                    onChange={(e) => setPostForm({ ...postForm, content: e.target.value })}
+                  />
+                </div>
+                <button onClick={handleWritePost} disabled={isSubmittingPost} className="premium-button disabled:opacity-50" style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                  {isSubmittingPost ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+                  <span>게시하기</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* TENDENCY MODAL */}
+      <AnimatePresence>
+        {showTendencyModal && tendencyResult && (
+          <div className="modal-backdrop overflow-y-auto" onClick={() => setShowTendencyModal(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ maxWidth: '520px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                    <Sparkles size={13} style={{ color: '#818cf8' }} />
+                    <span style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>AI 독서 성향 분석</span>
+                  </div>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{user?.name}님의 독서 패턴</h2>
+                </div>
+                <button onClick={() => setShowTendencyModal(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }} className="hover:bg-white\/10 hover:text-white"><X size={16} /></button>
+              </div>
+
+              {tendencyResult.qa_count === 0 ? (
+                <p style={{ color: '#475569', fontSize: '0.875rem', lineHeight: 1.7, textAlign: 'center', padding: '2rem 0' }}>{tendencyResult.tendency_summary}</p>
+              ) : (
+                <>
+                  <div style={{ padding: '1rem', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '0.875rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
+                      <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6366f1, #ec4899)', borderRadius: '9999px' }} />
+                      <span style={{ fontSize: '9px', fontWeight: 900, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em' }}>성향 요약</span>
+                    </div>
+                    <p style={{ fontSize: '0.875rem', lineHeight: 1.7, color: '#94a3b8' }}>{tendencyResult.tendency_summary}</p>
+                  </div>
+
+                  {tendencyResult.reading_lenses?.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: '9px', fontWeight: 900, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.625rem' }}>자주 쓰는 관점</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {tendencyResult.reading_lenses.map((lens, i) => (
+                          <span key={i} style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#818cf8', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '4px 12px', borderRadius: '9999px' }}>{lens}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    {tendencyResult.strong_areas?.length > 0 && (
+                      <div style={{ padding: '0.875rem', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '0.875rem' }}>
+                        <p style={{ fontSize: '9px', fontWeight: 900, color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>잘하는 영역</p>
+                        {tendencyResult.strong_areas.map((a, i) => (
+                          <p key={i} style={{ fontSize: '0.8125rem', color: '#94a3b8', lineHeight: 1.6, fontWeight: 500 }}>· {a}</p>
+                        ))}
+                      </div>
+                    )}
+                    {tendencyResult.growth_areas?.length > 0 && (
+                      <div style={{ padding: '0.875rem', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '0.875rem' }}>
+                        <p style={{ fontSize: '9px', fontWeight: 900, color: '#fcd34d', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>성장 가능 영역</p>
+                        {tendencyResult.growth_areas.map((a, i) => (
+                          <p key={i} style={{ fontSize: '0.8125rem', color: '#94a3b8', lineHeight: 1.6, fontWeight: 500 }}>· {a}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <p style={{ fontSize: '10px', color: '#334155', textAlign: 'right' }}>분석 기반: Q&A {tendencyResult.qa_count}개</p>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CONVERSATION Q&A MODAL */}
+      <AnimatePresence>
+        {isConversing && selectedBook && (
+          <div className="modal-backdrop overflow-y-auto" onClick={() => setIsConversing(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 32 }}
+              onClick={(e) => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                    <MessageCircle size={13} style={{ color: '#f9a8d4' }} />
+                    <span style={{ fontSize: '9px', color: '#f9a8d4', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>AI 토론 진행</span>
+                  </div>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{stripHtml(selectedBook.title)}</h2>
+                </div>
+                <button onClick={() => setIsConversing(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }} className="hover:bg-white\/10 hover:text-white"><X size={16} /></button>
+              </div>
+
+              {/* Q&A turns */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                {sessionQA.map((turn, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                    {/* Question bubble */}
+                    <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                      <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Sparkles size={10} color="white" />
+                      </div>
+                      <div style={{ flex: 1, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '0 0.875rem 0.875rem 0.875rem', padding: '0.75rem 1rem' }}>
+                        <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#cbd5e1', fontWeight: 500 }}>{turn.question}</p>
+                      </div>
+                    </div>
+                    {/* Answer bubble */}
+                    {turn.answer && (
+                      <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
+                        <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '9px', fontWeight: 900, color: '#94a3b8' }}>
+                          {(user?.name || '나')[0]}
+                        </div>
+                        <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '0.875rem 0 0.875rem 0.875rem', padding: '0.75rem 1rem' }}>
+                          <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#94a3b8', fontWeight: 500 }}>{turn.answer}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {isSubmittingAnswer && (
+                  <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', paddingLeft: '2.375rem' }}>
+                    <Loader2 size={14} className="animate-spin" style={{ color: '#818cf8' }} />
+                    <span style={{ fontSize: '11px', color: '#475569', fontWeight: 700 }}>다음 질문 생성 중...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Answer input */}
+              {sessionQA.length > 0 && sessionQA[sessionQA.length - 1].answer === null && !isSubmittingAnswer && (
+                <div style={{ display: 'flex', gap: '0.625rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <textarea
+                    value={conversationInput}
+                    onChange={(e) => setConversationInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitAnswer(); } }}
+                    placeholder="답변을 입력하세요... (Shift+Enter: 줄바꿈)"
+                    className="form-input"
+                    style={{ flex: 1, height: '5rem', resize: 'none', color: 'white', fontSize: '0.8125rem' }}
+                  />
+                  <button
+                    onClick={handleSubmitAnswer}
+                    disabled={!conversationInput.trim()}
+                    style={{ alignSelf: 'flex-end', width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem', background: conversationInput.trim() ? 'linear-gradient(135deg, #6366f1, #ec4899)' : 'rgba(255,255,255,0.05)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: conversationInput.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s ease', flexShrink: 0 }}
+                  >
+                    <Send size={15} color="white" />
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}
@@ -818,7 +1432,7 @@ function App() {
                       <Sparkles size={11} style={{ color: '#818cf8' }} />
                       <span style={{ fontSize: '9px', color: '#818cf8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>AI Insight</span>
                     </div>
-                    <h2 style={{ fontSize: '1.05rem', fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '0.375rem' }} dangerouslySetInnerHTML={{ __html: selectedBook.title }} />
+                    <h2 style={{ fontSize: '1.05rem', fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '0.375rem' }}>{stripHtml(selectedBook.title)}</h2>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{selectedBook.author}</span>
                       <span style={{ width: '3px', height: '3px', borderRadius: '9999px', background: 'rgba(255,255,255,0.12)', display: 'inline-block' }} />
@@ -844,12 +1458,55 @@ function App() {
                   )}
                 </div>
 
+                {!isAnalyzing && questions.thematic.length > 0 && (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {/* 주제 기반 질문 */}
+                    <div style={{ padding: '1rem', background: 'rgba(99,102,241,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(99,102,241,0.1)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6366f1, #ec4899)', borderRadius: '9999px' }} />
+                        <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.12em' }}>토론 질문</h3>
+                      </div>
+                      <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                        {questions.thematic.map((q, i) => (
+                          <li key={i} style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                            <span style={{ flexShrink: 0, width: '1.25rem', height: '1.25rem', borderRadius: '9999px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 900, color: '#818cf8', marginTop: '1px' }}>{i + 1}</span>
+                            <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#cbd5e1', fontWeight: 500 }}>{q}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* 관점 전환 질문 */}
+                    {questions.perspective_shift.length > 0 && (
+                      <div style={{ padding: '1rem', background: 'rgba(236,72,153,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(236,72,153,0.15)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                          <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #ec4899, #f59e0b)', borderRadius: '9999px' }} />
+                          <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#f9a8d4', textTransform: 'uppercase', letterSpacing: '0.12em' }}>관점 전환</h3>
+                        </div>
+                        <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                          {questions.perspective_shift.map((item, i) => (
+                            <li key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <span style={{ fontSize: '9px', fontWeight: 900, color: '#f9a8d4', background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.2)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block', width: 'fit-content', letterSpacing: '0.05em' }}>{item.perspective}</span>
+                              <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#cbd5e1', fontWeight: 500 }}>{item.question}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
                 <div style={{ display: 'flex', gap: '0.625rem' }}>
                   <button onClick={() => handleRegisterBook(selectedBook)} disabled={isSaving} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                     {isSaving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}
                     <span>내 서재에 기록하기</span>
                   </button>
-                  <button style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '0.875rem', fontWeight: 800, fontSize: '0.8125rem', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap' }} className="hover:bg-white\/10">상세보기</button>
+                  {!isAnalyzing && questions.thematic.length > 0 && (
+                    <button onClick={handleStartDiscussion} style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(236,72,153,0.12)', border: '1px solid rgba(236,72,153,0.25)', borderRadius: '0.875rem', color: '#f9a8d4', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                      <MessageCircle size={15} />
+                      <span>토론 시작하기</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>

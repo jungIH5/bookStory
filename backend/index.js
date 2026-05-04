@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const Anthropic = require('@anthropic-ai/sdk');
 require('dotenv').config();
 
 const app = express();
@@ -92,6 +93,49 @@ const initDb = async () => {
       console.log('Dummy clubs seeded!');
     }
 
+    // Posts (커뮤니티 게시글)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS posts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        title VARCHAR(300) NOT NULL,
+        content TEXT NOT NULL,
+        book_title VARCHAR(300),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Post Likes
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS post_likes (
+        user_id INTEGER NOT NULL,
+        post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+        PRIMARY KEY (user_id, post_id)
+      )
+    `);
+
+    // Comments
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS comments (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Club Members
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS club_members (
+        id SERIAL PRIMARY KEY,
+        club_id INTEGER REFERENCES clubs(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(club_id, user_id)
+      )
+    `);
+
     console.log('Database tables initialized!');
   } catch (error) {
     console.error('Database initialization error:', error);
@@ -139,10 +183,10 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// Naver Credentials
+// API Credentials
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Naver Book Search Proxy
 app.get('/api/books/search', async (req, res) => {
@@ -165,7 +209,7 @@ app.get('/api/books/search', async (req, res) => {
   }
 });
 
-// Book Analysis with Gemini and Naver Blog
+// Book Analysis with Claude and Naver Blog
 app.get('/api/books/analyze', async (req, res) => {
   const { title, author } = req.query;
   if (!title) return res.status(400).json({ error: 'Book title is required' });
@@ -179,36 +223,54 @@ app.get('/api/books/analyze', async (req, res) => {
         'X-Naver-Client-Secret': NAVER_CLIENT_SECRET
       }
     });
-    
     const blogData = await blogResponse.json();
     const reviews = blogData.items?.map(item => `- ${item.title}: ${item.description}`).join('\n') || '서평 정보를 찾을 수 없습니다.';
 
-    // 2. Analyze with Gemini
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-    const prompt = `책: ${title} (${author || '작자미상'})\n\n블로그 서평 자료:\n${reviews}\n\n위 자료를 바탕으로 다음을 수행해줘:\n1. 이 책이 독자에게 주는 핵심적인 의미, 가치, 주제 의식을 3~4문장으로 깊이 있게 분석해줘.\n2. 이 책의 대략적인 총 페이지 수(정수 숫자만)를 추정해줘. (정보가 없다면 평균적인 250으로 답변)\n\n답변 형식:\n분석: [분석 내용]\n페이지: [숫자]`;
+    // 2. Analyze with Claude
+    const prompt = `당신은 독서 토론 전문가입니다.
 
-    const geminiResponse = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+책: ${title} (${author || '작자미상'})
+
+블로그 서평 자료:
+${reviews}
+
+위 정보를 바탕으로 아래 JSON 형식으로 정확히 응답해주세요. JSON 외에 다른 텍스트는 포함하지 마세요.
+
+{
+  "analysis": "이 책이 독자에게 주는 핵심 의미, 가치, 주제 의식을 3~4문장으로 깊이 있게 분석",
+  "pages": 예상 페이지 수 숫자 (정보 없으면 250),
+  "thematic_questions": [
+    "책의 핵심 개념이나 철학적 논점을 탐구하는 토론 질문",
+    "저자의 관점이나 의도에 대해 묻는 질문",
+    "독자 자신의 경험과 삶을 이 책과 연결하는 질문"
+  ],
+  "shift_questions": [
+    {"perspective": "적용한 관점 (예: 경제학적 관점)", "question": "그 관점에서 바라본 예상치 못한 시각의 질문"},
+    {"perspective": "또 다른 관점 (예: 역사적 관점)", "question": "그 관점에서 바라본 질문"}
+  ]
+}`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }]
     });
-    
-    const geminiData = await geminiResponse.json();
-    
-    if (geminiData.candidates && geminiData.candidates[0]?.content?.parts?.[0]?.text) {
-      const fullResponse = geminiData.candidates[0].content.parts[0].text;
-      const analysisMatch = fullResponse.match(/분석: ([\s\S]*?)(?=\n페이지:|$)/);
-      const pagesMatch = fullResponse.match(/페이지: (\d+)/);
-      
-      const analysis = analysisMatch ? analysisMatch[1].trim() : fullResponse;
-      const pages = pagesMatch ? parseInt(pagesMatch[1]) : 250;
-      
-      res.json({ analysis, pages });
-    } else {
-      res.json({ analysis: 'AI 분석 중 예기치 못한 응답을 받았습니다. 잠시 후 다시 시도해주세요.', pages: 250 });
+
+    let responseText = message.content[0].text.trim();
+    // 마크다운 코드블록 감싸진 경우 제거
+    if (responseText.startsWith('```')) {
+      responseText = responseText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }
+
+    const parsed = JSON.parse(responseText);
+    res.json({
+      analysis: parsed.analysis || '',
+      pages: parsed.pages || 250,
+      questions: {
+        thematic: parsed.thematic_questions || [],
+        perspective_shift: parsed.shift_questions || []
+      }
+    });
   } catch (error) {
     console.error('Analysis Error:', error);
     res.status(500).json({ error: 'Failed to analyze book' });
@@ -244,46 +306,120 @@ app.get('/api/books/read', async (req, res) => {
   }
 });
 
-// Basic placeholders for the features
+// Community Posts
 app.get('/api/community/posts', async (req, res) => {
-  res.json([
-    { 
-      id: 1, 
-      title: '2024년 최고의 책 추천해주세요!', 
-      content: '올해 읽은 책 중에 가장 감명 깊었던 책이 무엇인가요? 서로 공유해봐요.', 
-      author: '책순이', 
-      date: new Date().toISOString(),
-      comments: 12,
-      likes: 45
-    },
-    { 
-      id: 2, 
-      title: '서울 지역 독서 모임 모집합니다 (주말)', 
-      content: '매주 토요일 오후 강남역 인근 카페에서 함께 책 읽고 토론할 분들 구해요.', 
-      author: '독서왕', 
-      date: new Date(Date.now() - 86400000).toISOString(),
-      comments: 5,
-      likes: 8
-    },
-    { 
-      id: 3, 
-      title: '제미나이 AI로 책 분석해보니 신기하네요', 
-      content: 'bookStory 앱으로 분석해보니까 제가 미처 생각지 못한 부분까지 알려줘서 좋네요.', 
-      author: 'AI러버', 
-      date: new Date(Date.now() - 172800000).toISOString(),
-      comments: 24,
-      likes: 120
-    }
-  ]);
+  const userId = parseInt(req.query.user_id) || 0;
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        p.*,
+        COALESCE(u.name, '익명') AS author,
+        COUNT(DISTINCT pl.user_id)::int AS likes,
+        COUNT(DISTINCT c.id)::int AS comments,
+        EXISTS(SELECT 1 FROM post_likes WHERE user_id = $1 AND post_id = p.id) AS liked
+      FROM posts p
+      LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN post_likes pl ON pl.post_id = p.id
+      LEFT JOIN comments c ON c.post_id = p.id
+      GROUP BY p.id, u.name
+      ORDER BY p.created_at DESC
+    `, [userId]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/api/clubs', async (req, res) => {
-  res.json([
-    { id: 1, name: '강남구 심야 독서단', region: '강남구', memberCount: 15, image: 'https://images.unsplash.com/photo-1529007196863-d07650a3f0ea?q=80&w=2070&auto=format&fit=crop', description: '잠 못 드는 밤, 책과 함께하는 고요한 시간.' },
-    { id: 2, name: '마포구 북 피크닉', region: '마포구', memberCount: 24, image: 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?q=80&w=2070&auto=format&fit=crop', description: '한강 공원에서 즐기는 여유로운 주말 독서 시간.' },
-    { id: 3, name: '관악 소모임 북큐레이터', region: '관악구', memberCount: 8, image: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2048&auto=format&fit=crop', description: '매달 새로운 테마로 책을 큐레이션하고 소통합니다.' },
-    { id: 4, name: '송파 IT 직장인 서평단', region: '송파구', memberCount: 12, image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop', description: '커리어와 지식 성장을 목표로 하는 직장인들의 모임.' }
-  ]);
+app.post('/api/community/posts', async (req, res) => {
+  const { user_id, title, content, book_title } = req.body;
+  if (!title || !content) return res.status(400).json({ error: '제목과 내용을 입력해주세요.' });
+  try {
+    const { rows } = await pool.query(
+      'INSERT INTO posts (user_id, title, content, book_title) VALUES ($1, $2, $3, $4) RETURNING *',
+      [user_id || null, title, content, book_title || null]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/community/posts/:id/like', async (req, res) => {
+  const { user_id } = req.body;
+  const postId = req.params.id;
+  if (!user_id) return res.status(400).json({ error: '로그인이 필요합니다.' });
+  try {
+    const { rows } = await pool.query(
+      'SELECT 1 FROM post_likes WHERE user_id = $1 AND post_id = $2',
+      [user_id, postId]
+    );
+    if (rows.length > 0) {
+      await pool.query('DELETE FROM post_likes WHERE user_id = $1 AND post_id = $2', [user_id, postId]);
+      res.json({ liked: false });
+    } else {
+      await pool.query('INSERT INTO post_likes (user_id, post_id) VALUES ($1, $2)', [user_id, postId]);
+      res.json({ liked: true });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// 내가 참여한 모임 ID 목록
+app.get('/api/clubs/joined', async (req, res) => {
+  const userId = req.query.user_id;
+  if (!userId) return res.json([]);
+  try {
+    const { rows } = await pool.query(
+      'SELECT club_id FROM club_members WHERE user_id = $1',
+      [userId]
+    );
+    res.json(rows.map(r => r.club_id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 모임 참여
+app.post('/api/clubs/:id/join', async (req, res) => {
+  const { user_id } = req.body;
+  const clubId = req.params.id;
+  if (!user_id) return res.status(400).json({ error: '로그인이 필요합니다.' });
+  try {
+    const { rowCount } = await pool.query(
+      'INSERT INTO club_members (club_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [clubId, user_id]
+    );
+    if (rowCount > 0) {
+      await pool.query('UPDATE clubs SET member_count = member_count + 1 WHERE id = $1', [clubId]);
+    }
+    res.json({ joined: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 모임 탈퇴
+app.delete('/api/clubs/:id/leave', async (req, res) => {
+  const { user_id } = req.body;
+  const clubId = req.params.id;
+  if (!user_id) return res.status(400).json({ error: '로그인이 필요합니다.' });
+  try {
+    const { rowCount } = await pool.query(
+      'DELETE FROM club_members WHERE club_id = $1 AND user_id = $2',
+      [clubId, user_id]
+    );
+    if (rowCount > 0) {
+      await pool.query(
+        'UPDATE clubs SET member_count = GREATEST(member_count - 1, 0) WHERE id = $1',
+        [clubId]
+      );
+    }
+    res.json({ left: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(port, () => {

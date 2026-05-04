@@ -13,21 +13,20 @@ services:
     environment:
       - VITE_API_URL=http://localhost:5001
     depends_on:
-      - backend
+      - agent
 
-  backend:
+  agent:
     build:
-      context: ./backend
+      context: ./agent
       dockerfile: Dockerfile
     ports:
       - "5001:5001"
     volumes:
-      - ./backend:/app
-      - /app/node_modules
+      - ./agent:/app
     env_file:
-      - ./backend/.env
-    environment:
-      - NODE_ENV=development
+      - ./backend/.env   # 기존 .env 파일 공유 (키 한 곳에서 관리)
+
+# (Node.js backend는 agent/로 대체됨. 파일은 backend/ 에 보존)
 
 # (Local DB service removed to use Supabase instead)
 #  db:
