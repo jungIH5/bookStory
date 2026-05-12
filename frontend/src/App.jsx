@@ -189,6 +189,28 @@ function App() {
     } catch (error) { alert('가입 중 오류가 발생했습니다.'); }
   };
 
+  const handleTestLogin = async () => {
+    const testData = { name: '테스트유저', gender: '기타', age: 20, location: '서울 강남구', lat: 37.4979, lng: 127.0276 };
+    try {
+      const response = await fetch(`${API_URL}/api/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testData)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setUser(data);
+        localStorage.setItem('bookstory_user', JSON.stringify(data));
+        window.location.reload();
+      }
+    } catch (error) {
+      const fallback = { id: 'test-' + Date.now(), ...testData };
+      setUser(fallback);
+      localStorage.setItem('bookstory_user', JSON.stringify(fallback));
+      window.location.reload();
+    }
+  };
+
   const handleRegisterBook = async (book) => {
     setIsSaving(true);
     try {
@@ -1059,6 +1081,17 @@ function App() {
                 <button onClick={handleRegisterUser} className="premium-button" style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginTop: '0.5rem' }}>
                   <span>bookStory 시작하기</span>
                   <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+                <button
+                  onClick={handleTestLogin}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0', transition: 'color 0.2s ease' }}
+                  onMouseEnter={(e) => e.target.style.color = '#64748b'}
+                  onMouseLeave={(e) => e.target.style.color = '#334155'}
+                >
+                  테스트 유저로 진입 →
                 </button>
               </div>
             </motion.div>

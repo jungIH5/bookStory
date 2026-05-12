@@ -2,7 +2,7 @@
   "name": "bookstory-backend",
   "version": "1.0.0",
   "description": "Backend for bookStory platform",
-  "main": "index.js",
+  "main": "index.js",z
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon -L index.js"
