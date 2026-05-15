@@ -1,10 +1,18 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { User } from '../services/api';
 
 const USER_KEY = 'bookstory_user';
 const TOKEN_KEY = 'bookstory_token';
+
+const secureGet = (key: string) =>
+  Platform.OS === 'web' ? Promise.resolve(localStorage.getItem(key)) : SecureStore.getItemAsync(key);
+const secureSet = (key: string, value: string) =>
+  Platform.OS === 'web' ? Promise.resolve(localStorage.setItem(key, value)) : SecureStore.setItemAsync(key, value);
+const secureDelete = (key: string) =>
+  Platform.OS === 'web' ? Promise.resolve(localStorage.removeItem(key)) : SecureStore.deleteItemAsync(key);
 
 interface UserStore {
   user: User | null;
@@ -24,7 +32,7 @@ export const useUserStore = create<UserStore>((set) => ({
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
     } else {
       await AsyncStorage.removeItem(USER_KEY);
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await secureDelete(TOKEN_KEY);
       set({ token: null });
     }
   },
@@ -32,16 +40,16 @@ export const useUserStore = create<UserStore>((set) => ({
   setToken: async (token) => {
     set({ token });
     if (token) {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
+      await secureSet(TOKEN_KEY, token);
     } else {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await secureDelete(TOKEN_KEY);
     }
   },
 
   loadUser: async () => {
     const [raw, token] = await Promise.all([
       AsyncStorage.getItem(USER_KEY),
-      SecureStore.getItemAsync(TOKEN_KEY),
+      secureGet(TOKEN_KEY),
     ]);
     if (raw) set({ user: JSON.parse(raw), token: token ?? null });
   },

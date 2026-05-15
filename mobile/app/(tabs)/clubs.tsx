@@ -5,7 +5,7 @@ import {
   RefreshControl, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { MotiView } from 'moti';
-import MapView, { Marker } from 'react-native-maps';
+// import MapView, { Marker } from 'react-native-maps';
 import { Users, MapPin, Plus, X, ChevronRight, WifiOff, RefreshCw } from 'lucide-react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { Colors, Spacing, FontSize, BorderRadius, Shadow } from '@/constants/theme';
@@ -229,27 +229,7 @@ function ClubDetailModal({ club, isJoined, onClose, onJoin }: {
         </View>
         <Text style={styles.detailDescription}>{club.description}</Text>
 
-        {club.lat && club.lng && (
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: parseFloat(String(club.lat)),
-              longitude: parseFloat(String(club.lng)),
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-          >
-            <Marker
-              coordinate={{
-                latitude: parseFloat(String(club.lat)),
-                longitude: parseFloat(String(club.lng)),
-              }}
-              title={club.name}
-            />
-          </MapView>
-        )}
+        {/* MapView 임시 비활성화 (웹 미지원) */}
 
         <View style={styles.detailStats}>
           <View style={styles.statItem}>
