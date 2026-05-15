@@ -3,8 +3,9 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   Alert, ActivityIndicator, Pressable, Platform,
 } from 'react-native';
-import { Mic, Square, Upload, FileAudio, X, Sparkles } from 'lucide-react-native';
+import { Mic, Square, Upload, FileAudio, X, Sparkles, WifiOff } from 'lucide-react-native';
 import { MotiView } from 'moti';
+import NetInfo from '@react-native-community/netinfo';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { Colors, Spacing, FontSize, BorderRadius, Shadow } from '@/constants/theme';
@@ -27,12 +28,16 @@ export default function RecordingScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<RecordingResult | null>(null);
 
+  const [isOffline, setIsOffline] = useState(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     Audio.requestPermissionsAsync();
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOffline(!(state.isConnected && state.isInternetReachable !== false));
+    });
+    return () => { if (timerRef.current) clearInterval(timerRef.current); unsubscribe(); };
   }, []);
 
   const startRecording = async () => {
@@ -106,6 +111,16 @@ export default function RecordingScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {isOffline && (
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          style={styles.offlineBanner}
+        >
+          <WifiOff size={14} color="white" />
+          <Text style={styles.offlineText}>인터넷 연결이 없습니다. 분석 기능이 제한됩니다.</Text>
+        </MotiView>
+      )}
       <Text style={styles.subtitle}>독서모임 대화를 녹음하거나 파일을 업로드해 AI가 분석합니다.</Text>
 
       {/* 녹음 버튼 */}
@@ -279,6 +294,13 @@ function ResultSection({ title, children }: { title: string; children: React.Rea
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
+
+  offlineBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#374151', borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md, paddingVertical: 10,
+  },
+  offlineText: { flex: 1, fontSize: FontSize.xs, color: 'white', fontWeight: '600' },
 
   subtitle: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: '600', lineHeight: 20 },
 

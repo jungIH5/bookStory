@@ -6,7 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { TrendingUp, BookOpen, ArrowLeft } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, BorderRadius, Shadow } from '@/constants/theme';
-import { tendencyApi, Book } from '@/services/api';
+import { tendencyApi, BookRecommendation } from '@/services/api';
 import { useUserStore } from '@/store/useUserStore';
 
 const stripHtml = (str?: string) => str?.replace(/<\/?[^>]+(>|$)/g, '') ?? '';
@@ -14,14 +14,14 @@ const stripHtml = (str?: string) => str?.replace(/<\/?[^>]+(>|$)/g, '') ?? '';
 export default function RecommendationsScreen() {
   const router = useRouter();
   const { user } = useUserStore();
-  const [recommendations, setRecommendations] = useState<(Book & { reason?: string })[]>([]);
+  const [recommendations, setRecommendations] = useState<BookRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!user?.id) { setIsLoading(false); setError('로그인이 필요합니다.'); return; }
     tendencyApi.getRecommendations(user.id)
-      .then((data) => setRecommendations(data.recommendations as any || []))
+      .then((data) => setRecommendations(data.recommendations || []))
       .catch(() => setError('추천 데이터가 부족합니다. 더 많은 책을 읽고 Q&A를 진행해주세요.'))
       .finally(() => setIsLoading(false));
   }, [user?.id]);
@@ -63,7 +63,7 @@ export default function RecommendationsScreen() {
   );
 }
 
-function RecommendCard({ book, rank }: { book: Book & { reason?: string }; rank: number }) {
+function RecommendCard({ book, rank }: { book: BookRecommendation; rank: number }) {
   return (
     <View style={styles.card}>
       <View style={styles.rankBadge}>

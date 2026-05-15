@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Image, StyleSheet,
   Modal, ScrollView, Pressable, Alert, TextInput, ActivityIndicator,
-  RefreshControl, Platform,
+  RefreshControl, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { MotiView } from 'moti';
 import MapView, { Marker } from 'react-native-maps';
@@ -23,29 +23,32 @@ export default function ClubsScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const fetchErrorRef = useRef(false);
+
+  const fetchData = useCallback(async () => {
+    fetchErrorRef.current = false;
+    setFetchError(false);
+    try {
+      const data = await clubsApi.getAll();
+      setClubs(data);
+      if (user?.id) {
+        const joined = await clubsApi.getJoined();
+        setJoinedClubs(joined.map((c) => c.id));
+      }
+    } catch {
+      fetchErrorRef.current = true;
+      setFetchError(true);
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchData();
     const unsubscribe = NetInfo.addEventListener((state) => {
       const offline = !(state.isConnected && state.isInternetReachable !== false);
       setIsOffline(offline);
-      if (!offline && fetchError) fetchData();
+      if (!offline && fetchErrorRef.current) fetchData();
     });
     return unsubscribe;
-  }, [user]);
-
-  const fetchData = useCallback(async () => {
-    setFetchError(false);
-    try {
-      const data = await clubsApi.getAll();
-      setClubs(data);
-      if (user?.id) {
-        const joined = await clubsApi.getJoined(user.id);
-        setJoinedClubs(joined.map((c) => c.id));
-      }
-    } catch {
-      setFetchError(true);
-    }
   }, [user]);
 
   const onRefresh = async () => {
@@ -294,6 +297,7 @@ function CreateClubModal({ onClose, onCreated }: { onClose: () => void; onCreate
   };
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <View style={[styles.modal, { flex: 1 }]}>
       <View style={styles.modalHeader}>
         <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -302,7 +306,7 @@ function CreateClubModal({ onClose, onCreated }: { onClose: () => void; onCreate
         <Text style={styles.modalTitle}>새 독서모임 만들기</Text>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.modalContent, { gap: Spacing.md }]}>
+      <ScrollView contentContainerStyle={[styles.modalContent, { gap: Spacing.md }]} keyboardShouldPersistTaps="handled">
         <FormField label="모임 이름" placeholder="모임 이름을 입력하세요" value={form.name} onChangeText={(v) => setForm({ ...form, name: v })} />
         <FormField label="위치" placeholder="활동 지역 (예: 서울 강남구)" value={form.location} onChangeText={(v) => setForm({ ...form, location: v })} />
         <FormField label="소개" placeholder="모임 소개를 입력하세요" value={form.description} onChangeText={(v) => setForm({ ...form, description: v })} multiline />
@@ -329,6 +333,7 @@ function CreateClubModal({ onClose, onCreated }: { onClose: () => void; onCreate
         </TouchableOpacity>
       </ScrollView>
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 

@@ -1,10 +1,25 @@
+import { useUserStore } from '@/store/useUserStore';
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = useUserStore.getState().token;
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options?.headers,
+    },
     ...options,
   });
+  if (response.status === 401) {
+    // 토큰 만료 — 로그아웃 처리
+    useUserStore.getState().setUser(null);
+    throw new Error('unauthorized');
+  }
+  if (response.status === 429) {
+    throw new Error('rate_limited');
+  }
   if (!response.ok) throw new Error(`API error: ${response.status}`);
   return response.json();
 }
@@ -26,14 +41,30 @@ export const booksApi = {
 
 // Users
 export const usersApi = {
-  create: (data: UserForm) =>
-    request<User>('/api/users', { method: 'POST', body: JSON.stringify(data) }),
+  create: async (data: UserForm): Promise<User> => {
+    const result = await request<{ user: User; token: string }>('/api/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    await useUserStore.getState().setToken(result.token);
+    return result.user;
+  },
+
+  refreshToken: async (userId: number): Promise<void> => {
+    const result = await request<{ token: string }>('/api/auth/token', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+    await useUserStore.getState().setToken(result.token);
+  },
 
   uploadVoiceSample: async (userId: number, uri: string) => {
+    const token = useUserStore.getState().token;
     const formData = new FormData();
     formData.append('file', { uri, name: 'voice.m4a', type: 'audio/m4a' } as any);
     const response = await fetch(`${API_URL}/api/users/${userId}/voice-sample`, {
       method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     });
     if (!response.ok) throw new Error('Upload failed');
@@ -48,8 +79,8 @@ export const clubsApi = {
   create: (data: Partial<Club>) =>
     request<Club>('/api/clubs', { method: 'POST', body: JSON.stringify(data) }),
 
-  getJoined: (userId: number) =>
-    request<Club[]>(`/api/clubs/joined?user_id=${userId}`),
+  getJoined: () =>
+    request<Club[]>('/api/clubs/joined'),
 
   join: (clubId: number) =>
     request(`/api/clubs/${clubId}/join`, { method: 'POST' }),
@@ -75,11 +106,24 @@ export const communityApi = {
 // Recordings
 export const recordingsApi = {
   upload: async (uri: string, userId?: number, clubId?: number) => {
+    const token = useUserStore.getState().token;
+    const ext = uri.split('.').pop()?.toLowerCase() ?? 'm4a';
+    const mimeMap: Record<string, string> = {
+      mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/m4a',
+      ogg: 'audio/ogg', webm: 'audio/webm',
+    };
+    const mimeType = mimeMap[ext] ?? 'audio/m4a';
+
     const formData = new FormData();
-    formData.append('file', { uri, name: 'recording.m4a', type: 'audio/m4a' } as any);
+    formData.append('file', { uri, name: `recording.${ext}`, type: mimeType } as any);
     if (userId) formData.append('user_id', String(userId));
     if (clubId) formData.append('club_id', String(clubId));
-    const response = await fetch(`${API_URL}/api/recordings`, { method: 'POST', body: formData });
+
+    const response = await fetch(`${API_URL}/api/recordings`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
     if (!response.ok) throw new Error('Upload failed');
     return response.json();
   },
@@ -90,10 +134,16 @@ export const recordingsApi = {
 // Sessions (Q&A)
 export const sessionsApi = {
   create: (bookTitle: string, analysis: string) =>
-    request<Session>('/api/sessions', { method: 'POST', body: JSON.stringify({ book_title: bookTitle, analysis }) }),
+    request<Session>('/api/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ book_title: bookTitle, analysis }),
+    }),
 
   answer: (sessionId: number, answer: string) =>
-    request<SessionQA>(`/api/sessions/${sessionId}/answer`, { method: 'POST', body: JSON.stringify({ answer }) }),
+    request<{ question: string }>(`/api/sessions/${sessionId}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ answer }),
+    }),
 
   get: (sessionId: number) =>
     request<Session>(`/api/sessions/${sessionId}`),
@@ -102,10 +152,12 @@ export const sessionsApi = {
 // Tendency & Recommendations
 export const tendencyApi = {
   get: (userId: number) => request<Tendency>(`/api/tendency/${userId}`),
-  getRecommendations: (userId: number) => request<{ recommendations: Book[] }>(`/api/recommendations/${userId}`),
+  getRecommendations: (userId: number) =>
+    request<{ recommendations: BookRecommendation[] }>(`/api/recommendations/${userId}`),
 };
 
-// Types
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 export interface Book {
   title: string;
   author: string;
@@ -113,6 +165,10 @@ export interface Book {
   isbn?: string;
   description?: string;
   pubdate?: string;
+}
+
+export interface BookRecommendation extends Book {
+  reason?: string;
 }
 
 export interface ReadBook extends Book {

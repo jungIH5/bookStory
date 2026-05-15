@@ -216,7 +216,13 @@ export default function SearchScreen() {
 function BookCard({ book, onPress }: { book: Book; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.bookCard} onPress={onPress} activeOpacity={0.75}>
-      <Image source={{ uri: book.image }} style={styles.bookCover} />
+      {book.image ? (
+        <Image source={{ uri: book.image }} style={styles.bookCover} />
+      ) : (
+        <View style={[styles.bookCover, styles.bookCoverPlaceholder]}>
+          <BookOpen size={20} color={Colors.textMuted} />
+        </View>
+      )}
       <View style={styles.bookInfo}>
         <Text style={styles.bookTitle} numberOfLines={2}>{stripHtml(book.title)}</Text>
         <Text style={styles.bookAuthor}>{book.author}</Text>
@@ -266,7 +272,13 @@ function BookAnalysisModal(props: AnalysisModalProps) {
       <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
         {/* 책 정보 */}
         <View style={styles.bookHeader}>
-          <Image source={{ uri: book.image }} style={styles.modalCover} />
+          {book.image ? (
+            <Image source={{ uri: book.image }} style={styles.modalCover} />
+          ) : (
+            <View style={[styles.modalCover, styles.bookCoverPlaceholder]}>
+              <BookOpen size={28} color={Colors.textMuted} />
+            </View>
+          )}
           <View style={styles.modalBookInfo}>
             <Text style={styles.modalBookTitle} numberOfLines={2}>{stripHtml(book.title)}</Text>
             <Text style={styles.modalBookAuthor}>{book.author}</Text>
@@ -429,6 +441,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   bookCover: { width: 56, height: 80, borderRadius: 6 },
+  bookCoverPlaceholder: { backgroundColor: Colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   bookInfo: { flex: 1, justifyContent: 'space-between' },
   bookTitle: { fontSize: FontSize.sm, fontWeight: '900', color: Colors.text },
   bookAuthor: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '700' },

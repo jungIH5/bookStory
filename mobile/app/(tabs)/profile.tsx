@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, Alert, ActivityIndicator, Pressable,
+  Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { User, ChevronRight, LogOut, Sparkles, BookOpen, TrendingUp } from 'lucide-react-native';
@@ -181,7 +182,8 @@ function RegisterForm({ form, setForm, isSaving, onSubmit }: {
   onSubmit: () => void;
 }) {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.registerHeader}>
         <View style={styles.registerIcon}>
           <User size={32} color={Colors.primary} />
@@ -252,6 +254,7 @@ function RegisterForm({ form, setForm, isSaving, onSubmit }: {
           : <Text style={styles.submitBtnText}>등록하기</Text>}
       </TouchableOpacity>
     </ScrollView>
+    </TouchableWithoutFeedback>
   );
 }
 

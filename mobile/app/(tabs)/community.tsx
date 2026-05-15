@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
   Modal, ScrollView, Pressable, Alert, TextInput,
-  ActivityIndicator, RefreshControl, Platform,
+  ActivityIndicator, RefreshControl, Platform, Keyboard, TouchableWithoutFeedback,
 } from 'react-native';
 import { MotiView } from 'moti';
 import { MessageSquare, Heart, MessageCircle, Plus, X, WifiOff, RefreshCw } from 'lucide-react-native';
@@ -19,26 +19,29 @@ export default function CommunityScreen() {
   const [isWriting, setIsWriting] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const fetchErrorRef = useRef(false);
+
+  const fetchPosts = useCallback(async () => {
+    fetchErrorRef.current = false;
+    setFetchError(false);
+    try {
+      const data = await communityApi.getPosts(user?.id);
+      setPosts(data);
+    } catch {
+      fetchErrorRef.current = true;
+      setFetchError(true);
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchPosts();
     const unsubscribe = NetInfo.addEventListener((state) => {
       const offline = !(state.isConnected && state.isInternetReachable !== false);
       setIsOffline(offline);
-      if (!offline && fetchError) fetchPosts();
+      if (!offline && fetchErrorRef.current) fetchPosts();
     });
     return unsubscribe;
   }, []);
-
-  const fetchPosts = useCallback(async () => {
-    setFetchError(false);
-    try {
-      const data = await communityApi.getPosts(user?.id);
-      setPosts(data);
-    } catch {
-      setFetchError(true);
-    }
-  }, [user]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -198,6 +201,7 @@ function WritePostModal({ onClose, onPosted, userId }: {
   };
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <View style={styles.modal}>
       <View style={styles.modalHeader}>
         <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -215,7 +219,7 @@ function WritePostModal({ onClose, onPosted, userId }: {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.modalContent, { gap: Spacing.md }]}>
+      <ScrollView contentContainerStyle={[styles.modalContent, { gap: Spacing.md }]} keyboardShouldPersistTaps="handled">
         <TextInput
           style={styles.titleInput}
           placeholder="제목을 입력하세요"
@@ -242,6 +246,7 @@ function WritePostModal({ onClose, onPosted, userId }: {
         />
       </ScrollView>
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 
