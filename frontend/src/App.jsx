@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Heart, MessageCircle, ChevronRight, User, MapIcon, Send, Mic, Upload, FileAudio } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Heart, MessageCircle, ChevronRight, User, MapIcon, Send, Mic, Upload, FileAudio, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -39,6 +39,12 @@ function App() {
   const [isAnalyzingRecording, setIsAnalyzingRecording] = useState(false);
   const [recordingResult, setRecordingResult] = useState(null);
   const [voiceSampleUploading, setVoiceSampleUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioStreamRef = useRef(null);
+  const timerRef = useRef(null);
 
   const [tendencyResult, setTendencyResult] = useState(null);
   const [isFetchingTendency, setIsFetchingTendency] = useState(false);
@@ -322,6 +328,52 @@ function App() {
     } catch { console.error('추천 로드 실패'); }
     finally { setIsFetchingRecs(false); }
   };
+
+  const formatDuration = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      audioChunksRef.current = [];
+      setRecordingFile(null);
+      setRecordingResult(null);
+      setRecordingDuration(0);
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const file = new File([blob], `recording_${Date.now()}.webm`, { type: 'audio/webm' });
+        setRecordingFile(file);
+        stream.getTracks().forEach((t) => t.stop());
+      };
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+      timerRef.current = setInterval(() => setRecordingDuration((d) => d + 1), 1000);
+    } catch {
+      alert('마이크 접근 권한이 필요합니다. 브라우저 설정에서 마이크를 허용해 주세요.');
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    clearInterval(timerRef.current);
+    setIsRecording(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current);
+      audioStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   const handleUploadRecording = async () => {
     if (!recordingFile) return;
@@ -712,7 +764,7 @@ function App() {
                 </button>
               </div>
 
-              {user && (
+              {user && user.lat && user.lng ? (
                 <div>
                   <div className="section-header">
                     <div className="section-accent" />
@@ -731,7 +783,7 @@ function App() {
                           <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 10 }}>
                             <div style={{ background: 'rgba(140,107,66,0.9)', backdropFilter: 'blur(8px)', color: 'white', padding: '3px 10px', borderRadius: '8px', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid rgba(139,107,66,0.25)' }}>
                               <MapPin size={9} />
-                              {club.distance || 0}km
+                              {club.distance != null ? `${club.distance}km` : '—'}
                             </div>
                           </div>
                           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(28,20,14,0.6), transparent)' }} />
@@ -750,7 +802,12 @@ function App() {
                     ))}
                   </div>
                 </div>
-              )}
+              ) : user ? (
+                <div style={{ padding: '1rem 1.25rem', marginBottom: '1rem', background: 'rgba(139,107,66,0.04)', border: '1px dashed rgba(139,107,66,0.2)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <MapPin size={14} style={{ color: '#BDB0A0', flexShrink: 0 }} />
+                  <p style={{ fontSize: '0.8125rem', color: '#9E8D7A', fontWeight: 600 }}>회원정보에 위치를 등록하면 가까운 모임을 우선 추천해드려요.</p>
+                </div>
+              ) : null}
 
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(139,107,66,0.1)', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
@@ -781,7 +838,7 @@ function App() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid rgba(139,107,66,0.08)' }}>
                         <span style={{ fontSize: '9px', fontWeight: 900, color: '#9E8D7A', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(139,107,66,0.07)', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '6px' }}>{club.category}</span>
-                        <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(140,107,66,0.6)', fontStyle: 'italic' }}>{club.distance || 0}km</span>
+                        {club.distance != null && <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(140,107,66,0.6)', fontStyle: 'italic' }}>{club.distance}km</span>}
                       </div>
                     </div>
                   ))}
@@ -851,59 +908,99 @@ function App() {
           {/* RECORDING TAB */}
           {activeTab === 'recording' && (
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%' }}>
-              <div style={{ marginBottom: '2rem' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.625rem', letterSpacing: '-0.03em' }}>
                   <Mic style={{ color: '#8C6B42' }} size={28} />
                   녹음 분석
                 </h2>
-                <p style={{ color: '#9E8D7A', fontWeight: 700, fontSize: '0.875rem' }}>독서모임 녹음 파일을 업로드하면 AI가 토론 내용을 분석하고 다음 모임 질문을 생성합니다.</p>
+                <p style={{ color: '#9E8D7A', fontWeight: 700, fontSize: '0.875rem' }}>독서모임 대화를 직접 녹음하거나 파일을 업로드해 AI가 토론 내용을 분석합니다.</p>
               </div>
 
-              {/* 업로드 영역 */}
+              {/* 녹음 UI */}
+              <div style={{ border: '1px solid rgba(139,107,66,0.15)', borderRadius: '1.25rem', padding: '2rem', textAlign: 'center', background: isRecording ? 'rgba(220,74,60,0.03)' : 'rgba(139,107,66,0.03)', marginBottom: '1rem', transition: 'background 0.3s' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                  <motion.button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    animate={isRecording ? { scale: [1, 1.07, 1], boxShadow: ['0 0 0 0 rgba(220,74,60,0.4)', '0 0 0 14px rgba(220,74,60,0)', '0 0 0 0 rgba(220,74,60,0)'] } : {}}
+                    transition={isRecording ? { duration: 1.4, repeat: Infinity } : {}}
+                    style={{ width: 72, height: 72, borderRadius: '50%', background: isRecording ? 'linear-gradient(135deg, #dc4a3c, #e06050)' : 'linear-gradient(135deg, #8C6B42, #C49456)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isRecording ? '0 4px 20px rgba(220,74,60,0.35)' : '0 4px 16px rgba(140,107,66,0.25)', transition: 'background 0.3s, box-shadow 0.3s' }}
+                  >
+                    {isRecording ? <Square size={26} color="white" fill="white" /> : <Mic size={28} color="white" />}
+                  </motion.button>
+
+                  {(isRecording || recordingDuration > 0) ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                      <span style={{ fontSize: '2rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: isRecording ? '#dc4a3c' : '#8C6B42', letterSpacing: '0.04em' }}>
+                        {formatDuration(recordingDuration)}
+                      </span>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: isRecording ? '#dc4a3c' : '#9E8D7A' }}>
+                        {isRecording ? '녹음 중 — 버튼을 눌러 정지' : '녹음 완료'}
+                      </span>
+                    </div>
+                  ) : (
+                    <p style={{ color: '#9E8D7A', fontSize: '0.875rem', fontWeight: 600 }}>버튼을 눌러 녹음을 시작하세요</p>
+                  )}
+
+                  {!isRecording && recordingDuration > 0 && (
+                    <button
+                      onClick={() => { setRecordingDuration(0); setRecordingFile(null); setRecordingResult(null); }}
+                      style={{ fontSize: '11px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      다시 녹음
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 파일 업로드 영역 (소형) */}
               <div
-                onClick={() => document.getElementById('recording-file-input').click()}
-                style={{ border: `2px dashed ${recordingFile ? 'rgba(140,107,66,0.5)' : 'rgba(139,107,66,0.2)'}`, borderRadius: '1.25rem', padding: '3rem 2rem', textAlign: 'center', cursor: 'pointer', background: recordingFile ? 'rgba(140,107,66,0.06)' : 'rgba(139,107,66,0.04)', transition: 'all 0.2s ease', marginBottom: '1.25rem' }}
+                onClick={() => !isRecording && document.getElementById('recording-file-input').click()}
+                style={{ border: `1.5px dashed ${recordingFile && recordingDuration === 0 ? 'rgba(140,107,66,0.4)' : 'rgba(139,107,66,0.18)'}`, borderRadius: '0.875rem', padding: '0.75rem 1.25rem', textAlign: 'center', cursor: isRecording ? 'not-allowed' : 'pointer', background: recordingFile && recordingDuration === 0 ? 'rgba(140,107,66,0.05)' : 'transparent', transition: 'all 0.2s ease', marginBottom: '1.25rem', opacity: isRecording ? 0.45 : 1 }}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) setRecordingFile(f); }}
+                onDrop={(e) => { e.preventDefault(); if (!isRecording) { const f = e.dataTransfer.files[0]; if (f) { setRecordingFile(f); setRecordingDuration(0); setRecordingResult(null); } } }}
               >
                 <input
                   id="recording-file-input"
                   type="file"
                   accept="audio/*"
                   style={{ display: 'none' }}
-                  onChange={(e) => setRecordingFile(e.target.files[0] || null)}
+                  onChange={(e) => { setRecordingFile(e.target.files[0] || null); setRecordingDuration(0); setRecordingResult(null); }}
                 />
-                {recordingFile ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                    <FileAudio size={36} style={{ color: '#8C6B42' }} />
-                    <p style={{ fontWeight: 900, fontSize: '1rem', color: '#A07840' }}>{recordingFile.name}</p>
-                    <p style={{ fontSize: '0.8125rem', color: '#9E8D7A' }}>{(recordingFile.size / 1024 / 1024).toFixed(1)} MB</p>
-                    <button onClick={(e) => { e.stopPropagation(); setRecordingFile(null); setRecordingResult(null); }} style={{ fontSize: '11px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>파일 변경</button>
+                {recordingFile && recordingDuration === 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <FileAudio size={15} style={{ color: '#8C6B42', flexShrink: 0 }} />
+                    <span style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#A07840' }}>{recordingFile.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: '#9E8D7A' }}>({(recordingFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+                    <button onClick={(e) => { e.stopPropagation(); setRecordingFile(null); setRecordingResult(null); }} style={{ fontSize: '11px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginLeft: '0.25rem' }}>제거</button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                    <Upload size={36} style={{ color: '#BDB0A0' }} />
-                    <p style={{ fontWeight: 900, color: '#9E8D7A' }}>녹음 파일을 드래그하거나 클릭해서 업로드</p>
-                    <p style={{ fontSize: '0.8125rem', color: '#BDB0A0' }}>MP3, MP4, WAV, OGG, WebM 지원</p>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <Upload size={13} style={{ color: '#BDB0A0' }} />
+                    <span style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>파일 업로드 (MP3, WAV, OGG, WebM)</span>
                   </div>
                 )}
               </div>
 
               <button
                 onClick={handleUploadRecording}
-                disabled={!recordingFile || isAnalyzingRecording}
+                disabled={!recordingFile || isAnalyzingRecording || isRecording}
                 className="premium-button disabled:opacity-40"
                 style={{ width: '100%', padding: '1rem', fontSize: '0.9375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginBottom: '2rem' }}
               >
-                {isAnalyzingRecording ? (
+                {isRecording ? (
+                  <>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+                    <span>녹음 중</span>
+                  </>
+                ) : isAnalyzingRecording ? (
                   <>
                     <Loader2 className="animate-spin" size={18} />
-                    <span>전사 및 분석 중... (수 분 소요될 수 있습니다)</span>
+                    <span>내용 정리 중...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles size={18} />
-                    <span>분석 시작하기</span>
+                    <span>대화내용 분석하기</span>
                   </>
                 )}
               </button>
