@@ -75,17 +75,38 @@ class ReadBookIn(BaseModel):
     publisher: str = ""
     isbn: str = ""
     pages: int = 250
+    impression: str = ""
+    is_public: bool = True
 
 
 @router.post("/read")
 def register_read_book(body: ReadBookIn, conn=Depends(get_db)):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            """INSERT INTO read_books (title, author, image, publisher, isbn, pages)
-               VALUES (%s, %s, %s, %s, %s, %s) RETURNING *""",
-            (_strip(body.title), body.author, body.image, body.publisher, body.isbn, body.pages),
+            """INSERT INTO read_books (title, author, image, publisher, isbn, pages, impression, is_public)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
+            (_strip(body.title), body.author, body.image, body.publisher, body.isbn, body.pages,
+             body.impression, body.is_public),
         )
         return dict(cur.fetchone())
+
+
+class ImpressionIn(BaseModel):
+    impression: str = ""
+    is_public: bool = True
+
+
+@router.put("/read/{book_id}/impression")
+def update_impression(book_id: int, body: ImpressionIn, conn=Depends(get_db)):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            "UPDATE read_books SET impression = %s, is_public = %s WHERE id = %s RETURNING *",
+            (body.impression, body.is_public, book_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Book not found")
+        return dict(row)
 
 
 # ── 읽은 책 목록 ───────────────────────────────────────────────────────────

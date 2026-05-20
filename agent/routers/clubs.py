@@ -11,7 +11,15 @@ router = APIRouter(prefix="/api/clubs")
 @router.get("")
 def get_clubs(conn=Depends(get_db)):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
-        cur.execute("SELECT * FROM clubs ORDER BY id DESC")
+        cur.execute("""
+            SELECT c.*,
+                ROUND(COALESCE(AVG(r.rating), 0)::numeric, 1)::float AS avg_rating,
+                COUNT(r.id)::int AS review_count
+            FROM clubs c
+            LEFT JOIN club_reviews r ON r.club_id = c.id
+            GROUP BY c.id
+            ORDER BY c.id DESC
+        """)
         return [dict(r) for r in cur.fetchall()]
 
 
@@ -85,3 +93,44 @@ def leave_club(club_id: int, body: MemberBody, conn=Depends(get_db)):
                 (club_id,),
             )
     return {"left": True}
+
+
+@router.get("/{club_id}/reviews")
+def get_reviews(club_id: int, conn=Depends(get_db)):
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            SELECT r.*, COALESCE(u.name, '익명') AS author_name
+            FROM club_reviews r
+            LEFT JOIN users u ON r.user_id = u.id
+            WHERE r.club_id = %s
+            ORDER BY r.created_at DESC
+            """,
+            (club_id,),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
+class ReviewIn(BaseModel):
+    user_id: int
+    rating: int
+    review_text: str = ""
+
+
+@router.post("/{club_id}/reviews")
+def create_review(club_id: int, body: ReviewIn, conn=Depends(get_db)):
+    if body.rating < 1 or body.rating > 5:
+        raise HTTPException(400, "평점은 1~5 사이여야 합니다.")
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+            """
+            INSERT INTO club_reviews (club_id, user_id, rating, review_text)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (club_id, user_id)
+            DO UPDATE SET rating = EXCLUDED.rating, review_text = EXCLUDED.review_text,
+                          created_at = CURRENT_TIMESTAMP
+            RETURNING *
+            """,
+            (club_id, body.user_id, body.rating, body.review_text),
+        )
+        return dict(cur.fetchone())

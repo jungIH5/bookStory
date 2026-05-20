@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Heart, MessageCircle, ChevronRight, User, MapIcon, Send, Mic, Upload, FileAudio, Square } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Plus, MapPin, X, Sparkles, Loader2, Bookmark, Heart, MessageCircle, ChevronRight, User, MapIcon, Send, Mic, Upload, FileAudio, Square, Star, CornerDownRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -77,12 +77,42 @@ function App() {
   const [isSearchingPostBook, setIsSearchingPostBook] = useState(false);
   const postSearchTimer = useRef(null);
 
+  // 게시물 상세 + 댓글
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [postComments, setPostComments] = useState([]);
+  const [commentInput, setCommentInput] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyInput, setReplyInput] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // 모임 평점/리뷰
+  const [clubReviews, setClubReviews] = useState([]);
+  const [myRating, setMyRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [myReviewText, setMyReviewText] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // 책 감상평
+  const [bookImpression, setBookImpression] = useState('');
+  const [bookImpressionPublic, setBookImpressionPublic] = useState(true);
+  const [isSavingImpression, setIsSavingImpression] = useState(false);
+
+  // 대댓글 멘션
+  const [replyingToMention, setReplyingToMention] = useState('');
+
   React.useEffect(() => {
     if (toast.show) {
       const t = setTimeout(() => setToast({ show: false, message: '' }), 2800);
       return () => clearTimeout(t);
     }
   }, [toast.show]);
+
+  React.useEffect(() => {
+    if (selectedBook) {
+      setBookImpression(selectedBook.impression || '');
+      setBookImpressionPublic(selectedBook.is_public !== false);
+    }
+  }, [selectedBook]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -279,17 +309,19 @@ function App() {
       isbn: book.isbn,
       pages: currentBookPages,
       read_at: new Date().toISOString(),
+      impression: bookImpression,
+      is_public: bookImpressionPublic,
     };
     setReadBooks(prev => [optimistic, ...prev]);
     setSelectedBook(null);
     setActiveTab('stack');
     setViewMode('tower');
-    setToast({ show: true, message: `“${cleanTitle.slice(0, 16)}${cleanTitle.length > 16 ? '...' : ''}” 서재에 추가됐어요 📚` });
+    setToast({ show: true, message: `”${cleanTitle.slice(0, 16)}${cleanTitle.length > 16 ? '...' : ''}” 서재에 추가됐어요 📚` });
     try {
       const response = await fetch(`${API_URL}/api/books/read`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: book.title, author: book.author, image: book.image, publisher: book.publisher, isbn: book.isbn, pages: currentBookPages })
+        body: JSON.stringify({ title: book.title, author: book.author, image: book.image, publisher: book.publisher, isbn: book.isbn, pages: currentBookPages, impression: bookImpression, is_public: bookImpressionPublic })
       });
       if (response.ok) {
         const data = await response.json();
@@ -350,6 +382,12 @@ function App() {
     if (!user) return;
     const numId = parseInt(user.id);
     if (isNaN(numId) || numId <= 0) return;
+    // 낙관적 업데이트
+    setCommunityPosts(prev => prev.map(p =>
+      p.id === postId
+        ? { ...p, liked: !p.liked, likes: p.liked ? Math.max(0, (p.likes||1)-1) : (p.likes||0)+1 }
+        : p
+    ));
     const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
     try {
       await fetch(`${API_URL}/api/community/posts/${postId}/like`, {
@@ -357,7 +395,7 @@ function App() {
         headers: { 'Content-Type': 'application/json', ...authH },
         body: JSON.stringify({ user_id: numId })
       });
-      await fetchCommunityPosts();
+      fetchCommunityPosts();
     } catch (error) { console.error('Like error:', error); }
   };
 
@@ -395,10 +433,110 @@ function App() {
     setIsAnalyzing(false);
   };
 
+  const handleSaveImpression = async () => {
+    if (!selectedBook?.id || String(selectedBook.id).startsWith('temp-')) return;
+    setIsSavingImpression(true);
+    try {
+      const res = await fetch(`${API_URL}/api/books/read/${selectedBook.id}/impression`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ impression: bookImpression, is_public: bookImpressionPublic })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setReadBooks(prev => prev.map(b => b.id === selectedBook.id ? { ...b, ...updated, title: stripHtml(updated.title) } : b));
+        setToast({ show: true, message: '감상평이 저장됐어요.' });
+        setSelectedBook(null);
+      }
+    } catch {} finally { setIsSavingImpression(false); }
+  };
+
   const getValidUserId = () => {
     if (!user?.id) return null;
     const n = parseInt(user.id);
     return !isNaN(n) && n > 0 ? n : null;
+  };
+
+  const fetchPostComments = async (postId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/community/posts/${postId}/comments`);
+      const data = await res.json();
+      setPostComments(Array.isArray(data) ? data : []);
+    } catch { setPostComments([]); }
+  };
+
+  const openPostDetail = async (post) => {
+    setSelectedPost(post);
+    setCommentInput('');
+    setReplyingTo(null);
+    setReplyInput('');
+    await fetchPostComments(post.id);
+  };
+
+  const handleSubmitComment = async () => {
+    if (!commentInput.trim() || !user) return;
+    setIsSubmittingComment(true);
+    const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+    try {
+      await fetch(`${API_URL}/api/community/posts/${selectedPost.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authH },
+        body: JSON.stringify({ content: commentInput.trim(), user_id: getValidUserId() })
+      });
+      await fetchPostComments(selectedPost.id);
+      setCommentInput('');
+      fetchCommunityPosts();
+    } catch {}
+    finally { setIsSubmittingComment(false); }
+  };
+
+  const handleSubmitReply = async (parentId) => {
+    if (!replyInput.trim() || !user) return;
+    setIsSubmittingComment(true);
+    const content = replyingToMention ? `${replyingToMention}${replyInput.trim()}` : replyInput.trim();
+    const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+    try {
+      await fetch(`${API_URL}/api/community/posts/${selectedPost.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authH },
+        body: JSON.stringify({ content, user_id: getValidUserId(), parent_comment_id: parentId })
+      });
+      await fetchPostComments(selectedPost.id);
+      setReplyInput('');
+      setReplyingTo(null);
+      setReplyingToMention('');
+      fetchCommunityPosts();
+    } catch {}
+    finally { setIsSubmittingComment(false); }
+  };
+
+  const fetchClubReviews = async (clubId) => {
+    try {
+      const res = await fetch(`${API_URL}/api/clubs/${clubId}/reviews`);
+      const data = await res.json();
+      setClubReviews(Array.isArray(data) ? data : []);
+    } catch { setClubReviews([]); }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!myRating || !user) return;
+    setIsSubmittingReview(true);
+    const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+    try {
+      await fetch(`${API_URL}/api/clubs/${selectedClub.id}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authH },
+        body: JSON.stringify({ user_id: getValidUserId(), rating: myRating, review_text: myReviewText })
+      });
+      await fetchClubReviews(selectedClub.id);
+      const refreshed = await (await fetch(`${API_URL}/api/clubs`)).json();
+      const updated = refreshed.find(c => c.id === selectedClub.id);
+      if (updated) setSelectedClub(prev => ({ ...prev, avg_rating: updated.avg_rating, review_count: updated.review_count }));
+      setMyRating(0);
+      setMyReviewText('');
+      setToast({ show: true, message: '리뷰가 등록됐어요 ⭐' });
+    } catch {}
+    finally { setIsSubmittingReview(false); }
   };
 
   const searchPostBook = (query) => {
@@ -584,16 +722,21 @@ function App() {
   };
 
   React.useEffect(() => {
-    if (selectedClub && selectedClub.lat && selectedClub.lng) {
-      setTimeout(() => {
-        const container = document.getElementById('club-map');
-        if (container) {
-          const options = { center: new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng), level: 3 };
-          const map = new window.kakao.maps.Map(container, options);
-          const marker = new window.kakao.maps.Marker({ position: new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng) });
-          marker.setMap(map);
-        }
-      }, 300);
+    if (selectedClub) {
+      fetchClubReviews(selectedClub.id);
+      setMyRating(0);
+      setMyReviewText('');
+      if (selectedClub.lat && selectedClub.lng) {
+        setTimeout(() => {
+          const container = document.getElementById('club-map');
+          if (container) {
+            const options = { center: new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng), level: 3 };
+            const map = new window.kakao.maps.Map(container, options);
+            const marker = new window.kakao.maps.Marker({ position: new window.kakao.maps.LatLng(selectedClub.lat, selectedClub.lng) });
+            marker.setMap(map);
+          }
+        }, 300);
+      }
     }
   }, [selectedClub]);
 
@@ -799,10 +942,17 @@ function App() {
                             {new Date(book.read_at).toLocaleDateString('ko-KR')}
                           </span>
                         </div>
-                        <p style={{ fontSize: '0.75rem', color: '#9E8D7A', fontWeight: 700, marginBottom: '0.5rem' }}>{book.author}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#9E8D7A', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>
+                        {book.impression && (
+                          <p style={{ fontSize: '0.75rem', color: '#7B6B55', lineHeight: 1.5, marginBottom: '0.375rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            <span style={{ color: book.is_public ? '#8C6B42' : '#BDB0A0', fontWeight: 700, marginRight: '4px' }}>{book.is_public ? '🌐' : '🔒'}</span>
+                            {book.impression}
+                          </p>
+                        )}
                         <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
                           {book.pages > 0 && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.pages}p</span>}
                           {book.publisher && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.publisher}</span>}
+                          {!book.impression && <span onClick={e => { e.stopPropagation(); handleStackBookClick(book); }} style={{ fontSize: '9px', color: '#8C6B42', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(140,107,66,0.05)', cursor: 'pointer' }}>+ 감상평 쓰기</span>}
                         </div>
                       </div>
                     </motion.div>
@@ -864,7 +1014,7 @@ function App() {
           {/* SEARCH RESULTS TAB */}
           {activeTab === 'search' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ width: '100%', marginTop: '0.5rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '2rem 1.25rem', width: '100%' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 160px)', gap: '1.75rem 1rem', width: '100%', justifyContent: 'center' }}>
                 {searchResults.map((book, index) => (
                   <motion.div
                     key={index}
@@ -966,7 +1116,10 @@ function App() {
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', fontWeight: 900, borderTop: '1px solid rgba(139,107,66,0.1)', paddingTop: '0.875rem', marginTop: '0.5rem' }}>
                             <span style={{ color: '#9E8D7A', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{club.location}</span>
-                            <span style={{ color: 'rgba(140,107,66,0.8)' }}>{club.member_count}명</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {club.avg_rating > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#C49456' }}><Star size={9} fill="#C49456" />{club.avg_rating}</span>}
+                              <span style={{ color: 'rgba(140,107,66,0.8)' }}>{club.member_count}명</span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1047,7 +1200,10 @@ function App() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid rgba(139,107,66,0.08)' }}>
                         <span style={{ fontSize: '9px', fontWeight: 900, color: '#9E8D7A', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(139,107,66,0.07)', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '6px' }}>{club.category}</span>
-                        {club.distance != null && <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(140,107,66,0.6)', fontStyle: 'italic' }}>{club.distance}km</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {club.avg_rating > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', color: '#C49456', fontWeight: 900 }}><Star size={9} fill="#C49456" />{club.avg_rating}</span>}
+                          {club.distance != null && <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(140,107,66,0.6)', fontStyle: 'italic' }}>{club.distance}km</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1080,6 +1236,7 @@ function App() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="group"
+                    onClick={() => openPostDetail(post)}
                     style={{ position: 'relative', padding: '1.75rem 0', borderBottom: '1px solid rgba(139,107,66,0.1)', cursor: 'pointer', transition: 'all 0.2s ease' }}
                   >
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', opacity: 0, borderRadius: '0 2px 2px 0', transition: 'opacity 0.2s ease' }} className="group-hover:opacity-100" />
@@ -1099,11 +1256,11 @@ function App() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
                           <button onClick={(e) => { e.stopPropagation(); handleLikePost(post.id); }} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: post.liked ? '#fb7185' : '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-rose-400">
                             <Heart size={14} fill={post.liked ? '#fb7185' : 'none'} />
-                            {post.likes}
+                            {post.likes || 0}
                           </button>
-                          <button style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-sky-400">
+                          <button onClick={(e) => { e.stopPropagation(); openPostDetail(post); }} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-sky-400">
                             <MessageCircle size={14} />
-                            {post.comments}
+                            {post.comments || 0}
                           </button>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.75rem' }}>
@@ -1532,6 +1689,13 @@ function App() {
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <p className="gradient-text-accent" style={{ fontSize: '1.5rem', fontWeight: 900, fontStyle: 'italic', lineHeight: 1 }}>{selectedClub.member_count}명</p>
                     <p style={{ fontSize: '9px', color: '#9E8D7A', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>Members</p>
+                    {(selectedClub.avg_rating > 0) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end', marginTop: '6px' }}>
+                        <Star size={12} fill="#C49456" color="#C49456" />
+                        <span style={{ fontSize: '12px', fontWeight: 900, color: '#C49456' }}>{selectedClub.avg_rating}</span>
+                        <span style={{ fontSize: '10px', color: '#BDB0A0' }}>({selectedClub.review_count || 0})</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1540,6 +1704,57 @@ function App() {
                 <div>
                   <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingBottom: '0.625rem', borderBottom: '1px solid rgba(139,107,66,0.1)' }}>모임 위치</h4>
                   <div id="club-map" style={{ width: '100%', height: '9rem', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(139,107,66,0.15)', background: '#EDE8E2' }} />
+                </div>
+
+                {/* 평점/리뷰 섹션 */}
+                <div style={{ borderTop: '1px solid rgba(139,107,66,0.08)', paddingTop: '1rem' }}>
+                  <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.875rem' }}>모임 평점 & 리뷰</h4>
+
+                  {/* 기존 리뷰 목록 */}
+                  {clubReviews.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1rem', maxHeight: '160px', overflowY: 'auto' }}>
+                      {clubReviews.map(rv => (
+                        <div key={rv.id} style={{ padding: '0.625rem 0.875rem', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'white', fontWeight: 900 }}>{(rv.author_name||'?')[0]}</div>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3D2D1E' }}>{rv.author_name}</span>
+                            <div style={{ display: 'flex', gap: '1px' }}>
+                              {[1,2,3,4,5].map(s => <Star key={s} size={10} fill={s<=rv.rating?'#C49456':'none'} color={s<=rv.rating?'#C49456':'rgba(139,107,66,0.3)'} />)}
+                            </div>
+                          </div>
+                          {rv.review_text && <p style={{ fontSize: '0.75rem', color: '#7B6B55', lineHeight: 1.5 }}>{rv.review_text}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 리뷰 작성 */}
+                  {user && (
+                    <div style={{ background: 'rgba(196,148,86,0.04)', border: '1px solid rgba(196,148,86,0.15)', borderRadius: '0.875rem', padding: '0.875rem' }}>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#A07840', marginBottom: '0.625rem' }}>내 평점 남기기</p>
+                      <div style={{ display: 'flex', gap: '3px', marginBottom: '0.625rem' }}>
+                        {[1,2,3,4,5].map(s => (
+                          <button key={s} onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)} onClick={() => setMyRating(s)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+                            <Star size={20} fill={(hoverRating||myRating)>=s?'#C49456':'none'} color={(hoverRating||myRating)>=s?'#C49456':'rgba(139,107,66,0.3)'} />
+                          </button>
+                        ))}
+                        {myRating > 0 && <span style={{ fontSize: '0.75rem', color: '#C49456', fontWeight: 800, marginLeft: '6px', alignSelf: 'center' }}>{myRating}점</span>}
+                      </div>
+                      <textarea
+                        value={myReviewText}
+                        onChange={e => setMyReviewText(e.target.value)}
+                        placeholder="리뷰를 남겨주세요 (선택)"
+                        className="form-input"
+                        style={{ width: '100%', height: '4rem', resize: 'none', fontSize: '0.8125rem', color: '#1C140E', marginBottom: '0.625rem', boxSizing: 'border-box' }}
+                      />
+                      <button onClick={handleSubmitReview} disabled={!myRating || isSubmittingReview}
+                        style={{ width: '100%', padding: '0.5rem', fontSize: '0.8125rem', fontWeight: 800, color: myRating ? '#fff' : '#BDB0A0', background: myRating ? 'linear-gradient(135deg,#8C6B42,#C49456)' : 'rgba(139,107,66,0.08)', border: 'none', borderRadius: '0.625rem', cursor: myRating ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'all 0.2s' }}>
+                        {isSubmittingReview ? <Loader2 size={13} className="animate-spin" /> : <Star size={13} />}
+                        리뷰 등록
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -1792,6 +2007,161 @@ function App() {
         )}
       </AnimatePresence>
 
+      {/* POST DETAIL MODAL */}
+      <AnimatePresence>
+        {selectedPost && (
+          <div className="modal-backdrop overflow-y-auto" onClick={() => { setSelectedPost(null); setPostComments([]); setReplyingTo(null); }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 32 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 32 }}
+              onClick={e => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {selectedPost.book_title && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.625rem', padding: '4px 10px 4px 8px', background: 'linear-gradient(135deg, rgba(140,107,66,0.1), rgba(196,148,86,0.08))', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '8px' }}>
+                      <BookOpen size={11} style={{ color: '#8C6B42', flexShrink: 0 }} />
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42' }}>{selectedPost.book_title}</span>
+                    </div>
+                  )}
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>{selectedPost.title}</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#9E8D7A' }}>
+                    <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px' }}>{(selectedPost.author||'?')[0]}</div>
+                    <span style={{ fontWeight: 700, color: '#7B6B55' }}>{selectedPost.author || '익명'}</span>
+                    <span>·</span>
+                    <span style={{ fontSize: '11px' }}>{new Date(selectedPost.created_at).toLocaleDateString('ko-KR')}</span>
+                  </div>
+                </div>
+                <button onClick={() => { setSelectedPost(null); setPostComments([]); }} style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.12)', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A', flexShrink: 0 }}><X size={16} /></button>
+              </div>
+
+              {/* 본문 */}
+              <div style={{ background: 'rgba(139,107,66,0.03)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0.875rem', padding: '1rem 1.125rem' }}>
+                <p style={{ fontSize: '0.875rem', lineHeight: 1.8, color: '#3D2D1E', whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(selectedPost.content) }} />
+              </div>
+
+              {/* 좋아요 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button onClick={() => { handleLikePost(selectedPost.id); setSelectedPost(prev => ({ ...prev, liked: !prev.liked, likes: prev.liked ? (prev.likes||1)-1 : (prev.likes||0)+1 })); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: selectedPost.liked ? '#fb7185' : '#9E8D7A', cursor: 'pointer', background: selectedPost.liked ? 'rgba(251,113,133,0.08)' : 'rgba(139,107,66,0.06)', border: `1px solid ${selectedPost.liked ? 'rgba(251,113,133,0.25)' : 'rgba(139,107,66,0.15)'}`, borderRadius: '9999px', padding: '0.375rem 0.875rem', transition: 'all 0.2s' }}>
+                  <Heart size={14} fill={selectedPost.liked ? '#fb7185' : 'none'} />
+                  공감 {selectedPost.likes || 0}
+                </button>
+              </div>
+
+              {/* 댓글 영역 */}
+              <div style={{ borderTop: '1px solid rgba(139,107,66,0.1)', paddingTop: '1rem' }}>
+                <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.875rem' }}>댓글 {postComments.length}개</h4>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '0.25rem', marginBottom: '1rem' }}>
+                  {postComments.filter(c => !c.parent_comment_id).map(comment => (
+                    <div key={comment.id}>
+                      {/* 댓글 */}
+                      <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                        <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', flexShrink: 0 }}>{(comment.author||'?')[0]}</div>
+                        <div style={{ flex: 1, background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.625rem 0.875rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3D2D1E' }}>{comment.author}</span>
+                            <span style={{ fontSize: '10px', color: '#BDB0A0' }}>{new Date(comment.created_at).toLocaleDateString('ko-KR')}</span>
+                          </div>
+                          <p style={{ fontSize: '0.8125rem', lineHeight: 1.6, color: '#5C4F42' }}>{comment.content}</p>
+                          {user && (
+                            <button onClick={() => { const same = replyingTo === comment.id && !replyingToMention; setReplyingTo(same ? null : comment.id); setReplyingToMention(''); setReplyInput(''); }}
+                              style={{ fontSize: '10px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.375rem', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
+                              <CornerDownRight size={10} /> 답글
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 대댓글 */}
+                      {postComments.filter(r => r.parent_comment_id === comment.id).map(reply => (
+                        <div key={reply.id} style={{ marginTop: '0.5rem', marginLeft: '2.25rem' }}>
+                          <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                            <CornerDownRight size={12} style={{ color: '#BDB0A0', flexShrink: 0, marginTop: '6px' }} />
+                            <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(196,148,86,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8C6B42', fontWeight: 900, fontSize: '9px', flexShrink: 0 }}>{(reply.author||'?')[0]}</div>
+                            <div style={{ flex: 1, background: 'rgba(196,148,86,0.04)', border: '1px solid rgba(196,148,86,0.12)', borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.5rem 0.75rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3D2D1E' }}>{reply.author}</span>
+                                <span style={{ fontSize: '10px', color: '#BDB0A0' }}>{new Date(reply.created_at).toLocaleDateString('ko-KR')}</span>
+                              </div>
+                              <p style={{ fontSize: '0.8125rem', lineHeight: 1.6, color: '#5C4F42' }}>
+                                {reply.content.startsWith('@') ? (
+                                  <>
+                                    <span style={{ color: '#8C6B42', fontWeight: 700 }}>{reply.content.split(' ')[0]} </span>
+                                    {reply.content.slice(reply.content.indexOf(' ')+1)}
+                                  </>
+                                ) : reply.content}
+                              </p>
+                              {user && (
+                                <button onClick={() => { setReplyingTo(comment.id); setReplyingToMention(`@${reply.author} `); setReplyInput(''); }}
+                                  style={{ fontSize: '10px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
+                                  <CornerDownRight size={10} /> 답글
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* 답글 입력창 */}
+                      {replyingTo === comment.id && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.5rem', marginLeft: '2.25rem' }}>
+                          {replyingToMention && (
+                            <span style={{ fontSize: '10px', color: '#8C6B42', fontWeight: 700, paddingLeft: '0.25rem' }}>{replyingToMention}에게 답글</span>
+                          )}
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input
+                              value={replyInput}
+                              onChange={e => setReplyInput(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitReply(comment.id); } }}
+                              placeholder={replyingToMention ? `${replyingToMention}에게 답글...` : '답글을 입력하세요...'}
+                              className="form-input"
+                              style={{ flex: 1, height: '2.5rem', fontSize: '0.8125rem', color: '#1C140E' }}
+                              autoFocus
+                            />
+                            <button onClick={() => handleSubmitReply(comment.id)} disabled={!replyInput.trim() || isSubmittingComment}
+                              style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.625rem', background: replyInput.trim() ? 'linear-gradient(135deg,#8C6B42,#C49456)' : 'rgba(139,107,66,0.1)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: replyInput.trim() ? 'pointer' : 'not-allowed', flexShrink: 0 }}>
+                              <Send size={13} color="white" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {postComments.length === 0 && (
+                    <p style={{ textAlign: 'center', color: '#BDB0A0', fontSize: '0.8125rem', padding: '1rem 0' }}>첫 댓글을 남겨보세요!</p>
+                  )}
+                </div>
+
+                {/* 댓글 입력 */}
+                {user ? (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      value={commentInput}
+                      onChange={e => setCommentInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmitComment(); } }}
+                      placeholder="댓글을 입력하세요... (Enter로 등록)"
+                      className="form-input"
+                      style={{ flex: 1, height: '2.75rem', fontSize: '0.8125rem', color: '#1C140E' }}
+                    />
+                    <button onClick={handleSubmitComment} disabled={!commentInput.trim() || isSubmittingComment}
+                      style={{ width: '2.75rem', height: '2.75rem', borderRadius: '0.75rem', background: commentInput.trim() ? 'linear-gradient(135deg,#8C6B42,#C49456)' : 'rgba(139,107,66,0.1)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: commentInput.trim() ? 'pointer' : 'not-allowed', flexShrink: 0 }}>
+                      {isSubmittingComment ? <Loader2 size={14} className="animate-spin" color="white" /> : <Send size={14} color="white" />}
+                    </button>
+                  </div>
+                ) : (
+                  <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#BDB0A0', padding: '0.75rem', background: 'rgba(139,107,66,0.04)', borderRadius: '0.75rem' }}>댓글을 작성하려면 로그인이 필요합니다.</p>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* BOOK ANALYSIS MODAL */}
       <AnimatePresence>
         {selectedBook && (
@@ -1879,11 +2249,33 @@ function App() {
                   </motion.div>
                 )}
 
+                {/* 내 감상평 섹션 */}
+                <div style={{ padding: '1rem', background: 'rgba(140,107,66,0.03)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.1)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', borderRadius: '9999px' }} />
+                      <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#A07840', textTransform: 'uppercase', letterSpacing: '0.12em' }}>내 감상평 <span style={{ fontSize: '8px', color: '#BDB0A0', textTransform: 'none', letterSpacing: 0 }}>(선택)</span></h3>
+                    </div>
+                    <button onClick={() => setBookImpressionPublic(p => !p)} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '9999px', background: bookImpressionPublic ? 'rgba(140,107,66,0.1)' : 'rgba(100,100,100,0.06)', border: `1px solid ${bookImpressionPublic ? 'rgba(140,107,66,0.25)' : 'rgba(139,107,66,0.12)'}`, cursor: 'pointer', fontSize: '10px', fontWeight: 700, color: bookImpressionPublic ? '#8C6B42' : '#9E8D7A', transition: 'all 0.2s' }}>
+                      {bookImpressionPublic ? '🌐 공개' : '🔒 나만 보기'}
+                    </button>
+                  </div>
+                  <textarea
+                    value={bookImpression}
+                    onChange={e => setBookImpression(e.target.value)}
+                    placeholder="이 책을 읽고 느낀 점을 자유롭게 적어보세요..."
+                    rows={3}
+                    className="form-input"
+                    style={{ width: '100%', resize: 'vertical', fontSize: '0.8125rem', lineHeight: 1.6, color: '#1C140E', minHeight: '72px', boxSizing: 'border-box' }}
+                  />
+                </div>
+
                 <div style={{ display: 'flex', gap: '0.625rem' }}>
                   {selectedBook?.fromStack ? (
-                    <div style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem', color: '#8C6B42', fontWeight: 800 }}>
-                      ✅ 이미 내 서재에 있어요
-                    </div>
+                    <button onClick={handleSaveImpression} disabled={isSavingImpression} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      {isSavingImpression ? <Loader2 className="animate-spin" size={15} /> : <Bookmark size={15} />}
+                      <span>감상평 저장</span>
+                    </button>
                   ) : (
                     <button onClick={() => handleRegisterBook(selectedBook)} disabled={isSaving} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                       {isSaving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}
