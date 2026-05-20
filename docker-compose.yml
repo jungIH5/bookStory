@@ -24,22 +24,21 @@ services:
     volumes:
       - ./agent:/app
     env_file:
-      - ./backend/.env   # 기존 .env 파일 공유 (키 한 곳에서 관리)
+      - ./backend/.env
+    depends_on:
+      - db
 
-# (Node.js backend는 agent/로 대체됨. 파일은 backend/ 에 보존)
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=bookstory
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
 
-# (Local DB service removed to use Supabase instead)
-#  db:
-#    image: postgres:15-alpine
-#    restart: always
-#    environment:
-#      - POSTGRES_USER=user
-#      - POSTGRES_PASSWORD=password
-#      - POSTGRES_DB=bookstory
-#    ports:
-#      - "5432:5432"
-#    volumes:
-#      - db-data:/var/lib/postgresql/data
-
-# volumes:
-#   db-data:
+volumes:
+  db-data:

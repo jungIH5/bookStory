@@ -2,10 +2,9 @@ import os
 from openai import AsyncOpenAI
 from state import RecordingState
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 
 async def transcribe_audio_node(state: RecordingState) -> dict:
+    client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     with open(state["audio_path"], "rb") as audio_file:
         response = await client.audio.transcriptions.create(
             model="whisper-1",

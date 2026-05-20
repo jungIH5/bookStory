@@ -74,19 +74,24 @@ function App() {
     }
   };
 
-  const handleBookClick = async (book) => {
+  const handleBookClick = (book) => {
     setSelectedBook(book);
-    setIsAnalyzing(true);
-    setAnalysisResult('');
+    setAnalysisResult(stripHtml(book.description || ''));
     setQuestions({ thematic: [], perspective_shift: [] });
+    setIsAnalyzing(false);
+  };
+
+  const handleLoadAnalysis = async () => {
+    if (!selectedBook || isAnalyzing) return;
+    setIsAnalyzing(true);
     try {
-      const response = await fetch(`${API_URL}/api/books/analyze?title=${encodeURIComponent(stripHtml(book.title))}&author=${encodeURIComponent(book.author)}`);
+      const response = await fetch(`${API_URL}/api/books/analyze?title=${encodeURIComponent(stripHtml(selectedBook.title))}&author=${encodeURIComponent(selectedBook.author)}`);
       const data = await response.json();
       setAnalysisResult(data.analysis);
       setCurrentBookPages(data.pages || 250);
       setQuestions(data.questions || { thematic: [], perspective_shift: [] });
     } catch (error) {
-      setAnalysisResult('도서 분석 중 오류가 발생했습니다.');
+      console.error('Analysis error:', error);
     } finally {
       setIsAnalyzing(false);
     }
@@ -156,6 +161,7 @@ function App() {
 
   const searchLocation = (keyword, _type) => {
     if (!keyword.trim()) return setLocationSuggestions([]);
+    if (!window.kakao?.maps?.services) return;
     setIsSearchingLocation(true);
     const ps = new window.kakao.maps.services.Places();
     ps.keywordSearch(keyword, (data, status) => {
@@ -196,6 +202,13 @@ function App() {
   };
 
   const handleTestLogin = async () => {
+    const cached = localStorage.getItem('bookstory_test_user');
+    if (cached) {
+      setUser(JSON.parse(cached));
+      localStorage.setItem('bookstory_user', cached);
+      window.location.reload();
+      return;
+    }
     const testData = { name: '테스트유저', gender: '기타', age: 20, location: '서울 강남구', lat: 37.4979, lng: 127.0276 };
     try {
       const response = await fetch(`${API_URL}/api/users`, {
@@ -207,12 +220,14 @@ function App() {
       if (response.ok) {
         setUser(data);
         localStorage.setItem('bookstory_user', JSON.stringify(data));
+        localStorage.setItem('bookstory_test_user', JSON.stringify(data));
         window.location.reload();
       }
     } catch (error) {
-      const fallback = { id: 'test-' + Date.now(), ...testData };
+      const fallback = { id: 1, ...testData };
       setUser(fallback);
       localStorage.setItem('bookstory_user', JSON.stringify(fallback));
+      localStorage.setItem('bookstory_test_user', JSON.stringify(fallback));
       window.location.reload();
     }
   };
@@ -902,6 +917,12 @@ function App() {
                     </div>
                   </div>
                 ))}
+                {communityPosts.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '4rem 0', color: '#BDB0A0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                    <MessageSquare size={32} style={{ opacity: 0.4 }} />
+                    <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>아직 게시물이 없습니다. 첫 글을 작성해보세요!</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -1154,23 +1175,23 @@ function App() {
                   <label className="form-label">주 활동 지역</label>
                   <div style={{ position: 'relative' }}>
                     <MapIcon style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
-                    <input type="text" placeholder="동네나 역 이름 검색 (예: 합정역)" onChange={(e) => searchLocation(e.target.value, 'reg')} className="form-input" style={{ paddingLeft: '2.75rem', color: '#1C140E' }} />
+                    <input type="text" placeholder="동네나 역 이름 검색 (예: 합정역, 마포구)" value={regForm.location} onChange={(e) => { setRegForm({...regForm, location: e.target.value, lat: null, lng: null}); searchLocation(e.target.value, 'reg'); }} className="form-input" style={{ paddingLeft: '2.75rem', color: '#1C140E' }} />
                     {isSearchingLocation && <Loader2 style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={15} className="animate-spin" />}
                   </div>
                   {locationSuggestions.length > 0 && (
                     <div style={{ position: 'absolute', zIndex: 1100, top: '100%', left: 0, right: 0, marginTop: '0.5rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', boxShadow: '0 16px 40px rgba(0,0,0,0.15)', maxHeight: '180px', overflowY: 'auto' }}>
                       {locationSuggestions.map((item, i) => (
-                        <div key={i} onClick={() => { selectLocation(item, 'reg'); document.querySelector('input[placeholder="동네나 역 이름 검색 (예: 합정역)"]').value = item.place_name; }} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.08)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
+                        <div key={i} onClick={() => { selectLocation(item, 'reg'); }} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.08)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
                           <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1C140E', marginBottom: '2px' }}>{item.place_name}</p>
                           <p style={{ fontSize: '10px', color: '#9E8D7A' }}>{item.address_name}</p>
                         </div>
                       ))}
                     </div>
                   )}
-                  {regForm.location && (
+                  {regForm.lat && regForm.lng && (
                     <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.875rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <MapPin size={11} style={{ color: '#8C6B42' }} />
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C6B42' }}>선택됨: {regForm.location}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C6B42' }}>📍 위치 확인됨: {regForm.location}</span>
                     </div>
                   )}
                 </div>
@@ -1235,22 +1256,22 @@ function App() {
                 <div style={{ position: 'relative' }}>
                   <label className="form-label">활동 지역</label>
                   <div style={{ position: 'relative' }}>
-                    <input className="form-input" style={{ color: '#1C140E', paddingRight: '3rem' }} placeholder="동네, 역 이름 또는 장소명 (예: 합정역)" onChange={(e) => searchLocation(e.target.value, 'club')} />
+                    <input className="form-input" style={{ color: '#1C140E', paddingRight: '3rem' }} placeholder="동네, 역 이름 또는 장소명 (예: 합정역)" value={clubForm.location} onChange={(e) => { setClubForm({...clubForm, location: e.target.value, lat: null, lng: null}); searchLocation(e.target.value, 'club'); }} />
                     <MapPin style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#8C6B42' }} size={16} />
                   </div>
                   {locationSuggestions.length > 0 && (
                     <div style={{ position: 'absolute', zIndex: 1200, top: '100%', left: 0, right: 0, marginTop: '0.5rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', boxShadow: '0 16px 40px rgba(0,0,0,0.15)', maxHeight: '180px', overflowY: 'auto' }}>
                       {locationSuggestions.map((item, i) => (
-                        <div key={i} onClick={() => { selectLocation(item, 'club'); document.querySelector('input[placeholder="동네, 역 이름 또는 장소명 (예: 합정역)"]').value = item.place_name; }} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.08)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
+                        <div key={i} onClick={() => { selectLocation(item, 'club'); }} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.08)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
                           <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1C140E', marginBottom: '2px' }}>{item.place_name}</p>
                           <p style={{ fontSize: '10px', color: '#9E8D7A' }}>{item.address_name}</p>
                         </div>
                       ))}
                     </div>
                   )}
-                  {clubForm.location && (
+                  {clubForm.lat && clubForm.lng && (
                     <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.875rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C6B42' }}>선택됨: {clubForm.location}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C6B42' }}>📍 위치 확인됨: {clubForm.location}</span>
                     </div>
                   )}
                 </div>
@@ -1559,8 +1580,8 @@ function App() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.375rem' }}>
-                      <Sparkles size={11} style={{ color: '#8C6B42' }} />
-                      <span style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>AI Insight</span>
+                      <BookOpen size={11} style={{ color: '#8C6B42' }} />
+                      <span style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>책 소개</span>
                     </div>
                     <h2 style={{ fontSize: '1.05rem', fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '0.375rem' }}>{stripHtml(selectedBook.title)}</h2>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1571,21 +1592,14 @@ function App() {
                   </div>
                 </div>
 
-                <div style={{ padding: '1rem', background: 'rgba(140,107,66,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.1)', minHeight: '6rem', position: 'relative' }}>
-                  {isAnalyzing ? (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-                      <Loader2 className="animate-spin" size={20} style={{ color: '#8C6B42' }} />
-                      <p className="animate-pulse" style={{ color: '#8C6B42', fontSize: '10px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase' }}>분석 중...</p>
+                <div style={{ padding: '1rem', background: 'rgba(140,107,66,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.1)', minHeight: '4rem' }}>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
+                      <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', borderRadius: '9999px' }} />
+                      <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#A07840', textTransform: 'uppercase', letterSpacing: '0.12em' }}>책 소개</h3>
                     </div>
-                  ) : (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
-                        <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', borderRadius: '9999px' }} />
-                        <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#A07840', textTransform: 'uppercase', letterSpacing: '0.12em' }}>The Insight</h3>
-                      </div>
-                      <p style={{ fontSize: '0.8125rem', lineHeight: 1.7, color: '#7B6B55', fontWeight: 500, whiteSpace: 'pre-wrap' }}>{analysisResult}</p>
-                    </motion.div>
-                  )}
+                    <p style={{ fontSize: '0.8125rem', lineHeight: 1.7, color: '#7B6B55', fontWeight: 500, whiteSpace: 'pre-wrap' }}>{analysisResult || '책 소개 정보가 없습니다.'}</p>
+                  </motion.div>
                 </div>
 
                 {!isAnalyzing && questions.thematic.length > 0 && (
@@ -1631,10 +1645,15 @@ function App() {
                     {isSaving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}
                     <span>내 서재에 기록하기</span>
                   </button>
-                  {!isAnalyzing && questions.thematic.length > 0 && (
+                  {questions.thematic.length > 0 ? (
                     <button onClick={handleStartDiscussion} style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.25)', borderRadius: '0.875rem', color: '#C49456', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>
                       <MessageCircle size={15} />
                       <span>토론 시작하기</span>
+                    </button>
+                  ) : (
+                    <button onClick={handleLoadAnalysis} disabled={isAnalyzing} style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(140,107,66,0.07)', border: '1px solid rgba(140,107,66,0.15)', borderRadius: '0.875rem', color: '#8C6B42', fontWeight: 800, cursor: isAnalyzing ? 'wait' : 'pointer', transition: 'all 0.2s ease', opacity: isAnalyzing ? 0.7 : 1 }}>
+                      {isAnalyzing ? <Loader2 className="animate-spin" size={15} /> : <Sparkles size={15} />}
+                      <span>{isAnalyzing ? 'AI 분석 중...' : 'AI 토론 질문 생성'}</span>
                     </button>
                   )}
                 </div>
