@@ -21,7 +21,20 @@ function App() {
   const [communityPosts, setCommunityPosts] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [currentBookPages, setCurrentBookPages] = useState(250);
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('bookstory_user')) || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const raw = localStorage.getItem('bookstory_user');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      // migrate old format {user:{...}, token:"..."} where id is nested
+      if (parsed && parsed.user && parsed.token && !parsed.id) {
+        const migrated = { ...parsed.user, token: parsed.token };
+        localStorage.setItem('bookstory_user', JSON.stringify(migrated));
+        return migrated;
+      }
+      return parsed;
+    } catch { return null; }
+  });
 
   const [regForm, setRegForm] = useState({ name: '', gender: '남성', age: 20, location: '', lat: null, lng: null });
   const [selectedClub, setSelectedClub] = useState(null);
@@ -57,6 +70,19 @@ function App() {
   const [isConversing, setIsConversing] = useState(false);
   const [conversationInput, setConversationInput] = useState('');
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '' });
+  const [postBookSearch, setPostBookSearch] = useState('');
+  const [postBookResults, setPostBookResults] = useState([]);
+  const [postSelectedBook, setPostSelectedBook] = useState(null);
+  const [isSearchingPostBook, setIsSearchingPostBook] = useState(false);
+  const postSearchTimer = useRef(null);
+
+  React.useEffect(() => {
+    if (toast.show) {
+      const t = setTimeout(() => setToast({ show: false, message: '' }), 2800);
+      return () => clearTimeout(t);
+    }
+  }, [toast.show]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -143,17 +169,20 @@ function App() {
 
   const fetchCommunityPosts = async () => {
     try {
-      const uid = user?.id ? `?user_id=${user.id}` : '';
+      const numId = user?.id ? parseInt(user.id) : NaN;
+      const uid = !isNaN(numId) && numId > 0 ? `?user_id=${numId}` : '';
       const response = await fetch(`${API_URL}/api/community/posts${uid}`);
       const data = await response.json();
-      setCommunityPosts(data);
+      setCommunityPosts(Array.isArray(data) ? data : (Array.isArray(data?.posts) ? data.posts : []));
     } catch (error) { console.error('Failed to fetch posts'); }
   };
 
   const fetchJoinedClubs = async () => {
     if (!user?.id) return;
     try {
-      const response = await fetch(`${API_URL}/api/clubs/joined?user_id=${user.id}`);
+      const headers = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+      const response = await fetch(`${API_URL}/api/clubs/joined`, { headers });
+      if (!response.ok) return;
       const data = await response.json();
       setJoinedClubs(new Set(data));
     } catch (error) { console.error('Failed to fetch joined clubs'); }
@@ -194,8 +223,9 @@ function App() {
       });
       const data = await response.json();
       if (response.ok) {
-        setUser(data);
-        localStorage.setItem('bookstory_user', JSON.stringify(data));
+        const stored = { ...data.user, token: data.token };
+        setUser(stored);
+        localStorage.setItem('bookstory_user', JSON.stringify(stored));
         window.location.reload();
       }
     } catch (error) { alert('가입 중 오류가 발생했습니다.'); }
@@ -204,8 +234,11 @@ function App() {
   const handleTestLogin = async () => {
     const cached = localStorage.getItem('bookstory_test_user');
     if (cached) {
-      setUser(JSON.parse(cached));
-      localStorage.setItem('bookstory_user', cached);
+      const parsed = JSON.parse(cached);
+      const stored = (parsed?.user && parsed?.token && !parsed?.id)
+        ? { ...parsed.user, token: parsed.token } : parsed;
+      setUser(stored);
+      localStorage.setItem('bookstory_user', JSON.stringify(stored));
       window.location.reload();
       return;
     }
@@ -218,13 +251,14 @@ function App() {
       });
       const data = await response.json();
       if (response.ok) {
-        setUser(data);
-        localStorage.setItem('bookstory_user', JSON.stringify(data));
-        localStorage.setItem('bookstory_test_user', JSON.stringify(data));
+        const stored = { ...data.user, token: data.token };
+        setUser(stored);
+        localStorage.setItem('bookstory_user', JSON.stringify(stored));
+        localStorage.setItem('bookstory_test_user', JSON.stringify(stored));
         window.location.reload();
       }
     } catch (error) {
-      const fallback = { id: 1, ...testData };
+      const fallback = { id: 1, ...testData, token: null };
       setUser(fallback);
       localStorage.setItem('bookstory_user', JSON.stringify(fallback));
       localStorage.setItem('bookstory_test_user', JSON.stringify(fallback));
@@ -234,6 +268,23 @@ function App() {
 
   const handleRegisterBook = async (book) => {
     setIsSaving(true);
+    const tempId = `temp-${Date.now()}`;
+    const cleanTitle = stripHtml(book.title);
+    const optimistic = {
+      id: tempId,
+      title: cleanTitle,
+      author: book.author,
+      image: book.image,
+      publisher: book.publisher,
+      isbn: book.isbn,
+      pages: currentBookPages,
+      read_at: new Date().toISOString(),
+    };
+    setReadBooks(prev => [optimistic, ...prev]);
+    setSelectedBook(null);
+    setActiveTab('stack');
+    setViewMode('tower');
+    setToast({ show: true, message: `“${cleanTitle.slice(0, 16)}${cleanTitle.length > 16 ? '...' : ''}” 서재에 추가됐어요 📚` });
     try {
       const response = await fetch(`${API_URL}/api/books/read`, {
         method: 'POST',
@@ -241,22 +292,23 @@ function App() {
         body: JSON.stringify({ title: book.title, author: book.author, image: book.image, publisher: book.publisher, isbn: book.isbn, pages: currentBookPages })
       });
       if (response.ok) {
-        await fetchReadBooks();
-        setSelectedBook(null);
-        setActiveTab('stack');
-        setViewMode('tower');
+        const data = await response.json();
+        setReadBooks(prev => prev.map(b => b.id === tempId ? { ...data, title: stripHtml(data.title) } : b));
       }
-    } catch (error) { alert('등록 중 오류가 발생했습니다.'); } finally { setIsSaving(false); }
+    } catch (error) {
+      console.error('Book save error:', error);
+    } finally { setIsSaving(false); }
   };
 
   const handleCreateClub = async () => {
     if (!clubForm.name || !clubForm.location) return alert('모집 정보를 모두 입력해주세요.');
     setIsSavingClub(true);
     try {
+      const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
       const response = await fetch(`${API_URL}/api/clubs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...clubForm, image: clubForm.image || `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000)}?q=80&w=800` })
+        headers: { 'Content-Type': 'application/json', ...authH },
+        body: JSON.stringify({ ...clubForm, image: clubForm.image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=800', creator_id: getValidUserId() })
       });
       if (response.ok) {
         await fetchClubs();
@@ -268,21 +320,24 @@ function App() {
 
   const handleJoinClub = async (clubId) => {
     if (!user) return alert('로그인이 필요합니다.');
+    const uid = getValidUserId();
+    if (!uid) return alert('유효하지 않은 계정입니다. 다시 로그인해주세요.');
     const isJoined = joinedClubs.has(clubId);
+    const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
     try {
       if (isJoined) {
         await fetch(`${API_URL}/api/clubs/${clubId}/leave`, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: user.id })
+          headers: { 'Content-Type': 'application/json', ...authH },
+          body: JSON.stringify({ user_id: uid })
         });
         setJoinedClubs(prev => { const s = new Set(prev); s.delete(clubId); return s; });
         if (selectedClub?.id === clubId) setSelectedClub(prev => ({ ...prev, member_count: prev.member_count - 1 }));
       } else {
         await fetch(`${API_URL}/api/clubs/${clubId}/join`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: user.id })
+          headers: { 'Content-Type': 'application/json', ...authH },
+          body: JSON.stringify({ user_id: uid })
         });
         setJoinedClubs(prev => new Set([...prev, clubId]));
         if (selectedClub?.id === clubId) setSelectedClub(prev => ({ ...prev, member_count: prev.member_count + 1 }));
@@ -293,32 +348,84 @@ function App() {
 
   const handleLikePost = async (postId) => {
     if (!user) return;
+    const numId = parseInt(user.id);
+    if (isNaN(numId) || numId <= 0) return;
+    const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
     try {
       await fetch(`${API_URL}/api/community/posts/${postId}/like`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user.id })
+        headers: { 'Content-Type': 'application/json', ...authH },
+        body: JSON.stringify({ user_id: numId })
       });
       await fetchCommunityPosts();
     } catch (error) { console.error('Like error:', error); }
   };
 
   const handleWritePost = async () => {
-    if (!postForm.title.trim() || !postForm.content.trim()) return alert('제목과 내용을 입력해주세요.');
+    const contentText = postForm.content.replace(/<[^>]+>/g, '').trim();
+    if (!postForm.title.trim() || !contentText) return alert('제목과 내용을 입력해주세요.');
     setIsSubmittingPost(true);
+    const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
     try {
       const response = await fetch(`${API_URL}/api/community/posts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user?.id, ...postForm })
+        headers: { 'Content-Type': 'application/json', ...authH },
+        body: JSON.stringify({
+          user_id: getValidUserId(),
+          title: postForm.title,
+          content: postForm.content,
+          book_title: postSelectedBook ? stripHtml(postSelectedBook.title) : postForm.book_title,
+        })
       });
       if (response.ok) {
         await fetchCommunityPosts();
         setIsWritingPost(false);
         setPostForm({ title: '', content: '', book_title: '' });
+        setPostSelectedBook(null); setPostBookSearch(''); setPostBookResults([]);
+        setToast({ show: true, message: '게시물이 등록됐어요 ✍️' });
       }
     } catch (error) { alert('글 작성 중 오류가 발생했습니다.'); }
     finally { setIsSubmittingPost(false); }
+  };
+
+  const handleStackBookClick = (book) => {
+    setSelectedBook({ ...book, description: '', fromStack: true });
+    setAnalysisResult('');
+    setQuestions({ thematic: [], perspective_shift: [] });
+    setIsAnalyzing(false);
+  };
+
+  const getValidUserId = () => {
+    if (!user?.id) return null;
+    const n = parseInt(user.id);
+    return !isNaN(n) && n > 0 ? n : null;
+  };
+
+  const searchPostBook = (query) => {
+    if (postSearchTimer.current) clearTimeout(postSearchTimer.current);
+    if (!query.trim()) { setPostBookResults([]); return; }
+    postSearchTimer.current = setTimeout(async () => {
+      setIsSearchingPostBook(true);
+      try {
+        const res = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setPostBookResults((data.items || []).slice(0, 5));
+      } catch {}
+      finally { setIsSearchingPostBook(false); }
+    }, 320);
+  };
+
+  const renderMarkdown = (text) => {
+    if (!text) return '';
+    // If content has HTML tags (from WYSIWYG editor), render as HTML directly
+    if (/<[a-z][\s\S]*?>/i.test(text)) return text;
+    // Otherwise treat as plain markdown
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^## (.+)$/gm, '<span style="font-size:0.9375rem;font-weight:900;color:#3D2D1E;display:block;margin:6px 0 2px">$1</span>')
+      .replace(/\n/g, '<br>');
   };
 
   const handleFetchTendency = async () => {
@@ -606,27 +713,43 @@ function App() {
               {viewMode === 'tower' ? (
                 <div style={{ width: '100%', maxWidth: '460px', height: '70vh', maxHeight: '640px', minHeight: '380px', backgroundColor: '#2C1A10', borderRadius: '2rem', border: '1px solid rgba(139,107,66,0.1)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', boxShadow: '0 32px 64px -16px rgba(0,0,0,0.7)', marginBottom: '2.5rem' }}>
                   <div style={{ width: '100%', flex: 1, overflowY: 'auto', display: 'block', position: 'relative' }}>
-                    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', padding: '60px 16px 4px 16px' }}>
+                    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', padding: '60px 36px 8px 36px' }}>
                       {readBooks && readBooks.length > 0 ? (
-                        [...readBooks].map((book, idx) => {
+                      <AnimatePresence initial={false}>
+                        {readBooks.map((book, idx) => {
                           const bookColor = hexColors[idx % 10];
+                          const bookH = Math.max(52, (book.pages && book.pages > 0 ? book.pages : 280) / 5);
                           return (
-                            <div
-                              key={book.id || idx}
-                              className="hover:scale-[1.03] hover:brightness-110 group"
-                              style={{ width: `${Math.min(96, 82 + (idx % 4) * 4)}%`, height: `${Math.max(34, (book.pages || 250) / 6)}px`, marginBottom: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px 8px 8px 3px', backgroundColor: bookColor, backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(255,255,255,0.18) 2%, rgba(0,0,0,0.08) 4%, transparent 10%, transparent 90%, rgba(0,0,0,0.2) 100%)`, borderLeft: '5px solid rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.18)', borderBottom: '1px solid rgba(0,0,0,0.3)', boxShadow: '0 6px 8px -2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', position: 'relative', zIndex: idx + 1, flexShrink: 0 }}
+                            <motion.div
+                              key={book.id || book.title || idx}
+                              initial={{ scaleX: 0, opacity: 0 }}
+                              animate={{ scaleX: 1, opacity: 1 }}
+                              exit={{ scaleX: 0, opacity: 0, height: 0, marginBottom: 0 }}
+                              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                              style={{ transformOrigin: 'left center' }}
                             >
-                              <div style={{ position: 'absolute', left: '8px', top: '15%', bottom: '15%', width: '2px', backgroundColor: 'rgba(255,255,255,0.08)', filter: 'blur(0.5px)' }} />
-                              <span style={{ fontSize: '12px', fontWeight: 900, letterSpacing: '-0.01em', color: 'white', padding: '0 2rem', userSelect: 'none', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%', fontStyle: 'italic', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))' }}>
-                                {book.title.replace(/<\/?[^>]+(>|$)/g, "")}
-                              </span>
-                              <div className="hidden group-hover:flex" style={{ position: 'absolute', top: '-52px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', border: '1px solid rgba(139,107,66,0.25)', padding: '6px 14px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, zIndex: 200, whiteSpace: 'nowrap', boxShadow: '0 8px 24px rgba(0,0,0,0.6)', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ backgroundColor: bookColor, width: '8px', height: '8px', borderRadius: '9999px', display: 'inline-block' }} />
-                                <span style={{ color: 'white' }}>{book.author}</span>
+                              <div
+                                onClick={() => handleStackBookClick(book)}
+                                className="hover:scale-[1.04] hover:brightness-110 group"
+                                style={{ width: '100%', height: `${bookH}px`, marginBottom: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px 8px 8px 3px', backgroundColor: bookColor, backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.45) 0%, rgba(255,255,255,0.18) 2%, rgba(0,0,0,0.08) 4%, transparent 10%, transparent 85%, rgba(0,0,0,0.15) 100%)`, borderLeft: '5px solid rgba(0,0,0,0.35)', borderTop: '1px solid rgba(255,255,255,0.18)', borderBottom: '1px solid rgba(0,0,0,0.3)', boxShadow: '0 6px 10px -2px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', position: 'relative', zIndex: idx + 1, flexShrink: 0, overflow: 'hidden' }}
+                              >
+                                <div style={{ position: 'absolute', left: '8px', top: '15%', bottom: '15%', width: '2px', backgroundColor: 'rgba(255,255,255,0.08)', filter: 'blur(0.5px)' }} />
+                                {book.image && (
+                                  <img src={book.image} alt="" style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '90px', objectFit: 'cover', opacity: 0.6, borderRadius: '0 8px 8px 0', borderLeft: '1px solid rgba(0,0,0,0.4)', transition: 'opacity 0.3s' }} className="group-hover:opacity-85" />
+                                )}
+                                <span style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.02em', color: 'white', padding: '0 72px 0 2rem', userSelect: 'none', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', fontStyle: 'italic', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' }}>
+                                  {book.title.replace(/<\/?[^>]+(>|$)/g, "")}
+                                </span>
+                                <div className="hidden group-hover:flex" style={{ position: 'absolute', top: '-58px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(8px)', border: '1px solid rgba(139,107,66,0.3)', padding: '8px 14px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, zIndex: 200, whiteSpace: 'nowrap', boxShadow: '0 12px 32px rgba(0,0,0,0.7)', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ backgroundColor: bookColor, width: '8px', height: '8px', borderRadius: '9999px', display: 'inline-block', flexShrink: 0 }} />
+                                  <span style={{ color: 'white' }}>{book.author || '저자 미상'}</span>
+                                  <span style={{ color: 'rgba(196,148,86,0.8)', fontSize: '9px' }}>{book.pages || 250}p</span>
+                                </div>
                               </div>
-                            </div>
+                            </motion.div>
                           );
-                        })
+                        })}
+                      </AnimatePresence>
                       ) : (
                         <div style={{ marginBottom: '8rem', textAlign: 'center' }}>
                           <div style={{ width: '64px', height: '64px', margin: '0 auto 1rem', borderRadius: '1.25rem', background: 'rgba(139,107,66,0.07)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -650,9 +773,25 @@ function App() {
                       <p style={{ color: '#9E8D7A', fontWeight: 700 }}>아직 기록된 책이 없습니다.</p>
                     </div>
                   )}
-                  {readBooks.map(book => (
-                    <div key={book.id} className="book-list-item group">
-                      <img src={book.image} style={{ width: '3rem', height: '4.25rem', objectFit: 'cover', borderRadius: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0 }} alt="" />
+                  {readBooks.map((book, idx) => (
+                    <motion.div
+                      key={book.id}
+                      initial={{ opacity: 0, x: -16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.04, duration: 0.3, ease: 'easeOut' }}
+                      className="book-list-item group"
+                      onClick={() => handleStackBookClick(book)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div style={{ width: '3rem', minWidth: '3rem', height: '4.25rem', borderRadius: '0.5rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0, background: '#EDE8E2', position: 'relative' }}>
+                        {book.image ? (
+                          <img src={book.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${hexColors[idx % 10]}, ${hexColors[(idx+2) % 10]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ color: 'white', fontSize: '14px', fontWeight: 900 }}>{(book.title || '?')[0]}</span>
+                          </div>
+                        )}
+                      </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
                           <h4 className="group-hover:text-amber-700 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(book.title)}</h4>
@@ -661,12 +800,12 @@ function App() {
                           </span>
                         </div>
                         <p style={{ fontSize: '0.75rem', color: '#9E8D7A', fontWeight: 700, marginBottom: '0.5rem' }}>{book.author}</p>
-                        <div style={{ display: 'flex', gap: '0.375rem' }}>
-                          <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.pages || 250}p</span>
+                        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                          {book.pages > 0 && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.pages}p</span>}
                           {book.publisher && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.publisher}</span>}
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -727,23 +866,40 @@ function App() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ width: '100%', marginTop: '0.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '2rem 1.25rem', width: '100%' }}>
                 {searchResults.map((book, index) => (
-                  <div
+                  <motion.div
                     key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.055, duration: 0.35, ease: 'easeOut' }}
                     onClick={() => handleBookClick(book)}
                     className="premium-card group"
                     style={{ padding: '0.75rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 0 }}
                   >
                     <div style={{ width: '100%', aspectRatio: '3/4', marginBottom: '0.875rem', overflow: 'hidden', borderRadius: '0.875rem', position: 'relative', boxShadow: '0 16px 32px rgba(0,0,0,0.4)', border: '1px solid rgba(139,107,66,0.1)', background: '#EDE8E2' }}>
-                      <img src={book.image} className="group-hover:scale-110 transition-transform duration-700" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                      <div className="group-hover:opacity-100 opacity-0 transition-opacity" style={{ position: 'absolute', inset: 0, background: 'rgba(140,107,66,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Sparkles color="white" size={28} />
+                      {book.image ? (
+                        <img
+                          src={book.image}
+                          className="group-hover:scale-110 transition-transform duration-700"
+                          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                          alt=""
+                          onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                        />
+                      ) : null}
+                      <div style={{ display: book.image ? 'none' : 'flex', position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${hexColors[index % 10]}, ${hexColors[(index+3) % 10]})`, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '0.5rem' }}>
+                        <BookOpen size={24} color="rgba(255,255,255,0.8)" />
+                        <span style={{ fontSize: '10px', color: 'white', fontWeight: 700, textAlign: 'center', padding: '0 0.5rem', lineHeight: 1.3 }}>{stripHtml(book.title)}</span>
+                      </div>
+                      <div className="group-hover:opacity-100 opacity-0 transition-opacity duration-300" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(28,20,14,0.92) 0%, rgba(140,107,66,0.5) 55%, transparent 80%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', padding: '0.75rem' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 900, color: 'white', letterSpacing: '0.12em', textTransform: 'uppercase' }}>자세히 보기</span>
+                        <div style={{ width: '20px', height: '1.5px', background: 'rgba(196,148,86,0.9)', marginTop: '4px', borderRadius: '9999px' }} />
                       </div>
                     </div>
                     <div style={{ width: '100%', textAlign: 'center' }}>
                       <h4 style={{ fontWeight: 900, fontSize: '0.8125rem', lineHeight: 1.35, padding: '0 0.25rem', marginBottom: '0.25rem' }} className="line-clamp-2">{stripHtml(book.title)}</h4>
                       <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 0.5rem' }}>{book.author}</p>
+                      {book.discount && <p style={{ fontSize: '10px', color: '#8C6B42', fontWeight: 800, marginTop: '3px' }}>{parseInt(book.discount).toLocaleString()}원</p>}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
               {searchResults.length === 0 && searchQuery && !isSearching && (
@@ -824,6 +980,44 @@ function App() {
                 </div>
               ) : null}
 
+              {user && getValidUserId() && clubs.filter(c => c.creator_id === getValidUserId()).length > 0 && (
+                <div>
+                  <div className="section-header" style={{ marginBottom: '1.25rem' }}>
+                    <div className="section-accent" />
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#1C140E' }}>내가 개설한 모임</h3>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.875rem', marginBottom: '2rem' }}>
+                    {clubs.filter(c => c.creator_id === getValidUserId()).map((club) => (
+                      <div
+                        key={club.id}
+                        onClick={() => setSelectedClub(club)}
+                        className="glass-card group"
+                        style={{ padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer', height: '130px', border: '1.5px solid rgba(140,107,66,0.3)' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                          <div style={{ width: '3.25rem', height: '3.25rem', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(139,107,66,0.15)', flexShrink: 0, background: '#EDE8E2' }}>
+                            <img src={club.image} className="w-full h-full grayscale group-hover:grayscale-0 transition-all" style={{ objectFit: 'cover' }} alt="" />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '2px' }}>
+                              <span style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', background: 'rgba(140,107,66,0.12)', border: '1px solid rgba(140,107,66,0.25)', padding: '1px 6px', borderRadius: '4px' }}>개설자</span>
+                            </div>
+                            <h4 className="group-hover:text-amber-700 transition-colors" style={{ fontSize: '0.8125rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.name}</h4>
+                            <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px', marginTop: '3px' }}>
+                              <MapPin size={9} /> {club.location}
+                            </p>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.75rem', borderTop: '1px solid rgba(139,107,66,0.08)' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 900, color: '#9E8D7A', textTransform: 'uppercase', letterSpacing: '0.05em', background: 'rgba(139,107,66,0.07)', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '6px' }}>{club.category}</span>
+                          <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(140,107,66,0.8)' }}>{club.member_count}명</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(139,107,66,0.1)', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
                   <div className="section-header" style={{ marginBottom: 0 }}>
@@ -881,22 +1075,29 @@ function App() {
 
               <div style={{ borderTop: '1px solid rgba(139,107,66,0.1)' }}>
                 {communityPosts.map((post) => (
-                  <div
+                  <motion.div
                     key={post.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
                     className="group"
                     style={{ position: 'relative', padding: '1.75rem 0', borderBottom: '1px solid rgba(139,107,66,0.1)', cursor: 'pointer', transition: 'all 0.2s ease' }}
                   >
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', opacity: 0, borderRadius: '0 2px 2px 0', transition: 'opacity 0.2s ease' }} className="group-hover:opacity-100" />
                     <div style={{ paddingLeft: '0.75rem' }}>
+                      {post.book_title && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem', padding: '4px 12px 4px 8px', background: 'linear-gradient(135deg, rgba(140,107,66,0.1), rgba(196,148,86,0.08))', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '8px' }}>
+                          <BookOpen size={11} style={{ color: '#8C6B42', flexShrink: 0 }} />
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42' }}>{post.book_title}</span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
                         <span style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '6px' }}>General</span>
                       </div>
                       <h3 className="group-hover:text-amber-700 transition-colors" style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: '0.5rem', lineHeight: 1.3, letterSpacing: '-0.01em' }}>{post.title}</h3>
-                      <p style={{ color: '#9E8D7A', lineHeight: 1.6, fontSize: '0.875rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{post.content}</p>
-
+                      <p style={{ color: '#9E8D7A', lineHeight: 1.6, fontSize: '0.875rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                          <button onClick={() => handleLikePost(post.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: post.liked ? '#fb7185' : '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-rose-400">
+                          <button onClick={(e) => { e.stopPropagation(); handleLikePost(post.id); }} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: post.liked ? '#fb7185' : '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-rose-400">
                             <Heart size={14} fill={post.liked ? '#fb7185' : 'none'} />
                             {post.likes}
                           </button>
@@ -915,7 +1116,7 @@ function App() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 {communityPosts.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '4rem 0', color: '#BDB0A0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
@@ -1124,6 +1325,21 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* TOAST NOTIFICATION */}
+      <AnimatePresence>
+        {toast.show && (
+          <motion.div
+            initial={{ y: 80, opacity: 0, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 80, opacity: 0, scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+            style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #8C6B42, #C49456)', color: 'white', padding: '0.875rem 1.75rem', borderRadius: '9999px', fontWeight: 800, fontSize: '0.875rem', boxShadow: '0 16px 40px rgba(140,107,66,0.55)', zIndex: 9999, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* REGISTRATION MODAL */}
       <AnimatePresence>
@@ -1343,52 +1559,75 @@ function App() {
       {/* WRITE POST MODAL */}
       <AnimatePresence>
         {isWritingPost && (
-          <div className="modal-backdrop overflow-y-auto" onClick={() => setIsWritingPost(false)}>
+          <div className="modal-backdrop overflow-y-auto" onClick={() => { setIsWritingPost(false); setPostSelectedBook(null); setPostBookResults([]); setPostBookSearch(''); }}>
             <motion.div
               initial={{ opacity: 0, scale: 0.93, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.93, y: 16 }}
               onClick={(e) => e.stopPropagation()}
               className="modal-content relative my-auto"
-              style={{ maxWidth: '520px' }}
+              style={{ maxWidth: '560px' }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.02em' }}>글쓰기</h2>
-                <button onClick={() => setIsWritingPost(false)} style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.12)', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }} className="hover:bg-white\/10 hover:text-white"><X size={16} /></button>
+                <div>
+                  <p style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '4px' }}>지식 나누기 광장</p>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.02em' }}>글쓰기</h2>
+                </div>
+                <button onClick={() => { setIsWritingPost(false); setPostSelectedBook(null); setPostBookResults([]); setPostBookSearch(''); }} style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.12)', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}><X size={16} /></button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
                 <div>
                   <label className="form-label">제목</label>
-                  <input
-                    className="form-input"
-                    style={{ color: '#1C140E' }}
-                    placeholder="어떤 이야기를 나누고 싶으신가요?"
-                    value={postForm.title}
-                    onChange={(e) => setPostForm({ ...postForm, title: e.target.value })}
-                  />
+                  <input className="form-input" style={{ color: '#1C140E' }} placeholder="어떤 이야기를 나누고 싶으신가요?" value={postForm.title} onChange={(e) => setPostForm({ ...postForm, title: e.target.value })} />
                 </div>
+
                 <div>
-                  <label className="form-label">관련 책 (선택)</label>
-                  <input
-                    className="form-input"
-                    style={{ color: '#1C140E' }}
-                    placeholder="관련 책 제목을 입력하세요"
-                    value={postForm.book_title}
-                    onChange={(e) => setPostForm({ ...postForm, book_title: e.target.value })}
-                  />
+                  <label className="form-label">관련 책 검색 (선택)</label>
+                  {postSelectedBook ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'linear-gradient(135deg, rgba(140,107,66,0.08), rgba(196,148,86,0.06))', border: '1px solid rgba(140,107,66,0.25)', borderRadius: '0.875rem' }}>
+                      {postSelectedBook.image && <img src={postSelectedBook.image} alt="" style={{ width: '2.75rem', height: '3.75rem', objectFit: 'cover', borderRadius: '4px', flexShrink: 0, boxShadow: '0 4px 8px rgba(0,0,0,0.2)' }} />}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3px' }}>선택된 책</p>
+                        <p style={{ fontWeight: 800, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>{stripHtml(postSelectedBook.title)}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#9E8D7A', fontWeight: 600 }}>{postSelectedBook.author}</p>
+                      </div>
+                      <button onClick={() => { setPostSelectedBook(null); setPostBookSearch(''); }} style={{ background: 'rgba(139,107,66,0.1)', border: '1px solid rgba(139,107,66,0.15)', width: '1.75rem', height: '1.75rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A', flexShrink: 0 }}><X size={12} /></button>
+                    </div>
+                  ) : (
+                    <div style={{ position: 'relative' }}>
+                      <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={14} />
+                      <input className="form-input" style={{ color: '#1C140E', paddingLeft: '2.5rem' }} placeholder="책 제목이나 저자를 검색하세요" value={postBookSearch} onChange={(e) => { setPostBookSearch(e.target.value); searchPostBook(e.target.value); }} />
+                      {isSearchingPostBook && <Loader2 style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={14} className="animate-spin" />}
+                      {postBookResults.length > 0 && (
+                        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, overflow: 'hidden' }}>
+                          {postBookResults.map((book, i) => (
+                            <div key={i} onClick={() => { setPostSelectedBook(book); setPostForm(p => ({...p, book_title: stripHtml(book.title)})); setPostBookResults([]); setPostBookSearch(''); }} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 1rem', cursor: 'pointer', borderBottom: i < postBookResults.length - 1 ? '1px solid rgba(139,107,66,0.08)' : 'none', background: 'transparent' }} onMouseEnter={e => e.currentTarget.style.background='rgba(140,107,66,0.05)'} onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                              {book.image && <img src={book.image} alt="" style={{ width: '2rem', height: '2.75rem', objectFit: 'cover', borderRadius: '3px', flexShrink: 0 }} />}
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontWeight: 700, fontSize: '0.8125rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(book.title)}</p>
+                                <p style={{ fontSize: '11px', color: '#9E8D7A' }}>{book.author}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+
                 <div>
                   <label className="form-label">내용</label>
                   <textarea
                     className="form-input"
-                    style={{ height: '8rem', resize: 'none', color: '#1C140E' }}
-                    placeholder="생각, 질문, 감상을 자유롭게 나눠보세요."
+                    style={{ minHeight: '10rem', resize: 'vertical', color: '#1C140E', lineHeight: 1.65, fontFamily: 'inherit' }}
+                    placeholder="내용을 입력하세요"
                     value={postForm.content}
-                    onChange={(e) => setPostForm({ ...postForm, content: e.target.value })}
+                    onChange={e => setPostForm(p => ({ ...p, content: e.target.value }))}
                   />
                 </div>
-                <button onClick={handleWritePost} disabled={isSubmittingPost} className="premium-button disabled:opacity-50" style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+
+                <button onClick={handleWritePost} disabled={isSubmittingPost} className="premium-button disabled:opacity-50" style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                   {isSubmittingPost ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
                   <span>게시하기</span>
                 </button>
@@ -1641,10 +1880,16 @@ function App() {
                 )}
 
                 <div style={{ display: 'flex', gap: '0.625rem' }}>
-                  <button onClick={() => handleRegisterBook(selectedBook)} disabled={isSaving} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    {isSaving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}
-                    <span>내 서재에 기록하기</span>
-                  </button>
+                  {selectedBook?.fromStack ? (
+                    <div style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem', color: '#8C6B42', fontWeight: 800 }}>
+                      ✅ 이미 내 서재에 있어요
+                    </div>
+                  ) : (
+                    <button onClick={() => handleRegisterBook(selectedBook)} disabled={isSaving} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      {isSaving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}
+                      <span>내 서재에 기록하기</span>
+                    </button>
+                  )}
                   {questions.thematic.length > 0 ? (
                     <button onClick={handleStartDiscussion} style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.25)', borderRadius: '0.875rem', color: '#C49456', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>
                       <MessageCircle size={15} />

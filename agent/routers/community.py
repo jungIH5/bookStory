@@ -9,8 +9,11 @@ router = APIRouter(prefix="/api/community")
 
 
 @router.get("/posts")
-def get_posts(user_id: Optional[int] = None, conn=Depends(get_db)):
-    uid = user_id or 0
+def get_posts(user_id: Optional[str] = None, conn=Depends(get_db)):
+    try:
+        uid = int(user_id) if user_id else 0
+    except (ValueError, TypeError):
+        uid = 0
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """

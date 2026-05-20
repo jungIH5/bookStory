@@ -134,6 +134,10 @@ def _init_db():
             """)
 
             cur.execute("""
+                ALTER TABLE clubs ADD COLUMN IF NOT EXISTS creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+            """)
+
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS club_members (
                     id SERIAL PRIMARY KEY,
                     club_id INTEGER REFERENCES clubs(id) ON DELETE CASCADE,

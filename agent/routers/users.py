@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from psycopg2.extras import RealDictCursor
 from typing import Optional
 import db
+from auth import create_token
 
 router = APIRouter(prefix="/api/users")
 
@@ -33,7 +34,9 @@ def register_user(body: UserIn, conn=Depends(db.get_db)):
                VALUES (%s, %s, %s, %s, %s, %s) RETURNING *""",
             (body.name, body.gender, body.age, body.location, body.lat, body.lng),
         )
-        return dict(cur.fetchone())
+        user = dict(cur.fetchone())
+    token = create_token(user["id"])
+    return {"user": user, "token": token}
 
 
 @router.post("/{user_id}/voice-sample")

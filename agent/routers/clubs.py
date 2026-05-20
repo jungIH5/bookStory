@@ -23,28 +23,33 @@ class ClubIn(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
     image: str = ""
+    creator_id: Optional[int] = None
 
 
 @router.post("")
 def create_club(body: ClubIn, conn=Depends(get_db)):
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
-            """INSERT INTO clubs (name, description, category, location, lat, lng, image)
-               VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *""",
+            """INSERT INTO clubs (name, description, category, location, lat, lng, image, creator_id)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
             (body.name, body.description, body.category, body.location,
-             body.lat, body.lng, body.image),
+             body.lat, body.lng, body.image, body.creator_id),
         )
         return dict(cur.fetchone())
 
 
 # 내가 참여한 모임 ID 목록 — 반드시 /{id}/... 라우트보다 앞에 정의
 @router.get("/joined")
-def get_joined_clubs(user_id: Optional[int] = None, conn=Depends(get_db)):
-    if not user_id:
+def get_joined_clubs(user_id: Optional[str] = None, conn=Depends(get_db)):
+    try:
+        uid = int(user_id) if user_id else None
+    except (ValueError, TypeError):
+        uid = None
+    if not uid:
         return []
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT club_id FROM club_members WHERE user_id = %s", (user_id,)
+            "SELECT club_id FROM club_members WHERE user_id = %s", (uid,)
         )
         return [r[0] for r in cur.fetchall()]
 
