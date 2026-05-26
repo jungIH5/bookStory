@@ -199,12 +199,15 @@ def _init_db():
                 INTEGER REFERENCES comments(id) ON DELETE SET NULL
             """)
 
-            # 읽은 책 감상평/공개여부
+            # 읽은 책 감상평/공개여부/소유자
             cur.execute("""
                 ALTER TABLE read_books ADD COLUMN IF NOT EXISTS impression TEXT DEFAULT ''
             """)
             cur.execute("""
                 ALTER TABLE read_books ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE
+            """)
+            cur.execute("""
+                ALTER TABLE read_books ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
             """)
 
             # 모임 평점/리뷰

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -7,7 +8,10 @@ from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
 import os
 
+# Docker 환경: docker-compose가 backend/.env를 직접 주입
+# 로컬 직접 실행: agent/.env → backend/.env 순으로 로드
 load_dotenv()
+load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 
 import db
 from routers import books, clubs, community, users, sessions, recordings, tendency, recommendations

@@ -1,0 +1,109 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { BookOpen, User, MapPin, ChevronRight, Loader2, MapIcon } from 'lucide-react';
+import { searchKakaoLocation } from '../utils';
+
+export default function RegistrationModal({ regForm, setRegForm, onRegister, onTestLogin }) {
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+
+  const handleLocationChange = (value) => {
+    setRegForm({ ...regForm, location: value, lat: null, lng: null });
+    searchKakaoLocation(value, setLocationSuggestions, setIsSearchingLocation);
+  };
+
+  const selectLocation = (item) => {
+    const simplifiedAddr = item.address_name.split(' ').slice(1, 3).join(' ');
+    setRegForm({ ...regForm, location: simplifiedAddr, lat: parseFloat(item.y), lng: parseFloat(item.x) });
+    setLocationSuggestions([]);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F7F4EF', padding: '1.5rem' }}>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: '55%', height: '55%', background: 'rgba(140,107,66,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+        <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '55%', height: '55%', background: 'rgba(196,148,86,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+      </div>
+
+      <motion.div
+        initial={{ scale: 0.93, y: 24 }}
+        animate={{ scale: 1, y: 0 }}
+        style={{ width: '100%', maxWidth: '420px', background: '#FEFCF9', backdropFilter: 'blur(24px)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '1.75rem', padding: '2.5rem', position: 'relative', zIndex: 10, boxShadow: '0 40px 80px rgba(0,0,0,0.6)' }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{ width: '4.5rem', height: '4.5rem', background: 'linear-gradient(135deg, #8C6B42, #C49456)', borderRadius: '1.25rem', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(140,107,66,0.4)', transform: 'rotate(3deg)' }}>
+            <BookOpen size={36} color="white" />
+          </div>
+          <h2 className="font-black gradient-text" style={{ fontSize: '2rem', letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>bookStory</h2>
+          <p style={{ color: '#9E8D7A', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.6 }}>당신만의 독서 여정을 시작하기 위해<br />회원 정보를 입력해주세요.</p>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div>
+            <label className="form-label">닉네임 또는 이름</label>
+            <div style={{ position: 'relative' }}>
+              <User style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+              <input type="text" placeholder="어떻게 불러드릴까요?" value={regForm.name} onChange={(e) => setRegForm({ ...regForm, name: e.target.value })} className="form-input" style={{ paddingLeft: '2.75rem', color: '#1C140E' }} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+            <div>
+              <label className="form-label">성별</label>
+              <select className="form-input appearance-none" style={{ color: '#1C140E' }} value={regForm.gender} onChange={(e) => setRegForm({ ...regForm, gender: e.target.value })}>
+                <option>남성</option>
+                <option>여성</option>
+                <option>기타</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">나이</label>
+              <input type="number" placeholder="20" value={regForm.age} onChange={(e) => setRegForm({ ...regForm, age: parseInt(e.target.value) })} className="form-input" style={{ color: '#1C140E' }} />
+            </div>
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <label className="form-label">주 활동 지역</label>
+            <div style={{ position: 'relative' }}>
+              <MapIcon style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+              <input type="text" placeholder="동네나 역 이름 검색 (예: 합정역, 마포구)" value={regForm.location} onChange={(e) => handleLocationChange(e.target.value)} className="form-input" style={{ paddingLeft: '2.75rem', color: '#1C140E' }} />
+              {isSearchingLocation && <Loader2 style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={15} className="animate-spin" />}
+            </div>
+            {locationSuggestions.length > 0 && (
+              <div style={{ position: 'absolute', zIndex: 1100, top: '100%', left: 0, right: 0, marginTop: '0.5rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', boxShadow: '0 16px 40px rgba(0,0,0,0.15)', maxHeight: '180px', overflowY: 'auto' }}>
+                {locationSuggestions.map((item, i) => (
+                  <div key={i} onClick={() => selectLocation(item)} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.08)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
+                    <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1C140E', marginBottom: '2px' }}>{item.place_name}</p>
+                    <p style={{ fontSize: '10px', color: '#9E8D7A' }}>{item.address_name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {regForm.lat && regForm.lng && (
+              <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.875rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MapPin size={11} style={{ color: '#8C6B42' }} />
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8C6B42' }}>📍 위치 확인됨: {regForm.location}</span>
+              </div>
+            )}
+          </div>
+
+          <button onClick={onRegister} className="premium-button" style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginTop: '0.5rem' }}>
+            <span>bookStory 시작하기</span>
+            <ChevronRight size={18} />
+          </button>
+        </div>
+
+        <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+          <button
+            onClick={onTestLogin}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#BDB0A0', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0', transition: 'color 0.2s ease' }}
+            onMouseEnter={(e) => e.target.style.color = '#8C6B42'}
+            onMouseLeave={(e) => e.target.style.color = '#BDB0A0'}
+          >
+            테스트 유저로 진입 →
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
