@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, BookOpen, Heart, Loader2, Send, CornerDownRight } from 'lucide-react';
+import { X, BookOpen, Heart, Loader2, Send, CornerDownRight, Trash2 } from 'lucide-react';
 import { renderMarkdown } from '../../utils';
 
 export default function PostModal({
@@ -10,7 +10,7 @@ export default function PostModal({
   replyInput, setReplyInput,
   replyingToMention, setReplyingToMention,
   isSubmittingComment,
-  onClose, onLike, onSubmitComment, onSubmitReply,
+  onClose, onLike, onSubmitComment, onSubmitReply, onDeletePost,
 }) {
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={() => { setReplyingTo(null); onClose(); }}>
@@ -45,12 +45,19 @@ export default function PostModal({
           <p style={{ fontSize: '0.875rem', lineHeight: 1.8, color: '#3D2D1E', whiteSpace: 'pre-wrap' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
           <button onClick={onLike}
             style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', fontWeight: 700, color: post.liked ? '#fb7185' : '#9E8D7A', cursor: 'pointer', background: post.liked ? 'rgba(251,113,133,0.08)' : 'rgba(139,107,66,0.06)', border: `1px solid ${post.liked ? 'rgba(251,113,133,0.25)' : 'rgba(139,107,66,0.15)'}`, borderRadius: '9999px', padding: '0.375rem 0.875rem', transition: 'all 0.2s' }}>
             <Heart size={14} fill={post.liked ? '#fb7185' : 'none'} />
             공감 {post.likes || 0}
           </button>
+          {onDeletePost && user && post.user_id && Number(post.user_id) === Number(user.id) && (
+            <button onClick={onDeletePost}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', cursor: 'pointer', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: '9999px', padding: '0.375rem 0.875rem', transition: 'all 0.2s' }}>
+              <Trash2 size={13} />
+              삭제
+            </button>
+          )}
         </div>
 
         <div style={{ borderTop: '1px solid rgba(139,107,66,0.1)', paddingTop: '1rem' }}>

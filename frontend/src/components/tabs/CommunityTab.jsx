@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MessageSquare, BookOpen, Heart, MessageCircle, Plus } from 'lucide-react';
+import { MessageSquare, BookOpen, Heart, MessageCircle, Plus, Loader2 } from 'lucide-react';
 import { renderMarkdown } from '../../utils';
 
-export default function CommunityTab({ user, communityPosts, onOpenPost, onLikePost, onWritePost }) {
+export default function CommunityTab({ user, communityPosts, hasMore, isFetchingMore, onOpenPost, onLikePost, onWritePost, onLoadMore }) {
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
@@ -73,6 +73,19 @@ export default function CommunityTab({ user, communityPosts, onOpenPost, onLikeP
           </div>
         )}
       </div>
+
+      {hasMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '1.5rem' }}>
+          <button
+            onClick={onLoadMore}
+            disabled={isFetchingMore}
+            style={{ padding: '0.625rem 2rem', background: 'rgba(139,107,66,0.07)', border: '1px solid rgba(139,107,66,0.18)', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 800, color: '#7B6B55', cursor: isFetchingMore ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s ease', opacity: isFetchingMore ? 0.6 : 1 }}
+          >
+            {isFetchingMore ? <Loader2 size={14} className="animate-spin" /> : null}
+            {isFetchingMore ? '불러오는 중...' : '더 보기'}
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }

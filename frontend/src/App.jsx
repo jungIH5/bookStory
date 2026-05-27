@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
@@ -80,6 +80,9 @@ function App() {
   const [replyInput, setReplyInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [replyingToMention, setReplyingToMention] = useState('');
+  const [communityPage, setCommunityPage] = useState(1);
+  const [communityHasMore, setCommunityHasMore] = useState(false);
+  const [isFetchingMorePosts, setIsFetchingMorePosts] = useState(false);
 
   const [clubReviews, setClubReviews] = useState([]);
   const [myRating, setMyRating] = useState(0);
@@ -148,21 +151,36 @@ function App() {
     } catch (error) { console.error('Failed to fetch clubs'); }
   };
 
-  const fetchCommunityPosts = async () => {
+  const fetchCommunityPosts = async (page = 1, append = false) => {
     try {
       const numId = user?.id ? parseInt(user.id) : NaN;
-      const uid = !isNaN(numId) && numId > 0 ? `?user_id=${numId}` : '';
-      const response = await fetch(`${API_URL}/api/community/posts${uid}`);
+      const uid = !isNaN(numId) && numId > 0 ? `user_id=${numId}&` : '';
+      const response = await fetch(`${API_URL}/api/community/posts?${uid}page=${page}&limit=20`);
       const data = await response.json();
-      setCommunityPosts(Array.isArray(data) ? data : (Array.isArray(data?.posts) ? data.posts : []));
+      const posts = Array.isArray(data) ? data : (Array.isArray(data?.posts) ? data.posts : []);
+      const total = data?.total || posts.length;
+      if (append) {
+        setCommunityPosts(prev => [...prev, ...posts]);
+      } else {
+        setCommunityPosts(posts);
+      }
+      setCommunityPage(page);
+      setCommunityHasMore(page * 20 < total);
     } catch (error) { console.error('Failed to fetch posts'); }
+  };
+
+  const handleLoadMorePosts = async () => {
+    setIsFetchingMorePosts(true);
+    await fetchCommunityPosts(communityPage + 1, true);
+    setIsFetchingMorePosts(false);
   };
 
   const fetchJoinedClubs = async () => {
     if (!user?.id) return;
     try {
-      const headers = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
-      const response = await fetch(`${API_URL}/api/clubs/joined`, { headers });
+      const uid = getValidUserId(user);
+      if (!uid) return;
+      const response = await fetch(`${API_URL}/api/clubs/joined?user_id=${uid}`);
       if (!response.ok) return;
       const data = await response.json();
       setJoinedClubs(new Set(data));
@@ -316,6 +334,18 @@ function App() {
       }
     } catch (error) { console.error('Book save error:', error); }
     finally { setIsSaving(false); }
+  };
+
+  const handleDeleteBook = async (bookId) => {
+    if (String(bookId).startsWith('temp-')) {
+      setReadBooks(prev => prev.filter(b => b.id !== bookId));
+      return;
+    }
+    setReadBooks(prev => prev.filter(b => b.id !== bookId));
+    try {
+      await fetch(`${API_URL}/api/books/read/${bookId}`, { method: 'DELETE' });
+    } catch (e) { console.error('Book delete error:', e); }
+    setToast({ show: true, message: '서재에서 삭제됐어요 🗑️' });
   };
 
   const handleSaveImpression = async () => {
@@ -550,6 +580,23 @@ function App() {
     finally { setIsSubmittingAnswer(false); }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('bookstory_user');
+    window.location.reload();
+  };
+
+  const handleDeletePost = async (postId) => {
+    setCommunityPosts(prev => prev.filter(p => p.id !== postId));
+    setSelectedPost(null);
+    setPostComments([]);
+    try {
+      const uid = getValidUserId(user);
+      const uidParam = uid ? `?user_id=${uid}` : '';
+      await fetch(`${API_URL}/api/community/posts/${postId}${uidParam}`, { method: 'DELETE' });
+    } catch (e) { console.error('Post delete error:', e); }
+    setToast({ show: true, message: '게시물이 삭제됐어요 🗑️' });
+  };
+
   const handleUploadVoiceSample = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !user?.id) return;
@@ -608,6 +655,15 @@ function App() {
                   <p style={{ fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1.3, marginTop: '2px' }}>{user.name}</p>
                 </div>
               </div>
+              <button
+                onClick={handleLogout}
+                title="로그아웃"
+                style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(140,107,66,0.08)'; e.currentTarget.style.borderColor = 'rgba(140,107,66,0.18)'; }}
+              >
+                <LogOut size={13} style={{ color: '#9E8D7A' }} />
+              </button>
             </div>
           )}
         </div>
@@ -672,6 +728,7 @@ function App() {
               onStackBookClick={handleStackBookClick}
               onFetchTendency={handleFetchTendency}
               onFetchRecommendations={handleFetchRecommendations}
+              onDeleteBook={handleDeleteBook}
             />
           )}
           {activeTab === 'search' && (
@@ -695,9 +752,12 @@ function App() {
             <CommunityTab
               user={user}
               communityPosts={communityPosts}
+              hasMore={communityHasMore}
+              isFetchingMore={isFetchingMorePosts}
               onOpenPost={openPostDetail}
               onLikePost={handleLikePost}
               onWritePost={() => setIsWritingPost(true)}
+              onLoadMore={handleLoadMorePosts}
             />
           )}
           {activeTab === 'recording' && (
@@ -830,6 +890,7 @@ function App() {
             }}
             onSubmitComment={handleSubmitComment}
             onSubmitReply={handleSubmitReply}
+            onDeletePost={() => handleDeletePost(selectedPost.id)}
           />
         )}
       </AnimatePresence>
@@ -853,6 +914,7 @@ function App() {
             onLoadAnalysis={handleLoadAnalysis}
             onStartDiscussion={handleStartDiscussion}
             onSaveImpression={handleSaveImpression}
+            onDeleteBook={() => { handleDeleteBook(selectedBook.id); setSelectedBook(null); }}
           />
         )}
       </AnimatePresence>

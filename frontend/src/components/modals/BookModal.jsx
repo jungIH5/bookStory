@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, BookOpen, Sparkles, Loader2, Bookmark, Plus, MessageCircle } from 'lucide-react';
+import { X, BookOpen, Sparkles, Loader2, Bookmark, Plus, MessageCircle, Trash2 } from 'lucide-react';
 import { stripHtml } from '../../utils';
 
 export default function BookModal({
@@ -8,7 +8,7 @@ export default function BookModal({
   bookImpression, setBookImpression,
   bookImpressionPublic, setBookImpressionPublic,
   isSaving, isSavingImpression,
-  onClose, onRegister, onLoadAnalysis, onStartDiscussion, onSaveImpression,
+  onClose, onRegister, onLoadAnalysis, onStartDiscussion, onSaveImpression, onDeleteBook,
 }) {
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
@@ -115,10 +115,18 @@ export default function BookModal({
 
           <div style={{ display: 'flex', gap: '0.625rem' }}>
             {book?.fromStack ? (
-              <button onClick={onSaveImpression} disabled={isSavingImpression} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                {isSavingImpression ? <Loader2 className="animate-spin" size={15} /> : <Bookmark size={15} />}
-                <span>감상평 저장</span>
-              </button>
+              <>
+                <button onClick={onSaveImpression} disabled={isSavingImpression} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  {isSavingImpression ? <Loader2 className="animate-spin" size={15} /> : <Bookmark size={15} />}
+                  <span>감상평 저장</span>
+                </button>
+                {onDeleteBook && (
+                  <button onClick={onDeleteBook} style={{ padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.875rem', color: '#ef4444', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap' }}>
+                    <Trash2 size={14} />
+                    <span className="sm:inline hidden">삭제</span>
+                  </button>
+                )}
+              </>
             ) : (
               <button onClick={onRegister} disabled={isSaving} className="premium-button disabled:opacity-50" style={{ flex: 1, padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                 {isSaving ? <Loader2 className="animate-spin" size={15} /> : <Plus size={15} />}

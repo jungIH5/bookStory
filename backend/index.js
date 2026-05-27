@@ -129,7 +129,10 @@ const initDb = async () => {
         publisher TEXT,
         isbn TEXT,
         pages INTEGER DEFAULT 250,
-        read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        impression TEXT DEFAULT '',
+        is_public BOOLEAN DEFAULT TRUE,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
       )
     `);
     await pool.query(`
@@ -155,9 +158,15 @@ const initDb = async () => {
         lng DOUBLE PRECISION,
         member_count INT DEFAULT 1,
         image TEXT,
+        creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    // 기존 DB에 누락된 컬럼 보정 (ALTER TABLE IF NOT EXISTS)
+    await pool.query(`ALTER TABLE read_books ADD COLUMN IF NOT EXISTS impression TEXT DEFAULT ''`);
+    await pool.query(`ALTER TABLE read_books ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE`);
+    await pool.query(`ALTER TABLE read_books ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL`);
+    await pool.query(`ALTER TABLE clubs ADD COLUMN IF NOT EXISTS creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL`);
 
     const { rows: existingClubs } = await pool.query('SELECT count(*) FROM clubs');
     if (parseInt(existingClubs[0].count) < 5) {
@@ -194,9 +203,11 @@ const initDb = async () => {
         post_id INTEGER REFERENCES posts(id) ON DELETE CASCADE,
         user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         content TEXT NOT NULL,
+        parent_comment_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await pool.query(`ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_comment_id INTEGER REFERENCES comments(id) ON DELETE CASCADE`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS club_members (
         id SERIAL PRIMARY KEY,

@@ -111,6 +111,17 @@ def update_impression(book_id: int, body: ImpressionIn, conn=Depends(get_db)):
         return dict(row)
 
 
+# ── 읽은 책 삭제 ──────────────────────────────────────────────────────────
+@router.delete("/read/{book_id}")
+def delete_read_book(book_id: int, conn=Depends(get_db)):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM read_books WHERE id = %s RETURNING id", (book_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(404, "Book not found")
+    return {"deleted": True, "id": book_id}
+
+
 # ── 읽은 책 목록 (user_id 필터 지원) ─────────────────────────────────────
 @router.get("/read")
 def get_read_books(user_id: Optional[int] = None, conn=Depends(get_db)):

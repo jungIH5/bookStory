@@ -14,7 +14,8 @@ async def get_recommendations(user_id: int, conn=Depends(db.get_db)):
             raise HTTPException(status_code=404, detail="User not found")
 
         cur.execute(
-            "SELECT title, author FROM read_books ORDER BY read_at DESC LIMIT 30",
+            "SELECT title, author FROM read_books WHERE user_id = %s ORDER BY read_at DESC LIMIT 30",
+            (user_id,),
         )
         rows = cur.fetchall()
 

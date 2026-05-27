@@ -9,11 +9,12 @@ router = APIRouter(prefix="/api/community")
 
 
 @router.get("/posts")
-def get_posts(user_id: Optional[str] = None, conn=Depends(get_db)):
+def get_posts(user_id: Optional[str] = None, page: int = 1, limit: int = 20, conn=Depends(get_db)):
     try:
         uid = int(user_id) if user_id else 0
     except (ValueError, TypeError):
         uid = 0
+    offset = (max(1, page) - 1) * limit
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
             """
@@ -31,10 +32,14 @@ def get_posts(user_id: Optional[str] = None, conn=Depends(get_db)):
             LEFT JOIN comments c ON c.post_id = p.id
             GROUP BY p.id, u.name
             ORDER BY p.created_at DESC
+            LIMIT %s OFFSET %s
             """,
-            (uid,),
+            (uid, limit, offset),
         )
-        return [dict(r) for r in cur.fetchall()]
+        rows = [dict(r) for r in cur.fetchall()]
+        cur.execute("SELECT COUNT(*) FROM posts")
+        total = cur.fetchone()["count"]
+        return {"posts": rows, "total": total, "page": page, "limit": limit}
 
 
 class PostIn(BaseModel):
@@ -55,6 +60,19 @@ def create_post(body: PostIn, conn=Depends(get_db)):
             (body.user_id, body.title, body.content, body.book_title or None),
         )
         return dict(cur.fetchone())
+
+
+@router.delete("/posts/{post_id}")
+def delete_post(post_id: int, user_id: Optional[int] = None, conn=Depends(get_db)):
+    with conn.cursor() as cur:
+        cur.execute("SELECT user_id FROM posts WHERE id = %s", (post_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(404, "게시물을 찾을 수 없습니다.")
+        if user_id and row[0] and row[0] != user_id:
+            raise HTTPException(403, "삭제 권한이 없습니다.")
+        cur.execute("DELETE FROM posts WHERE id = %s", (post_id,))
+    return {"deleted": True, "id": post_id}
 
 
 @router.get("/posts/{post_id}")

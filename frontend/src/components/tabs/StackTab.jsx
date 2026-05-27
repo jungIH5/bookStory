@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Sparkles, Loader2, ChevronRight } from 'lucide-react';
+import { BookOpen, Sparkles, Loader2, ChevronRight, X } from 'lucide-react';
 import { stripHtml } from '../../utils';
 import { hexColors } from '../../constants';
 
 export default function StackTab({
   user, readBooks, viewMode, recommendations,
   isFetchingTendency, isFetchingRecs,
-  onBookClick, onStackBookClick, onFetchTendency, onFetchRecommendations,
+  onBookClick, onStackBookClick, onFetchTendency, onFetchRecommendations, onDeleteBook,
 }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -96,9 +96,20 @@ export default function StackTab({
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
                   <h4 className="group-hover:text-amber-700 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(book.title)}</h4>
-                  <span style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '6px', flexShrink: 0, letterSpacing: '0.05em' }}>
-                    {new Date(book.read_at).toLocaleDateString('ko-KR')}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                    <span style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.05em' }}>
+                      {new Date(book.read_at).toLocaleDateString('ko-KR')}
+                    </span>
+                    {onDeleteBook && (
+                      <button
+                        onClick={e => { e.stopPropagation(); onDeleteBook(book.id); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444' }}
+                      >
+                        <X size={10} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p style={{ fontSize: '0.75rem', color: '#9E8D7A', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>
                 {book.impression && (
