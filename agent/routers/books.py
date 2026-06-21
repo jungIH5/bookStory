@@ -45,6 +45,7 @@ async def analyze_book(title: str, author: str = ""):
     result = await book_analysis_graph.ainvoke({
         "title": _strip(title),
         "author": author,
+        "book_metadata": {},
         "blog_reviews": [],
         "retry_count": 0,
         "review_quality": "",

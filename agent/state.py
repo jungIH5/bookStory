@@ -6,7 +6,8 @@ class BookAnalysisState(TypedDict):
     title: str
     author: str
 
-    # Node 1: fetch_blog_reviews 결과
+    # Node 1: prepare_book_analysis 결과 (verify_book + fetch_blog_reviews 병렬)
+    book_metadata: Dict   # {isbn, title, author, publisher, description}
     blog_reviews: List[str]
     retry_count: int
 
