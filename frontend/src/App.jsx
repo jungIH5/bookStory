@@ -590,9 +590,11 @@ function App() {
     setSelectedPost(null);
     setPostComments([]);
     try {
-      const uid = getValidUserId(user);
-      const uidParam = uid ? `?user_id=${uid}` : '';
-      await fetch(`${API_URL}/api/community/posts/${postId}${uidParam}`, { method: 'DELETE' });
+      const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+      await fetch(`${API_URL}/api/community/posts/${postId}`, {
+        method: 'DELETE',
+        headers: authH,
+      });
     } catch (e) { console.error('Post delete error:', e); }
     setToast({ show: true, message: '게시물이 삭제됐어요 🗑️' });
   };
