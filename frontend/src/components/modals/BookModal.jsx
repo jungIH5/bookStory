@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, BookOpen, Sparkles, Loader2, Bookmark, Plus, MessageCircle, Trash2 } from 'lucide-react';
+import { X, BookOpen, Sparkles, Loader2, Bookmark, Plus, MessageCircle, Trash2, Timer } from 'lucide-react';
 import { stripHtml } from '../../utils';
 
 export default function BookModal({
@@ -8,8 +8,11 @@ export default function BookModal({
   bookImpression, setBookImpression,
   bookImpressionPublic, setBookImpressionPublic,
   isSaving, isSavingImpression,
-  onClose, onRegister, onLoadAnalysis, onStartDiscussion, onSaveImpression, onDeleteBook,
+  timerBook,
+  onClose, onRegister, onLoadAnalysis, onStartDiscussion, onSaveImpression, onDeleteBook, onStartTimer,
 }) {
+  const thisTitle = stripHtml(book?.title || '');
+  const isTimerRunningHere = timerBook?.title === thisTitle;
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
       <motion.div
@@ -145,6 +148,25 @@ export default function BookModal({
               </button>
             )}
           </div>
+
+          {onStartTimer && (
+            <button
+              onClick={() => { onStartTimer({ title: thisTitle, author: book.author || '' }); onClose(); }}
+              disabled={isTimerRunningHere}
+              style={{
+                width: '100%', padding: '0.7rem', fontSize: '0.8125rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                background: isTimerRunningHere ? 'rgba(140,107,66,0.05)' : 'rgba(140,107,66,0.06)',
+                border: `1px solid ${isTimerRunningHere ? 'rgba(140,107,66,0.2)' : 'rgba(140,107,66,0.18)'}`,
+                borderRadius: '0.875rem', color: isTimerRunningHere ? '#C49456' : '#8C6B42',
+                fontWeight: 800, cursor: isTimerRunningHere ? 'default' : 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Timer size={14} />
+              <span>{isTimerRunningHere ? '타이머 진행 중' : '읽기 시작 (시간 기록)'}</span>
+            </button>
+          )}
         </div>
       </motion.div>
     </div>

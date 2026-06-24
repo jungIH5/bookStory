@@ -38,6 +38,7 @@ class UserUpdate(BaseModel):
     location: Optional[str] = None
     lat: Optional[float] = None
     lng: Optional[float] = None
+    stats_public: Optional[bool] = None
 
 
 @router.post("")
@@ -62,6 +63,24 @@ async def login_user(body: LoginIn, conn=Depends(db.get_db)):
     user = dict(row)
     token = create_token(user["id"])
     return {"user": user, "token": token}
+
+
+@router.get("/{user_id}/stats")
+async def get_user_stats(user_id: int, conn=Depends(db.get_db)):
+    row = await conn.fetchrow("""
+        SELECT
+            u.id, u.name, u.stats_public,
+            COUNT(DISTINCT rb.id)::int AS books_count,
+            COALESCE(SUM(rl.duration_seconds), 0)::int AS total_seconds
+        FROM users u
+        LEFT JOIN read_books rb ON rb.user_id = u.id
+        LEFT JOIN reading_logs rl ON rl.user_id = u.id
+        WHERE u.id = $1
+        GROUP BY u.id, u.name, u.stats_public
+    """, user_id)
+    if not row:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다.")
+    return dict(row)
 
 
 @router.get("/{user_id}")

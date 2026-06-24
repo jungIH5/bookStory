@@ -230,6 +230,20 @@ async def _init_db():
                 )
             """)
 
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS reading_logs (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    book_title TEXT NOT NULL,
+                    book_author TEXT DEFAULT '',
+                    duration_seconds INTEGER NOT NULL DEFAULT 0,
+                    logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS stats_public BOOLEAN DEFAULT TRUE"
+            )
+
             # 샘플 게시물/댓글 시딩
             post_count = await conn.fetchval("SELECT COUNT(*) FROM posts")
             if post_count == 0:

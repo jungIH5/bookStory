@@ -1,0 +1,50 @@
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from db import get_db
+from auth import get_current_user_id
+
+router = APIRouter(prefix="/api/reading")
+
+
+class ReadingLogIn(BaseModel):
+    book_title: str
+    book_author: str = ""
+    duration_seconds: int
+
+
+@router.post("/log")
+async def save_reading_log(
+    body: ReadingLogIn,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    row = await conn.fetchrow(
+        """INSERT INTO reading_logs (user_id, book_title, book_author, duration_seconds)
+           VALUES ($1,$2,$3,$4) RETURNING *""",
+        user_id, body.book_title, body.book_author, body.duration_seconds,
+    )
+    return dict(row)
+
+
+@router.get("/leaderboard")
+async def get_leaderboard(conn=Depends(get_db)):
+    rows = await conn.fetch("""
+        WITH stats AS (
+            SELECT
+                u.id,
+                u.name,
+                COUNT(DISTINCT rb.id)::int AS books_count,
+                COALESCE(SUM(rl.duration_seconds), 0)::int AS total_seconds
+            FROM users u
+            LEFT JOIN read_books rb ON rb.user_id = u.id
+            LEFT JOIN reading_logs rl ON rl.user_id = u.id
+            WHERE u.stats_public = TRUE
+            GROUP BY u.id, u.name
+        )
+        SELECT *, ROW_NUMBER() OVER (ORDER BY books_count DESC, total_seconds DESC)::int AS rank
+        FROM stats
+        WHERE books_count > 0 OR total_seconds > 0
+        ORDER BY books_count DESC, total_seconds DESC
+        LIMIT 50
+    """)
+    return [dict(r) for r in rows]

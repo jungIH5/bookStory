@@ -19,6 +19,21 @@ export const formatDuration = (seconds) => {
   return `${m}:${s}`;
 };
 
+export const formatTimer = (seconds) => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return h > 0 ? `${h}:${m}:${s}` : `${m}:${s}`;
+};
+
+export const formatReadingTime = (seconds) => {
+  if (!seconds || seconds < 60) return seconds > 0 ? `${seconds}초` : '-';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}분`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
+};
+
 export const renderMarkdown = (text) => {
   if (!text) return '';
   if (/<[a-z][\s\S]*?>/i.test(text)) return text;

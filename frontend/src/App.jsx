@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
@@ -18,6 +18,8 @@ import WritePostModal from './components/modals/WritePostModal';
 import TendencyModal from './components/modals/TendencyModal';
 import ConversationModal from './components/modals/ConversationModal';
 import PostModal from './components/modals/PostModal';
+import ProfileModal from './components/modals/ProfileModal';
+import ReadingTimer from './components/ReadingTimer';
 
 function App() {
   const [activeTab, setActiveTab] = useState('stack');
@@ -59,6 +61,13 @@ function App() {
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
   const [voiceSampleUploading, setVoiceSampleUploading] = useState(false);
+
+  const [showProfile, setShowProfile] = useState(false);
+
+  const [timerBook, setTimerBook] = useState(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const timerRef = useRef(null);
 
   const [tendencyResult, setTendencyResult] = useState(null);
   const [isFetchingTendency, setIsFetchingTendency] = useState(false);
@@ -318,14 +327,14 @@ function App() {
     setViewMode('tower');
     setToast({ show: true, message: `"${cleanTitle.slice(0, 16)}${cleanTitle.length > 16 ? '...' : ''}" 서재에 추가됐어요 📚` });
     try {
+      const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
       const response = await fetch(`${API_URL}/api/books/read`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authH },
         body: JSON.stringify({
           title: book.title, author: book.author, image: book.image,
           publisher: book.publisher, isbn: book.isbn, pages: currentBookPages,
           impression: bookImpression, is_public: bookImpressionPublic,
-          user_id: getValidUserId(user),
         })
       });
       if (response.ok) {
@@ -343,7 +352,8 @@ function App() {
     }
     setReadBooks(prev => prev.filter(b => b.id !== bookId));
     try {
-      await fetch(`${API_URL}/api/books/read/${bookId}`, { method: 'DELETE' });
+      const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+      await fetch(`${API_URL}/api/books/read/${bookId}`, { method: 'DELETE', headers: authH });
     } catch (e) { console.error('Book delete error:', e); }
     setToast({ show: true, message: '서재에서 삭제됐어요 🗑️' });
   };
@@ -352,9 +362,10 @@ function App() {
     if (!selectedBook?.id || String(selectedBook.id).startsWith('temp-')) return;
     setIsSavingImpression(true);
     try {
+      const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
       const res = await fetch(`${API_URL}/api/books/read/${selectedBook.id}/impression`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authH },
         body: JSON.stringify({ impression: bookImpression, is_public: bookImpressionPublic })
       });
       if (res.ok) {
@@ -580,6 +591,64 @@ function App() {
     finally { setIsSubmittingAnswer(false); }
   };
 
+  const handleStartTimer = (book) => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimerBook(book);
+    setTimerSeconds(0);
+    setTimerRunning(true);
+    timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
+  };
+
+  const handlePauseTimer = () => {
+    clearInterval(timerRef.current);
+    setTimerRunning(false);
+  };
+
+  const handleResumeTimer = () => {
+    setTimerRunning(true);
+    timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
+  };
+
+  const handleStopTimer = async () => {
+    clearInterval(timerRef.current);
+    const duration = timerSeconds;
+    const book = timerBook;
+    setTimerBook(null);
+    setTimerSeconds(0);
+    setTimerRunning(false);
+    if (duration < 10 || !user?.token) return;
+    const authH = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
+    try {
+      await fetch(`${API_URL}/api/reading/log`, {
+        method: 'POST',
+        headers: authH,
+        body: JSON.stringify({ book_title: book.title, book_author: book.author || '', duration_seconds: duration }),
+      });
+      const mins = Math.floor(duration / 60);
+      const secs = duration % 60;
+      setToast({ show: true, message: `${mins > 0 ? `${mins}분 ` : ''}${secs}초 독서 기록 완료!` });
+    } catch (e) { console.error('Reading log error:', e); }
+  };
+
+  const handleUpdateProfile = async (updates) => {
+    if (!user?.id || !user?.token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        const stored = { ...updated, token: user.token };
+        setUser(stored);
+        localStorage.setItem('bookstory_user', JSON.stringify(stored));
+        setToast({ show: true, message: '프로필이 업데이트됐어요.' });
+        setShowProfile(false);
+      }
+    } catch {}
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('bookstory_user');
     window.location.reload();
@@ -657,6 +726,13 @@ function App() {
                   <p style={{ fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1.3, marginTop: '2px' }}>{user.name}</p>
                 </div>
               </div>
+              <button
+                onClick={() => setShowProfile(true)}
+                title="프로필 수정"
+                style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
+              >
+                <UserCog size={13} style={{ color: '#9E8D7A' }} />
+              </button>
               <button
                 onClick={handleLogout}
                 title="로그아웃"
@@ -911,12 +987,39 @@ function App() {
             setBookImpressionPublic={setBookImpressionPublic}
             isSaving={isSaving}
             isSavingImpression={isSavingImpression}
+            timerBook={timerBook}
             onClose={() => setSelectedBook(null)}
             onRegister={() => handleRegisterBook(selectedBook)}
             onLoadAnalysis={handleLoadAnalysis}
             onStartDiscussion={handleStartDiscussion}
             onSaveImpression={handleSaveImpression}
             onDeleteBook={() => { handleDeleteBook(selectedBook.id); setSelectedBook(null); }}
+            onStartTimer={user ? handleStartTimer : null}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Reading timer */}
+      <AnimatePresence>
+        {timerBook && (
+          <ReadingTimer
+            book={timerBook}
+            seconds={timerSeconds}
+            isRunning={timerRunning}
+            onPause={handlePauseTimer}
+            onResume={handleResumeTimer}
+            onStop={handleStopTimer}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Profile modal */}
+      <AnimatePresence>
+        {showProfile && user && (
+          <ProfileModal
+            user={user}
+            onClose={() => setShowProfile(false)}
+            onSave={handleUpdateProfile}
           />
         )}
       </AnimatePresence>
