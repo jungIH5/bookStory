@@ -31,12 +31,17 @@ export default function ReadingTimer({ book, seconds, isRunning, onPause, onResu
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <div style={{
-          width: '1.75rem', height: '1.75rem', borderRadius: '9999px',
-          background: isRunning ? 'rgba(140,107,66,0.25)' : 'rgba(100,100,100,0.15)',
-          border: `1px solid ${isRunning ? 'rgba(196,148,86,0.4)' : 'rgba(139,107,66,0.15)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          width: '1.875rem', height: '2.625rem', borderRadius: '3px',
+          overflow: 'hidden', flexShrink: 0,
+          background: 'rgba(140,107,66,0.15)',
+          border: `1px solid ${isRunning ? 'rgba(196,148,86,0.35)' : 'rgba(139,107,66,0.15)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <BookOpen size={10} style={{ color: isRunning ? '#C49456' : '#7B6B55' }} />
+          {book.image ? (
+            <img src={book.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <BookOpen size={10} style={{ color: isRunning ? '#C49456' : '#7B6B55' }} />
+          )}
         </div>
         <span style={{ fontSize: '11px', fontWeight: 700, color: '#9E8D7A', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {book.title}

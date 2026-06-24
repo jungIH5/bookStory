@@ -6,6 +6,7 @@ import { API_URL } from '../../api';
 
 export default function CommunityTab({ user, communityPosts, hasMore, isFetchingMore, onOpenPost, onLikePost, onWritePost, onLoadMore }) {
   const [activeView, setActiveView] = useState('posts');
+  const [rankingView, setRankingView] = useState('books');
   const [leaderboard, setLeaderboard] = useState([]);
   const [isFetchingLeaderboard, setIsFetchingLeaderboard] = useState(false);
 
@@ -148,9 +149,27 @@ export default function CommunityTab({ user, communityPosts, hasMore, isFetching
       {/* 순위 뷰 */}
       {activeView === 'ranking' && (
         <div>
-          <p style={{ fontSize: '0.8125rem', color: '#9E8D7A', fontWeight: 700, marginBottom: '1.25rem' }}>
-            통계 공개로 설정한 독자들의 순위입니다.
-          </p>
+          {/* 책 수 / 독서 시간 서브탭 */}
+          <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1.25rem' }}>
+            {[
+              { id: 'books', label: '책 수 순위' },
+              { id: 'time', label: '독서 시간 순위' },
+            ].map(sub => (
+              <button
+                key={sub.id}
+                onClick={() => setRankingView(sub.id)}
+                style={{
+                  padding: '0.4rem 1rem', borderRadius: '9999px', fontSize: '0.8125rem', fontWeight: 800,
+                  cursor: 'pointer', transition: 'all 0.2s ease',
+                  background: rankingView === sub.id ? 'rgba(140,107,66,0.14)' : 'transparent',
+                  border: `1px solid ${rankingView === sub.id ? 'rgba(140,107,66,0.35)' : 'rgba(139,107,66,0.12)'}`,
+                  color: rankingView === sub.id ? '#8C6B42' : '#9E8D7A',
+                }}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </div>
 
           {isFetchingLeaderboard ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem 0' }}>
@@ -161,55 +180,68 @@ export default function CommunityTab({ user, communityPosts, hasMore, isFetching
               <Trophy size={32} style={{ opacity: 0.4 }} />
               <p style={{ fontSize: '0.875rem', fontWeight: 600 }}>아직 순위 데이터가 없습니다.</p>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {leaderboard.map((entry) => (
-                <motion.div
-                  key={entry.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '1rem',
-                    padding: '1rem 1.25rem',
-                    background: entry.rank <= 3 ? `rgba(${entry.rank === 1 ? '255,215,0' : entry.rank === 2 ? '192,192,192' : '205,127,50'},0.06)` : 'rgba(139,107,66,0.03)',
-                    border: `1px solid ${entry.rank <= 3 ? `rgba(${entry.rank === 1 ? '255,215,0' : entry.rank === 2 ? '192,192,192' : '205,127,50'},0.2)` : 'rgba(139,107,66,0.1)'}`,
-                    borderRadius: '0.875rem',
-                  }}
-                >
-                  <div style={{
-                    width: '2rem', height: '2rem', borderRadius: '9999px', flexShrink: 0,
-                    background: entry.rank <= 3 ? `rgba(${entry.rank === 1 ? '255,215,0' : entry.rank === 2 ? '192,192,192' : '205,127,50'},0.15)` : 'rgba(139,107,66,0.08)',
-                    border: `1px solid ${medalColor(entry.rank)}40`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '11px', fontWeight: 900,
-                    color: entry.rank <= 3 ? medalColor(entry.rank) : '#9E8D7A',
-                  }}>
-                    {entry.rank <= 3 ? ['🥇','🥈','🥉'][entry.rank - 1] : entry.rank}
-                  </div>
+          ) : (() => {
+            const sorted = [...leaderboard].sort((a, b) =>
+              rankingView === 'books'
+                ? b.books_count - a.books_count || b.total_seconds - a.total_seconds
+                : b.total_seconds - a.total_seconds || b.books_count - a.books_count
+            );
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {sorted.map((entry, idx) => {
+                  const rank = idx + 1;
+                  return (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '1rem',
+                        padding: '1rem 1.25rem',
+                        background: rank <= 3 ? `rgba(${rank === 1 ? '255,215,0' : rank === 2 ? '192,192,192' : '205,127,50'},0.06)` : 'rgba(139,107,66,0.03)',
+                        border: `1px solid ${rank <= 3 ? `rgba(${rank === 1 ? '255,215,0' : rank === 2 ? '192,192,192' : '205,127,50'},0.2)` : 'rgba(139,107,66,0.1)'}`,
+                        borderRadius: '0.875rem',
+                      }}
+                    >
+                      <div style={{
+                        width: '2rem', height: '2rem', borderRadius: '9999px', flexShrink: 0,
+                        background: rank <= 3 ? `rgba(${rank === 1 ? '255,215,0' : rank === 2 ? '192,192,192' : '205,127,50'},0.15)` : 'rgba(139,107,66,0.08)',
+                        border: `1px solid ${medalColor(rank)}40`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', fontWeight: 900, color: rank <= 3 ? medalColor(rank) : '#9E8D7A',
+                      }}>
+                        {rank <= 3 ? ['🥇','🥈','🥉'][rank - 1] : rank}
+                      </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: 900, fontSize: '0.9375rem', color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {entry.name}
-                      {user?.id && parseInt(user.id) === entry.id && (
-                        <span style={{ marginLeft: '0.5rem', fontSize: '9px', fontWeight: 900, color: '#8C6B42', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '1px 6px', borderRadius: '9999px', letterSpacing: '0.05em' }}>나</span>
-                      )}
-                    </p>
-                  </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 900, fontSize: '0.9375rem', color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {entry.name}
+                          {user?.id && parseInt(user.id) === entry.id && (
+                            <span style={{ marginLeft: '0.5rem', fontSize: '9px', fontWeight: 900, color: '#8C6B42', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '1px 6px', borderRadius: '9999px', letterSpacing: '0.05em' }}>나</span>
+                          )}
+                        </p>
+                      </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginBottom: '1px' }}>읽은 책</p>
-                      <p style={{ fontSize: '0.9375rem', fontWeight: 900, color: '#1C140E' }}>{entry.books_count}권</p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginBottom: '1px' }}>독서 시간</p>
-                      <p style={{ fontSize: '0.9375rem', fontWeight: 900, color: '#8C6B42' }}>{formatReadingTime(entry.total_seconds)}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        {rankingView === 'books' ? (
+                          <>
+                            <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginBottom: '1px' }}>읽은 책</p>
+                            <p style={{ fontSize: '1.125rem', fontWeight: 900, color: '#1C140E' }}>{entry.books_count}권</p>
+                          </>
+                        ) : (
+                          <>
+                            <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginBottom: '1px' }}>독서 시간</p>
+                            <p style={{ fontSize: '1.125rem', fontWeight: 900, color: '#8C6B42' }}>{formatReadingTime(entry.total_seconds)}</p>
+                          </>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
     </motion.div>

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from typing import Optional
 from db import get_db
 from auth import get_current_user_id
 
@@ -9,7 +10,9 @@ router = APIRouter(prefix="/api/reading")
 class ReadingLogIn(BaseModel):
     book_title: str
     book_author: str = ""
+    book_image: str = ""
     duration_seconds: int
+    started_reading_at: Optional[str] = None  # ISO date string "YYYY-MM-DD"
 
 
 @router.post("/log")
@@ -19,9 +22,11 @@ async def save_reading_log(
     user_id: int = Depends(get_current_user_id),
 ):
     row = await conn.fetchrow(
-        """INSERT INTO reading_logs (user_id, book_title, book_author, duration_seconds)
-           VALUES ($1,$2,$3,$4) RETURNING *""",
-        user_id, body.book_title, body.book_author, body.duration_seconds,
+        """INSERT INTO reading_logs
+               (user_id, book_title, book_author, book_image, duration_seconds, started_reading_at)
+           VALUES ($1,$2,$3,$4,$5,$6::date) RETURNING *""",
+        user_id, body.book_title, body.book_author, body.book_image,
+        body.duration_seconds, body.started_reading_at,
     )
     return dict(row)
 

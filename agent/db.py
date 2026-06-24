@@ -236,10 +236,18 @@ async def _init_db():
                     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     book_title TEXT NOT NULL,
                     book_author TEXT DEFAULT '',
+                    book_image TEXT DEFAULT '',
                     duration_seconds INTEGER NOT NULL DEFAULT 0,
+                    started_reading_at DATE,
                     logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            await conn.execute(
+                "ALTER TABLE reading_logs ADD COLUMN IF NOT EXISTS book_image TEXT DEFAULT ''"
+            )
+            await conn.execute(
+                "ALTER TABLE reading_logs ADD COLUMN IF NOT EXISTS started_reading_at DATE"
+            )
             await conn.execute(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS stats_public BOOLEAN DEFAULT TRUE"
             )

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog, Timer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
@@ -9,6 +9,7 @@ import SearchTab from './components/tabs/SearchTab';
 import ClubsTab from './components/tabs/ClubsTab';
 import CommunityTab from './components/tabs/CommunityTab';
 import RecordingTab from './components/tabs/RecordingTab';
+import TimerTab from './components/tabs/TimerTab';
 
 import RegistrationModal from './components/RegistrationModal';
 import BookModal from './components/modals/BookModal';
@@ -593,7 +594,7 @@ function App() {
 
   const handleStartTimer = (book) => {
     if (timerRef.current) clearInterval(timerRef.current);
-    setTimerBook(book);
+    setTimerBook({ ...book, startedAt: new Date().toISOString().split('T')[0] });
     setTimerSeconds(0);
     setTimerRunning(true);
     timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
@@ -622,7 +623,7 @@ function App() {
       await fetch(`${API_URL}/api/reading/log`, {
         method: 'POST',
         headers: authH,
-        body: JSON.stringify({ book_title: book.title, book_author: book.author || '', duration_seconds: duration }),
+        body: JSON.stringify({ book_title: book.title, book_author: book.author || '', book_image: book.image || '', duration_seconds: duration, started_reading_at: book.startedAt || null }),
       });
       const mins = Math.floor(duration / 60);
       const secs = duration % 60;
@@ -695,6 +696,7 @@ function App() {
     { id: 'clubs', label: '모임찾기', icon: <Users size={15} /> },
     { id: 'community', label: '커뮤니티', icon: <MessageSquare size={15} /> },
     { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
+    { id: 'timer', label: '독서 타이머', icon: <Timer size={15} />, dot: !!timerBook },
   ];
 
   return (
@@ -778,9 +780,13 @@ function App() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`nav-pill ${activeTab === tab.id ? 'nav-pill-active' : ''}`}
+                style={{ position: 'relative' }}
               >
                 {tab.icon}
                 <span>{tab.label}</span>
+                {tab.dot && (
+                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', borderRadius: '9999px', background: '#C49456', boxShadow: '0 0 6px rgba(196,148,86,0.8)' }} />
+                )}
               </button>
             ))}
           </div>
@@ -840,6 +846,19 @@ function App() {
           )}
           {activeTab === 'recording' && (
             <RecordingTab user={user} />
+          )}
+          {activeTab === 'timer' && (
+            <TimerTab
+              user={user}
+              readBooks={readBooks}
+              timerBook={timerBook}
+              timerSeconds={timerSeconds}
+              timerRunning={timerRunning}
+              onStart={handleStartTimer}
+              onPause={handlePauseTimer}
+              onResume={handleResumeTimer}
+              onStop={handleStopTimer}
+            />
           )}
         </main>
       </div>
