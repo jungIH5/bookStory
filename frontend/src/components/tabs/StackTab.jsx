@@ -41,10 +41,16 @@ export default function StackTab({
                           <span style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.02em', color: 'white', padding: '0 72px 0 2rem', userSelect: 'none', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', fontStyle: 'italic', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.5))' }}>
                             {book.title.replace(/<\/?[^>]+(>|$)/g, "")}
                           </span>
+                          {book.status === 'reading' && (
+                            <div style={{ position: 'absolute', top: '50%', right: book.image ? '96px' : '12px', transform: 'translateY(-50%)', background: 'rgba(196,148,86,0.25)', border: '1px solid rgba(196,148,86,0.5)', borderRadius: '9999px', padding: '2px 8px', fontSize: '9px', fontWeight: 900, color: '#C49456', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                              읽는 중
+                            </div>
+                          )}
                           <div className="hidden group-hover:flex" style={{ position: 'absolute', top: '-58px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(8px)', border: '1px solid rgba(139,107,66,0.3)', padding: '8px 14px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, zIndex: 200, whiteSpace: 'nowrap', boxShadow: '0 12px 32px rgba(0,0,0,0.7)', alignItems: 'center', gap: '8px' }}>
                             <span style={{ backgroundColor: bookColor, width: '8px', height: '8px', borderRadius: '9999px', display: 'inline-block', flexShrink: 0 }} />
                             <span style={{ color: 'white' }}>{book.author || '저자 미상'}</span>
                             <span style={{ color: 'rgba(196,148,86,0.8)', fontSize: '9px' }}>{book.pages || 250}p</span>
+                            {book.status === 'reading' && <span style={{ color: '#C49456', fontSize: '9px' }}>· 읽는 중</span>}
                           </div>
                         </div>
                       </motion.div>
@@ -67,65 +73,43 @@ export default function StackTab({
           </div>
         </div>
       ) : (
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           {readBooks.length === 0 && (
             <div style={{ textAlign: 'center', padding: '4rem 2rem', borderRadius: '1.5rem', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)' }}>
               <BookOpen size={36} style={{ margin: '0 auto 1rem', color: '#BDB0A0' }} />
               <p style={{ color: '#9E8D7A', fontWeight: 700 }}>아직 기록된 책이 없습니다.</p>
             </div>
           )}
-          {readBooks.map((book, idx) => (
-            <motion.div
-              key={book.id}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.04, duration: 0.3, ease: 'easeOut' }}
-              className="book-list-item group"
-              onClick={() => onStackBookClick(book)}
-              style={{ cursor: 'pointer' }}
-            >
-              <div style={{ width: '3rem', minWidth: '3rem', height: '4.25rem', borderRadius: '0.5rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0, background: '#EDE8E2', position: 'relative' }}>
-                {book.image ? (
-                  <img src={book.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, ${hexColors[idx % 10]}, ${hexColors[(idx + 2) % 10]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ color: 'white', fontSize: '14px', fontWeight: 900 }}>{(book.title || '?')[0]}</span>
-                  </div>
-                )}
+          {/* 읽는 중 섹션 */}
+          {readBooks.filter(b => b.status === 'reading').length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                <div style={{ width: '3px', height: '14px', borderRadius: '9999px', background: '#C49456' }} />
+                <span style={{ fontSize: '11px', fontWeight: 900, color: '#C49456', textTransform: 'uppercase', letterSpacing: '0.1em' }}>읽는 중</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#BDB0A0' }}>{readBooks.filter(b => b.status === 'reading').length}권</span>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                  <h4 className="group-hover:text-amber-700 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(book.title)}</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-                    <span style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.05em' }}>
-                      {new Date(book.read_at).toLocaleDateString('ko-KR')}
-                    </span>
-                    {onDeleteBook && (
-                      <button
-                        onClick={e => { e.stopPropagation(); onDeleteBook(book.id); }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444' }}
-                      >
-                        <X size={10} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <p style={{ fontSize: '0.75rem', color: '#9E8D7A', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>
-                {book.impression && (
-                  <p style={{ fontSize: '0.75rem', color: '#7B6B55', lineHeight: 1.5, marginBottom: '0.375rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    <span style={{ color: book.is_public ? '#8C6B42' : '#BDB0A0', fontWeight: 700, marginRight: '4px' }}>{book.is_public ? '🌐' : '🔒'}</span>
-                    {book.impression}
-                  </p>
-                )}
-                <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                  {book.pages > 0 && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.pages}p</span>}
-                  {book.publisher && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.publisher}</span>}
-                  {!book.impression && <span onClick={e => { e.stopPropagation(); onStackBookClick(book); }} style={{ fontSize: '9px', color: '#8C6B42', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(140,107,66,0.05)', cursor: 'pointer' }}>+ 감상평 쓰기</span>}
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {readBooks.filter(b => b.status === 'reading').map((book, idx) => (
+                  <BookListItem key={book.id} book={book} idx={idx} onStackBookClick={onStackBookClick} onDeleteBook={onDeleteBook} />
+                ))}
               </div>
-            </motion.div>
-          ))}
+            </div>
+          )}
+          {/* 완독 섹션 */}
+          {readBooks.filter(b => b.status !== 'reading').length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                <div style={{ width: '3px', height: '14px', borderRadius: '9999px', background: '#8C6B42' }} />
+                <span style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em' }}>완독</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#BDB0A0' }}>{readBooks.filter(b => b.status !== 'reading').length}권</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {readBooks.filter(b => b.status !== 'reading').map((book, idx) => (
+                  <BookListItem key={book.id} book={book} idx={idx} onStackBookClick={onStackBookClick} onDeleteBook={onDeleteBook} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -175,6 +159,60 @@ export default function StackTab({
           </div>
         </motion.div>
       )}
+    </motion.div>
+  );
+}
+
+function BookListItem({ book, idx, onStackBookClick, onDeleteBook }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -16 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: idx * 0.04, duration: 0.3, ease: 'easeOut' }}
+      className="book-list-item group"
+      onClick={() => onStackBookClick(book)}
+      style={{ cursor: 'pointer' }}
+    >
+      <div style={{ width: '3rem', minWidth: '3rem', height: '4.25rem', borderRadius: '0.5rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0, background: '#EDE8E2' }}>
+        {book.image ? (
+          <img src={book.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg,${hexColors[idx % 10]},${hexColors[(idx+2)%10]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'white', fontSize: '14px', fontWeight: 900 }}>{(book.title || '?')[0]}</span>
+          </div>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
+          <h4 className="group-hover:text-amber-700 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(book.title)}</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+            <span style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.05em' }}>
+              {new Date(book.read_at).toLocaleDateString('ko-KR')}
+            </span>
+            {onDeleteBook && (
+              <button
+                onClick={e => { e.stopPropagation(); onDeleteBook(book.id); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444' }}
+              >
+                <X size={10} />
+              </button>
+            )}
+          </div>
+        </div>
+        <p style={{ fontSize: '0.75rem', color: '#9E8D7A', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>
+        {book.impression && (
+          <p style={{ fontSize: '0.75rem', color: '#7B6B55', lineHeight: 1.5, marginBottom: '0.375rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            <span style={{ color: book.is_public ? '#8C6B42' : '#BDB0A0', fontWeight: 700, marginRight: '4px' }}>{book.is_public ? '🌐' : '🔒'}</span>
+            {book.impression}
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+          {book.pages > 0 && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.pages}p</span>}
+          {book.publisher && <span style={{ fontSize: '9px', color: '#9E8D7A', border: '1px solid rgba(139,107,66,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(139,107,66,0.04)' }}>{book.publisher}</span>}
+          {!book.impression && <span onClick={e => { e.stopPropagation(); onStackBookClick(book); }} style={{ fontSize: '9px', color: '#8C6B42', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(140,107,66,0.05)', cursor: 'pointer' }}>+ 감상평 쓰기</span>}
+        </div>
+      </div>
     </motion.div>
   );
 }

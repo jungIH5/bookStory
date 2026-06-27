@@ -74,6 +74,7 @@ class ReadBookIn(BaseModel):
     pages: int = 250
     impression: str = ""
     is_public: bool = True
+    status: str = "finished"
 
 
 @router.post("/read")
@@ -83,11 +84,31 @@ async def register_read_book(
     user_id: int = Depends(get_current_user_id),
 ):
     row = await conn.fetchrow(
-        """INSERT INTO read_books (title, author, image, publisher, isbn, pages, impression, is_public, user_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *""",
+        """INSERT INTO read_books (title, author, image, publisher, isbn, pages, impression, is_public, user_id, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *""",
         _strip(body.title), body.author, body.image, body.publisher, body.isbn,
-        body.pages, body.impression, body.is_public, user_id,
+        body.pages, body.impression, body.is_public, user_id, body.status,
     )
+    return dict(row)
+
+
+class StatusIn(BaseModel):
+    status: str  # 'reading' | 'finished'
+
+
+@router.patch("/read/{book_id}/status")
+async def update_book_status(
+    book_id: int,
+    body: StatusIn,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    row = await conn.fetchrow(
+        "UPDATE read_books SET status = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+        body.status, book_id, user_id,
+    )
+    if not row:
+        raise HTTPException(404, "책을 찾을 수 없거나 권한이 없습니다.")
     return dict(row)
 
 

@@ -21,6 +21,8 @@ import ConversationModal from './components/modals/ConversationModal';
 import PostModal from './components/modals/PostModal';
 import ProfileModal from './components/modals/ProfileModal';
 import ReadingTimer from './components/ReadingTimer';
+import TimerCompleteModal from './components/modals/TimerCompleteModal';
+import UserLibraryModal from './components/modals/UserLibraryModal';
 
 function App() {
   const [activeTab, setActiveTab] = useState('stack');
@@ -69,6 +71,8 @@ function App() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef(null);
+  const [timerComplete, setTimerComplete] = useState(null); // { book, seconds }
+  const [userLibrary, setUserLibrary] = useState(null); // { userId, userName }
 
   const [tendencyResult, setTendencyResult] = useState(null);
   const [isFetchingTendency, setIsFetchingTendency] = useState(false);
@@ -610,25 +614,56 @@ function App() {
     timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
   };
 
-  const handleStopTimer = async () => {
+  const handleStopTimer = () => {
     clearInterval(timerRef.current);
     const duration = timerSeconds;
     const book = timerBook;
     setTimerBook(null);
     setTimerSeconds(0);
     setTimerRunning(false);
-    if (duration < 10 || !user?.token) return;
+    if (duration < 10) return;
+    setTimerComplete({ book, seconds: duration });
+  };
+
+  const handleTimerComplete = async (finished) => {
+    const { book, seconds } = timerComplete;
+    setTimerComplete(null);
+    if (!user?.token) return;
     const authH = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
     try {
+      // 독서 시간 기록
       await fetch(`${API_URL}/api/reading/log`, {
         method: 'POST',
         headers: authH,
-        body: JSON.stringify({ book_title: book.title, book_author: book.author || '', book_image: book.image || '', duration_seconds: duration, started_reading_at: book.startedAt || null }),
+        body: JSON.stringify({ book_title: book.title, book_author: book.author || '', book_image: book.image || '', duration_seconds: seconds, started_reading_at: book.startedAt || null }),
       });
-      const mins = Math.floor(duration / 60);
-      const secs = duration % 60;
-      setToast({ show: true, message: `${mins > 0 ? `${mins}분 ` : ''}${secs}초 독서 기록 완료!` });
-    } catch (e) { console.error('Reading log error:', e); }
+      // 서재에 있는지 확인 (제목 매칭)
+      const existingBook = readBooks.find(b => b.title.replace(/<\/?[^>]+(>|$)/g, '') === book.title);
+      if (existingBook) {
+        // 상태만 업데이트
+        const res = await fetch(`${API_URL}/api/books/read/${existingBook.id}/status`, {
+          method: 'PATCH',
+          headers: authH,
+          body: JSON.stringify({ status: finished ? 'finished' : 'reading' }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setReadBooks(prev => prev.map(b => b.id === existingBook.id ? { ...b, status: updated.status } : b));
+        }
+      } else if (finished) {
+        // 서재에 없고 완독이면 새로 등록
+        const res = await fetch(`${API_URL}/api/books/read`, {
+          method: 'POST',
+          headers: authH,
+          body: JSON.stringify({ title: book.title, author: book.author || '', image: book.image || '', status: 'finished' }),
+        });
+        if (res.ok) {
+          const newBook = await res.json();
+          setReadBooks(prev => [newBook, ...prev]);
+        }
+      }
+      setToast({ show: true, message: finished ? `완독 완료! ${book.title}` : `독서 기록 저장 완료!` });
+    } catch (e) { console.error('Timer complete error:', e); }
   };
 
   const handleUpdateProfile = async (updates) => {
@@ -842,6 +877,7 @@ function App() {
               onLikePost={handleLikePost}
               onWritePost={() => setIsWritingPost(true)}
               onLoadMore={handleLoadMorePosts}
+              onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
             />
           )}
           {activeTab === 'recording' && (
@@ -988,6 +1024,7 @@ function App() {
             onSubmitComment={handleSubmitComment}
             onSubmitReply={handleSubmitReply}
             onDeletePost={() => handleDeletePost(selectedPost.id)}
+            onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
           />
         )}
       </AnimatePresence>
@@ -1028,6 +1065,30 @@ function App() {
             onPause={handlePauseTimer}
             onResume={handleResumeTimer}
             onStop={handleStopTimer}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* User library modal */}
+      <AnimatePresence>
+        {userLibrary && (
+          <UserLibraryModal
+            userId={userLibrary.userId}
+            userName={userLibrary.userName}
+            currentUserId={user?.id}
+            onClose={() => setUserLibrary(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Timer complete modal */}
+      <AnimatePresence>
+        {timerComplete && (
+          <TimerCompleteModal
+            book={timerComplete.book}
+            seconds={timerComplete.seconds}
+            onFinished={() => handleTimerComplete(true)}
+            onStillReading={() => handleTimerComplete(false)}
           />
         )}
       </AnimatePresence>

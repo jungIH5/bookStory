@@ -10,7 +10,7 @@ export default function PostModal({
   replyInput, setReplyInput,
   replyingToMention, setReplyingToMention,
   isSubmittingComment,
-  onClose, onLike, onSubmitComment, onSubmitReply, onDeletePost,
+  onClose, onLike, onSubmitComment, onSubmitReply, onDeletePost, onOpenUserLibrary,
 }) {
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={() => { setReplyingTo(null); onClose(); }}>
@@ -32,8 +32,14 @@ export default function PostModal({
             )}
             <h2 style={{ fontSize: '1.25rem', fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>{post.title}</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#9E8D7A' }}>
-              <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px' }}>{(post.author || '?')[0]}</div>
-              <span style={{ fontWeight: 700, color: '#7B6B55' }}>{post.author || '익명'}</span>
+              <div
+                onClick={() => post.user_id && onOpenUserLibrary && onOpenUserLibrary(post.user_id, post.author)}
+                style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', cursor: post.user_id ? 'pointer' : 'default' }}
+              >{(post.author || '?')[0]}</div>
+              <span
+                onClick={() => post.user_id && onOpenUserLibrary && onOpenUserLibrary(post.user_id, post.author)}
+                style={{ fontWeight: 700, color: '#7B6B55', cursor: post.user_id ? 'pointer' : 'default', textDecoration: post.user_id ? 'underline' : 'none', textUnderlineOffset: '2px', textDecorationColor: 'rgba(139,107,66,0.3)' }}
+              >{post.author || '익명'}</span>
               <span>·</span>
               <span style={{ fontSize: '11px' }}>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
             </div>

@@ -79,6 +79,9 @@ async def _init_db():
             await conn.execute(
                 "ALTER TABLE read_books ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
             )
+            await conn.execute(
+                "ALTER TABLE read_books ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'finished'"
+            )
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS clubs (

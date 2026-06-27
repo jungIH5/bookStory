@@ -4,7 +4,7 @@ import { MessageSquare, BookOpen, Heart, MessageCircle, Plus, Loader2, Trophy } 
 import { renderMarkdown, formatReadingTime } from '../../utils';
 import { API_URL } from '../../api';
 
-export default function CommunityTab({ user, communityPosts, hasMore, isFetchingMore, onOpenPost, onLikePost, onWritePost, onLoadMore }) {
+export default function CommunityTab({ user, communityPosts, hasMore, isFetchingMore, onOpenPost, onLikePost, onWritePost, onLoadMore, onOpenUserLibrary }) {
   const [activeView, setActiveView] = useState('posts');
   const [rankingView, setRankingView] = useState('books');
   const [leaderboard, setLeaderboard] = useState([]);
@@ -112,10 +112,16 @@ export default function CommunityTab({ user, communityPosts, hasMore, isFetching
                       </button>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.75rem' }}>
-                      <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px' }}>
+                      <div
+                        onClick={e => { e.stopPropagation(); if (post.user_id && onOpenUserLibrary) onOpenUserLibrary(post.user_id, post.author); }}
+                        style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', cursor: post.user_id ? 'pointer' : 'default' }}
+                      >
                         {(post.author || '?')[0]}
                       </div>
-                      <span style={{ color: '#7B6B55', fontWeight: 700 }}>{post.author || '익명'}</span>
+                      <span
+                        onClick={e => { e.stopPropagation(); if (post.user_id && onOpenUserLibrary) onOpenUserLibrary(post.user_id, post.author); }}
+                        style={{ color: '#7B6B55', fontWeight: 700, cursor: post.user_id ? 'pointer' : 'default', textDecoration: post.user_id ? 'underline' : 'none', textUnderlineOffset: '2px', textDecorationColor: 'rgba(139,107,66,0.3)' }}
+                      >{post.author || '익명'}</span>
                       <span style={{ color: '#9E8D7A' }}>·</span>
                       <span style={{ color: '#BDB0A0', fontSize: '11px' }}>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
                     </div>
@@ -215,10 +221,13 @@ export default function CommunityTab({ user, communityPosts, hasMore, isFetching
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 900, fontSize: '0.9375rem', color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <p
+                          onClick={() => onOpenUserLibrary && onOpenUserLibrary(entry.id, entry.name)}
+                          style={{ fontWeight: 900, fontSize: '0.9375rem', color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '2px', textDecorationColor: 'rgba(139,107,66,0.3)', display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
+                        >
                           {entry.name}
                           {user?.id && parseInt(user.id) === entry.id && (
-                            <span style={{ marginLeft: '0.5rem', fontSize: '9px', fontWeight: 900, color: '#8C6B42', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '1px 6px', borderRadius: '9999px', letterSpacing: '0.05em' }}>나</span>
+                            <span style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '1px 6px', borderRadius: '9999px', letterSpacing: '0.05em' }}>나</span>
                           )}
                         </p>
                       </div>
