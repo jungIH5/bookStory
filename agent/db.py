@@ -240,17 +240,21 @@ async def _init_db():
             await conn.execute(
                 "ALTER TABLE recordings DROP COLUMN IF EXISTS duration_seconds"
             )
-            # recording_analyses 데이터를 recordings로 이전 후 테이블 제거
-            await conn.execute("""
-                UPDATE recordings r SET
-                    summary = ra.summary,
-                    key_topics = ra.key_topics,
-                    followup_questions = ra.followup_questions
-                FROM recording_analyses ra
-                WHERE ra.recording_id = r.id
-                  AND r.summary IS NULL
-            """)
-            await conn.execute("DROP TABLE IF EXISTS recording_analyses")
+            # recording_analyses 데이터를 recordings로 이전 후 테이블 제거 (없으면 skip)
+            try:
+                async with conn.transaction():
+                    await conn.execute("""
+                        UPDATE recordings r SET
+                            summary = ra.summary,
+                            key_topics = ra.key_topics,
+                            followup_questions = ra.followup_questions
+                        FROM recording_analyses ra
+                        WHERE ra.recording_id = r.id
+                          AND r.summary IS NULL
+                    """)
+                    await conn.execute("DROP TABLE IF EXISTS recording_analyses")
+            except Exception:
+                pass
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS club_reviews (
@@ -280,14 +284,18 @@ async def _init_db():
             await conn.execute(
                 "ALTER TABLE reading_logs ADD COLUMN IF NOT EXISTS started_reading_at DATE"
             )
-            # 기존 로그 read_book_id 연결 (제목+유저 기준 매칭)
-            await conn.execute("""
-                UPDATE reading_logs rl SET read_book_id = rb.id
-                FROM read_books rb
-                WHERE rl.user_id = rb.user_id
-                  AND rl.book_title = rb.title
-                  AND rl.read_book_id IS NULL
-            """)
+            # 기존 로그 read_book_id 연결 (book_title 컬럼이 있는 경우에만)
+            try:
+                async with conn.transaction():
+                    await conn.execute("""
+                        UPDATE reading_logs rl SET read_book_id = rb.id
+                        FROM read_books rb
+                        WHERE rl.user_id = rb.user_id
+                          AND rl.book_title = rb.title
+                          AND rl.read_book_id IS NULL
+                    """)
+            except Exception:
+                pass
             # 텍스트 컬럼 제거 (기존 데이터 마이그레이션 후)
             await conn.execute("ALTER TABLE reading_logs DROP COLUMN IF EXISTS book_title")
             await conn.execute("ALTER TABLE reading_logs DROP COLUMN IF EXISTS book_author")
@@ -297,23 +305,25 @@ async def _init_db():
             )
             # post_likes user_id FK 추가
             try:
-                await conn.execute("""
-                    ALTER TABLE post_likes
-                    ADD CONSTRAINT fk_post_likes_user
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                """)
+                async with conn.transaction():
+                    await conn.execute("""
+                        ALTER TABLE post_likes
+                        ADD CONSTRAINT fk_post_likes_user
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    """)
             except Exception:
                 pass  # 이미 존재하는 경우
             # comments 부모 댓글 삭제 시 CASCADE로 변경
             try:
-                await conn.execute(
-                    "ALTER TABLE comments DROP CONSTRAINT IF EXISTS comments_parent_comment_id_fkey"
-                )
-                await conn.execute("""
-                    ALTER TABLE comments
-                    ADD CONSTRAINT comments_parent_comment_id_fkey
-                    FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE CASCADE
-                """)
+                async with conn.transaction():
+                    await conn.execute(
+                        "ALTER TABLE comments DROP CONSTRAINT IF EXISTS comments_parent_comment_id_fkey"
+                    )
+                    await conn.execute("""
+                        ALTER TABLE comments
+                        ADD CONSTRAINT comments_parent_comment_id_fkey
+                        FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE CASCADE
+                    """)
             except Exception:
                 pass
 

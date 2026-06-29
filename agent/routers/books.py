@@ -77,17 +77,43 @@ class ReadBookIn(BaseModel):
     status: str = "finished"
 
 
+async def _fetch_pages(title: str, author: str) -> Optional[int]:
+    """Open Library 검색으로 페이지 수 중앙값 조회 (실패 시 None)"""
+    try:
+        q = f"{_strip(title)} {author}".strip()
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.get(
+                "https://openlibrary.org/search.json",
+                params={"q": q, "limit": 3, "fields": "number_of_pages_median"},
+            )
+            docs = resp.json().get("docs", [])
+            for doc in docs:
+                pc = doc.get("number_of_pages_median")
+                if pc and int(pc) > 30:
+                    return int(pc)
+    except Exception:
+        pass
+    return None
+
+
 @router.post("/read")
 async def register_read_book(
     body: ReadBookIn,
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
+    pages = body.pages
+    # 페이지 수가 기본값(250)이면 Open Library에서 실제 페이지 수 조회
+    if pages == 250 and body.title:
+        fetched = await _fetch_pages(body.title, body.author)
+        if fetched:
+            pages = fetched
+
     row = await conn.fetchrow(
         """INSERT INTO read_books (title, author, image, publisher, isbn, pages, impression, is_public, user_id, status)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *""",
         _strip(body.title), body.author, body.image, body.publisher, body.isbn,
-        body.pages, body.impression, body.is_public, user_id, body.status,
+        pages, body.impression, body.is_public, user_id, body.status,
     )
     return dict(row)
 
@@ -106,6 +132,26 @@ async def update_book_status(
     row = await conn.fetchrow(
         "UPDATE read_books SET status = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
         body.status, book_id, user_id,
+    )
+    if not row:
+        raise HTTPException(404, "책을 찾을 수 없거나 권한이 없습니다.")
+    return dict(row)
+
+
+class PagesIn(BaseModel):
+    pages: int
+
+
+@router.patch("/read/{book_id}/pages")
+async def update_book_pages(
+    book_id: int,
+    body: PagesIn,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    row = await conn.fetchrow(
+        "UPDATE read_books SET pages = $1 WHERE id = $2 AND user_id = $3 RETURNING *",
+        body.pages, book_id, user_id,
     )
     if not row:
         raise HTTPException(404, "책을 찾을 수 없거나 권한이 없습니다.")

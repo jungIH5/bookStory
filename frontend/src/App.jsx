@@ -350,6 +350,16 @@ function App() {
     finally { setIsSaving(false); }
   };
 
+  const handleUpdatePages = async (bookId, pages) => {
+    if (!user?.token) return;
+    setReadBooks(prev => prev.map(b => b.id === bookId ? { ...b, pages } : b));
+    await fetch(`${API_URL}/api/books/read/${bookId}/pages`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pages }),
+    });
+  };
+
   const handleDeleteBook = async (bookId) => {
     if (String(bookId).startsWith('temp-')) {
       setReadBooks(prev => prev.filter(b => b.id !== bookId));
@@ -566,7 +576,7 @@ function App() {
         const authH = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
         const res = await fetch(`${API_URL}/api/books/read`, {
           method: 'POST', headers: authH,
-          body: JSON.stringify({ title: stripHtml(selectedBook.title), author: selectedBook.author || '', image: selectedBook.image || '', status: 'reading' }),
+          body: JSON.stringify({ title: stripHtml(selectedBook.title), author: selectedBook.author || '', image: selectedBook.image || '', isbn: selectedBook.isbn || '', publisher: selectedBook.publisher || '', status: 'reading' }),
         });
         if (res.ok) {
           const newBook = await res.json();
@@ -662,7 +672,7 @@ function App() {
         // 서재에 없으면 새로 등록 (읽는 중 또는 완독)
         const res = await fetch(`${API_URL}/api/books/read`, {
           method: 'POST', headers: authH,
-          body: JSON.stringify({ title: book.title, author: book.author || '', image: book.image || '', status: finished ? 'finished' : 'reading' }),
+          body: JSON.stringify({ title: book.title, author: book.author || '', image: book.image || '', isbn: book.isbn || '', publisher: book.publisher || '', status: finished ? 'finished' : 'reading' }),
         });
         if (res.ok) {
           const newBook = await res.json();
@@ -863,6 +873,7 @@ function App() {
               onFetchTendency={handleFetchTendency}
               onFetchRecommendations={handleFetchRecommendations}
               onDeleteBook={handleDeleteBook}
+              onUpdatePages={user ? handleUpdatePages : null}
             />
           )}
           {activeTab === 'search' && (
