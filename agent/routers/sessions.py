@@ -9,8 +9,8 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 
 class SessionCreate(BaseModel):
-    book_title: str
-    book_author: str
+    read_book_id: Optional[int] = None
+    book_title: Optional[str] = None   # fallback when not logged in
     book_analysis: str
     first_question: str
     user_id: Optional[int] = None
@@ -21,16 +21,26 @@ class AnswerSubmit(BaseModel):
     user_id: Optional[int] = None
 
 
+_SESSION_SELECT = """
+    SELECT rs.*,
+           COALESCE(rb.title, rs.book_title) AS resolved_title,
+           COALESCE(rb.author, '')            AS resolved_author,
+           rb.image                           AS book_image
+    FROM reading_sessions rs
+    LEFT JOIN read_books rb ON rs.read_book_id = rb.id
+"""
+
+
 @router.get("")
 async def list_sessions(user_id: Optional[int] = None, conn=Depends(db.get_db)):
     if user_id:
         rows = await conn.fetch(
-            "SELECT * FROM reading_sessions WHERE user_id = $1 ORDER BY created_at DESC",
+            _SESSION_SELECT + "WHERE rs.user_id = $1 ORDER BY rs.created_at DESC",
             user_id,
         )
     else:
         rows = await conn.fetch(
-            "SELECT * FROM reading_sessions ORDER BY created_at DESC LIMIT 50"
+            _SESSION_SELECT + "ORDER BY rs.created_at DESC LIMIT 50"
         )
     return [dict(r) for r in rows]
 
@@ -43,9 +53,9 @@ async def create_session(
 ):
     uid = token_uid or body.user_id
     session_id = await conn.fetchval(
-        """INSERT INTO reading_sessions (user_id, book_title, book_author, book_analysis)
+        """INSERT INTO reading_sessions (user_id, read_book_id, book_title, book_analysis)
            VALUES ($1,$2,$3,$4) RETURNING id""",
-        uid, body.book_title, body.book_author, body.book_analysis,
+        uid, body.read_book_id, body.book_title, body.book_analysis,
     )
     await conn.execute(
         "INSERT INTO session_qa (session_id, question, question_type, turn_order) VALUES ($1,$2,'initial',1)",
@@ -61,7 +71,7 @@ async def submit_answer(
     conn=Depends(db.get_db),
 ):
     session = await conn.fetchrow(
-        "SELECT * FROM reading_sessions WHERE id = $1", session_id
+        _SESSION_SELECT + "WHERE rs.id = $1", session_id
     )
     if not session:
         raise HTTPException(404, "Session not found")
@@ -92,8 +102,8 @@ async def submit_answer(
 
     result = await conversation_graph.ainvoke({
         "session_id": session_id,
-        "book_title": session["book_title"],
-        "book_author": session["book_author"],
+        "book_title": session["resolved_title"],
+        "book_author": session["resolved_author"],
         "book_analysis": session["book_analysis"],
         "history": history,
         "current_answer": body.answer,
@@ -115,7 +125,7 @@ async def submit_answer(
 @router.get("/{session_id}")
 async def get_session(session_id: int, conn=Depends(db.get_db)):
     session = await conn.fetchrow(
-        "SELECT * FROM reading_sessions WHERE id = $1", session_id
+        _SESSION_SELECT + "WHERE rs.id = $1", session_id
     )
     if not session:
         raise HTTPException(404, "Session not found")

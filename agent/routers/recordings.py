@@ -21,25 +21,23 @@ async def list_recordings(user_id: Optional[int] = None, conn=Depends(db.get_db)
     if user_id:
         rows = await conn.fetch(
             """
-            SELECT r.id, r.user_id, r.club_id, r.filename, r.duration_seconds,
-                   r.transcript, r.labeled_transcript, r.created_at,
-                   ra.summary, ra.key_topics, ra.followup_questions
-            FROM recordings r
-            LEFT JOIN recording_analyses ra ON ra.recording_id = r.id
-            WHERE r.user_id = $1
-            ORDER BY r.created_at DESC
+            SELECT id, user_id, club_id, filename,
+                   transcript, labeled_transcript,
+                   summary, key_topics, followup_questions, created_at
+            FROM recordings
+            WHERE user_id = $1
+            ORDER BY created_at DESC
             """,
             user_id,
         )
     else:
         rows = await conn.fetch(
             """
-            SELECT r.id, r.user_id, r.club_id, r.filename, r.duration_seconds,
-                   r.transcript, r.labeled_transcript, r.created_at,
-                   ra.summary, ra.key_topics, ra.followup_questions
-            FROM recordings r
-            LEFT JOIN recording_analyses ra ON ra.recording_id = r.id
-            ORDER BY r.created_at DESC
+            SELECT id, user_id, club_id, filename,
+                   transcript, labeled_transcript,
+                   summary, key_topics, followup_questions, created_at
+            FROM recordings
+            ORDER BY created_at DESC
             LIMIT 50
             """
         )
@@ -99,16 +97,13 @@ async def upload_recording(
 
         labeled = result.get("labeled_transcript", "")
         await conn.execute(
-            "UPDATE recordings SET transcript = $1, labeled_transcript = $2 WHERE id = $3",
-            result["transcript"], labeled, recording_id,
-        )
-        await conn.execute(
-            """INSERT INTO recording_analyses (recording_id, summary, key_topics, followup_questions)
-               VALUES ($1,$2,$3,$4)""",
+            """UPDATE recordings
+               SET transcript = $1, labeled_transcript = $2,
+                   summary = $3, key_topics = $4, followup_questions = $5
+               WHERE id = $6""",
+            result["transcript"], labeled,
+            result["summary"], result["key_topics"], result["followup_questions"],
             recording_id,
-            result["summary"],
-            result["key_topics"],
-            result["followup_questions"],
         )
 
         return {
@@ -131,10 +126,4 @@ async def get_recording(recording_id: int, conn=Depends(db.get_db)):
     )
     if not recording:
         raise HTTPException(404, "Recording not found")
-    analysis = await conn.fetchrow(
-        "SELECT * FROM recording_analyses WHERE recording_id = $1", recording_id
-    )
-    return {
-        "recording": dict(recording),
-        "analysis": dict(analysis) if analysis else None,
-    }
+    return dict(recording)

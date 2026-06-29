@@ -92,7 +92,6 @@ async def _init_db():
                     location VARCHAR(200),
                     lat DOUBLE PRECISION,
                     lng DOUBLE PRECISION,
-                    member_count INT DEFAULT 1,
                     image TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL
@@ -101,31 +100,34 @@ async def _init_db():
             await conn.execute(
                 "ALTER TABLE clubs ADD COLUMN IF NOT EXISTS creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
             )
+            await conn.execute(
+                "ALTER TABLE clubs DROP COLUMN IF EXISTS member_count"
+            )
 
             club_count = await conn.fetchval("SELECT COUNT(*) FROM clubs")
             if club_count < 5:
                 await conn.execute("""
-                    INSERT INTO clubs (name, description, category, location, lat, lng, member_count, image) VALUES
-                    ('합정 독서 기록단','합정역 근처 조용한 카페에서 함께 책 읽고 기록하는 모임입니다.','독서/기록','합정동',37.5494,126.9133,12,'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=800'),
-                    ('잠실 소설 클럽','잠실 롯데월드몰 근처에서 최신 소설을 분석하고 토론합니다.','소설/토론','잠실동',37.5133,127.1001,8,'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800'),
-                    ('홍대 디자인 인사이트','예술과 디자인 서적을 읽으며 영감을 나누는 합정-홍대 라인 모임.','예술/디자인','서교동',37.5567,126.9236,15,'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800'),
-                    ('송파 수필의 밤','잠실/송파 직장인들이 모여 하루 한 구절 공유하는 밤 모임.','에세이','송파동',37.5101,127.1128,6,'https://images.unsplash.com/photo-1543269865-cbf427effbad?q=80&w=800'),
-                    ('강남 비즈니스 독서회','성장을 꿈꾸는 직장인들의 경제경영서 요약 모임.','비즈니스','역삼동',37.5006,127.0360,24,'https://images.unsplash.com/photo-1552250575-e508473b090f?q=80&w=800'),
-                    ('성수 숲속 독서','성수동 카페거리에서 커피와 함께하는 주말 독서 시간.','독서/인문','성수동',37.5445,127.0560,10,'https://images.unsplash.com/photo-1481627526605-594220f7f2fb?q=80&w=800'),
-                    ('망원 문학 산책','동네 카페를 돌며 고전 문학의 의미를 찾는 모임.','소설/인문','망원동',37.5559,126.9015,7,'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?q=80&w=800'),
-                    ('신촌 철학 브런치','어려운 철학 책을 쉽게 풀어보는 브런치 타임.','인문/철학','대현동',37.5591,126.9432,5,'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?q=80&w=800'),
-                    ('연남동 기록자들','자신의 일상을 책으로 엮어보는 독립출판 준비 모임.','독서/기록','연남동',37.5612,126.9248,11,'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=800'),
-                    ('성신 경제 스터디','최신 경제 트렌드 뉴스를 책으로 깊게 파봅니다.','비즈니스','동선동',37.5926,127.0164,9,'https://images.unsplash.com/photo-1611974717537-48843914e1fd?q=80&w=800'),
-                    ('마포 만화 애호가','서사가 있는 만화와 그래픽 노블을 공유합니다.','취미/만화','마포동',37.5393,126.9452,18,'https://images.unsplash.com/photo-1588497859490-85d1c17db96d?q=80&w=800'),
-                    ('종로 역사 탐방','역사서를 읽고 실제 유적지를 가보는 현장형 모임.','인문/역사','종로1가',37.5714,126.9788,13,'https://images.unsplash.com/photo-1548013146-72479768bbaa?q=80&w=800'),
-                    ('서울숲 에세이 쓰기','감성을 담은 짧은 글을 매주 한 편씩 완성합니다.','기록/에세이','성수동1가',37.5431,127.0448,4,'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=800'),
-                    ('광화문 독토회','시사 전문 서적을 읽고 열띤 토론을 벌입니다.','사회/문화','광화문',37.5759,126.9768,20,'https://images.unsplash.com/photo-1517245385169-46b8b23f0385?q=80&w=800'),
-                    ('이태원 글로벌 낭독','원서 읽기를 통해 언어와 문화를 동시에 배웁니다.','외국어/문학','이태원동',37.5345,126.9942,12,'https://images.unsplash.com/photo-1523050335456-cbbefe286207?q=80&w=800'),
-                    ('여의도 금융 독서','금융 시장의 원리를 책을 통해 마스터합니다.','경제/경영','여의도동',37.5216,126.9242,16,'https://images.unsplash.com/photo-1591696208162-a9775fb4465d?q=80&w=800'),
-                    ('혜화 예술가의 눈','미술사와 예술론을 연구하는 심도 있는 안목 모임.','예술/학술','명륜동',37.5818,127.0019,8,'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?q=80&w=800'),
-                    ('건대 판타지 정복','판타지 소설과 장르 문학을 사랑하는 사람들의 모임.','장르/소설','화양동',37.5425,127.0709,22,'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=800'),
-                    ('남산 시(詩) 산책','계절마다 변하는 위대한 시구들을 함께 읽습니다.','문학/시','예장동',37.5538,126.9912,6,'https://images.unsplash.com/photo-1502134249126-5fcd058c3d0d?q=80&w=800'),
-                    ('용산 데이터 사이언스','IT 기술 서적과 데이터 분석법을 함께 공부합니다.','자기계발/IT','한강로동',37.5299,126.9648,14,'https://images.unsplash.com/photo-1551288049-bbbda536ad37?q=80&w=800')
+                    INSERT INTO clubs (name, description, category, location, lat, lng, image) VALUES
+                    ('합정 독서 기록단','합정역 근처 조용한 카페에서 함께 책 읽고 기록하는 모임입니다.','독서/기록','합정동',37.5494,126.9133,'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=800'),
+                    ('잠실 소설 클럽','잠실 롯데월드몰 근처에서 최신 소설을 분석하고 토론합니다.','소설/토론','잠실동',37.5133,127.1001,'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800'),
+                    ('홍대 디자인 인사이트','예술과 디자인 서적을 읽으며 영감을 나누는 합정-홍대 라인 모임.','예술/디자인','서교동',37.5567,126.9236,'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800'),
+                    ('송파 수필의 밤','잠실/송파 직장인들이 모여 하루 한 구절 공유하는 밤 모임.','에세이','송파동',37.5101,127.1128,'https://images.unsplash.com/photo-1543269865-cbf427effbad?q=80&w=800'),
+                    ('강남 비즈니스 독서회','성장을 꿈꾸는 직장인들의 경제경영서 요약 모임.','비즈니스','역삼동',37.5006,127.0360,'https://images.unsplash.com/photo-1552250575-e508473b090f?q=80&w=800'),
+                    ('성수 숲속 독서','성수동 카페거리에서 커피와 함께하는 주말 독서 시간.','독서/인문','성수동',37.5445,127.0560,'https://images.unsplash.com/photo-1481627526605-594220f7f2fb?q=80&w=800'),
+                    ('망원 문학 산책','동네 카페를 돌며 고전 문학의 의미를 찾는 모임.','소설/인문','망원동',37.5559,126.9015,'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?q=80&w=800'),
+                    ('신촌 철학 브런치','어려운 철학 책을 쉽게 풀어보는 브런치 타임.','인문/철학','대현동',37.5591,126.9432,'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?q=80&w=800'),
+                    ('연남동 기록자들','자신의 일상을 책으로 엮어보는 독립출판 준비 모임.','독서/기록','연남동',37.5612,126.9248,'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=800'),
+                    ('성신 경제 스터디','최신 경제 트렌드 뉴스를 책으로 깊게 파봅니다.','비즈니스','동선동',37.5926,127.0164,'https://images.unsplash.com/photo-1611974717537-48843914e1fd?q=80&w=800'),
+                    ('마포 만화 애호가','서사가 있는 만화와 그래픽 노블을 공유합니다.','취미/만화','마포동',37.5393,126.9452,'https://images.unsplash.com/photo-1588497859490-85d1c17db96d?q=80&w=800'),
+                    ('종로 역사 탐방','역사서를 읽고 실제 유적지를 가보는 현장형 모임.','인문/역사','종로1가',37.5714,126.9788,'https://images.unsplash.com/photo-1548013146-72479768bbaa?q=80&w=800'),
+                    ('서울숲 에세이 쓰기','감성을 담은 짧은 글을 매주 한 편씩 완성합니다.','기록/에세이','성수동1가',37.5431,127.0448,'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=800'),
+                    ('광화문 독토회','시사 전문 서적을 읽고 열띤 토론을 벌입니다.','사회/문화','광화문',37.5759,126.9768,'https://images.unsplash.com/photo-1517245385169-46b8b23f0385?q=80&w=800'),
+                    ('이태원 글로벌 낭독','원서 읽기를 통해 언어와 문화를 동시에 배웁니다.','외국어/문학','이태원동',37.5345,126.9942,'https://images.unsplash.com/photo-1523050335456-cbbefe286207?q=80&w=800'),
+                    ('여의도 금융 독서','금융 시장의 원리를 책을 통해 마스터합니다.','경제/경영','여의도동',37.5216,126.9242,'https://images.unsplash.com/photo-1591696208162-a9775fb4465d?q=80&w=800'),
+                    ('혜화 예술가의 눈','미술사와 예술론을 연구하는 심도 있는 안목 모임.','예술/학술','명륜동',37.5818,127.0019,'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?q=80&w=800'),
+                    ('건대 판타지 정복','판타지 소설과 장르 문학을 사랑하는 사람들의 모임.','장르/소설','화양동',37.5425,127.0709,'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=800'),
+                    ('남산 시(詩) 산책','계절마다 변하는 위대한 시구들을 함께 읽습니다.','문학/시','예장동',37.5538,126.9912,'https://images.unsplash.com/photo-1502134249126-5fcd058c3d0d?q=80&w=800'),
+                    ('용산 데이터 사이언스','IT 기술 서적과 데이터 분석법을 함께 공부합니다.','자기계발/IT','한강로동',37.5299,126.9648,'https://images.unsplash.com/photo-1551288049-bbbda536ad37?q=80&w=800')
                 """)
 
             await conn.execute("""
@@ -175,11 +177,26 @@ async def _init_db():
                 CREATE TABLE IF NOT EXISTS reading_sessions (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    read_book_id INTEGER REFERENCES read_books(id) ON DELETE SET NULL,
                     book_title VARCHAR(300),
-                    book_author VARCHAR(300),
                     book_analysis TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            """)
+            await conn.execute(
+                "ALTER TABLE reading_sessions ADD COLUMN IF NOT EXISTS read_book_id INTEGER REFERENCES read_books(id) ON DELETE SET NULL"
+            )
+            # book_title은 비인증 세션의 fallback으로 nullable 유지, book_author는 JOIN으로 대체
+            await conn.execute(
+                "ALTER TABLE reading_sessions DROP COLUMN IF EXISTS book_author"
+            )
+            # 기존 세션 read_book_id 연결 (제목+유저 기준 매칭)
+            await conn.execute("""
+                UPDATE reading_sessions rs SET read_book_id = rb.id
+                FROM read_books rb
+                WHERE rs.user_id = rb.user_id
+                  AND rs.book_title = rb.title
+                  AND rs.read_book_id IS NULL
             """)
 
             await conn.execute("""
@@ -200,26 +217,40 @@ async def _init_db():
                     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     club_id INTEGER REFERENCES clubs(id) ON DELETE SET NULL,
                     filename VARCHAR(300),
-                    duration_seconds INTEGER,
                     transcript TEXT,
                     labeled_transcript TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            await conn.execute(
-                "ALTER TABLE recordings ADD COLUMN IF NOT EXISTS labeled_transcript TEXT"
-            )
-
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS recording_analyses (
-                    id SERIAL PRIMARY KEY,
-                    recording_id INTEGER REFERENCES recordings(id) ON DELETE CASCADE,
                     summary TEXT,
                     key_topics JSONB,
                     followup_questions JSONB,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            await conn.execute(
+                "ALTER TABLE recordings ADD COLUMN IF NOT EXISTS labeled_transcript TEXT"
+            )
+            await conn.execute(
+                "ALTER TABLE recordings ADD COLUMN IF NOT EXISTS summary TEXT"
+            )
+            await conn.execute(
+                "ALTER TABLE recordings ADD COLUMN IF NOT EXISTS key_topics JSONB"
+            )
+            await conn.execute(
+                "ALTER TABLE recordings ADD COLUMN IF NOT EXISTS followup_questions JSONB"
+            )
+            await conn.execute(
+                "ALTER TABLE recordings DROP COLUMN IF EXISTS duration_seconds"
+            )
+            # recording_analyses 데이터를 recordings로 이전 후 테이블 제거
+            await conn.execute("""
+                UPDATE recordings r SET
+                    summary = ra.summary,
+                    key_topics = ra.key_topics,
+                    followup_questions = ra.followup_questions
+                FROM recording_analyses ra
+                WHERE ra.recording_id = r.id
+                  AND r.summary IS NULL
+            """)
+            await conn.execute("DROP TABLE IF EXISTS recording_analyses")
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS club_reviews (
@@ -237,23 +268,54 @@ async def _init_db():
                 CREATE TABLE IF NOT EXISTS reading_logs (
                     id SERIAL PRIMARY KEY,
                     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                    book_title TEXT NOT NULL,
-                    book_author TEXT DEFAULT '',
-                    book_image TEXT DEFAULT '',
+                    read_book_id INTEGER REFERENCES read_books(id) ON DELETE SET NULL,
                     duration_seconds INTEGER NOT NULL DEFAULT 0,
                     started_reading_at DATE,
                     logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             await conn.execute(
-                "ALTER TABLE reading_logs ADD COLUMN IF NOT EXISTS book_image TEXT DEFAULT ''"
+                "ALTER TABLE reading_logs ADD COLUMN IF NOT EXISTS read_book_id INTEGER REFERENCES read_books(id) ON DELETE SET NULL"
             )
             await conn.execute(
                 "ALTER TABLE reading_logs ADD COLUMN IF NOT EXISTS started_reading_at DATE"
             )
+            # 기존 로그 read_book_id 연결 (제목+유저 기준 매칭)
+            await conn.execute("""
+                UPDATE reading_logs rl SET read_book_id = rb.id
+                FROM read_books rb
+                WHERE rl.user_id = rb.user_id
+                  AND rl.book_title = rb.title
+                  AND rl.read_book_id IS NULL
+            """)
+            # 텍스트 컬럼 제거 (기존 데이터 마이그레이션 후)
+            await conn.execute("ALTER TABLE reading_logs DROP COLUMN IF EXISTS book_title")
+            await conn.execute("ALTER TABLE reading_logs DROP COLUMN IF EXISTS book_author")
+            await conn.execute("ALTER TABLE reading_logs DROP COLUMN IF EXISTS book_image")
             await conn.execute(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS stats_public BOOLEAN DEFAULT TRUE"
             )
+            # post_likes user_id FK 추가
+            try:
+                await conn.execute("""
+                    ALTER TABLE post_likes
+                    ADD CONSTRAINT fk_post_likes_user
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                """)
+            except Exception:
+                pass  # 이미 존재하는 경우
+            # comments 부모 댓글 삭제 시 CASCADE로 변경
+            try:
+                await conn.execute(
+                    "ALTER TABLE comments DROP CONSTRAINT IF EXISTS comments_parent_comment_id_fkey"
+                )
+                await conn.execute("""
+                    ALTER TABLE comments
+                    ADD CONSTRAINT comments_parent_comment_id_fkey
+                    FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE CASCADE
+                """)
+            except Exception:
+                pass
 
             # 샘플 게시물/댓글 시딩
             post_count = await conn.fetchval("SELECT COUNT(*) FROM posts")

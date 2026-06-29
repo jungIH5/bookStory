@@ -8,9 +8,7 @@ router = APIRouter(prefix="/api/reading")
 
 
 class ReadingLogIn(BaseModel):
-    book_title: str
-    book_author: str = ""
-    book_image: str = ""
+    read_book_id: int
     duration_seconds: int
     started_reading_at: Optional[str] = None  # ISO date string "YYYY-MM-DD"
 
@@ -23,10 +21,10 @@ async def save_reading_log(
 ):
     row = await conn.fetchrow(
         """INSERT INTO reading_logs
-               (user_id, book_title, book_author, book_image, duration_seconds, started_reading_at)
-           VALUES ($1,$2,$3,$4,$5,$6::date) RETURNING *""",
-        user_id, body.book_title, body.book_author, body.book_image,
-        body.duration_seconds, body.started_reading_at,
+               (user_id, read_book_id, duration_seconds, started_reading_at)
+           VALUES ($1,$2,$3,$4::date)
+           RETURNING id, user_id, read_book_id, duration_seconds, started_reading_at, logged_at""",
+        user_id, body.read_book_id, body.duration_seconds, body.started_reading_at,
     )
     return dict(row)
 
@@ -41,7 +39,7 @@ async def get_leaderboard(conn=Depends(get_db)):
                 COUNT(DISTINCT rb.id)::int AS books_count,
                 COALESCE(SUM(rl.duration_seconds), 0)::int AS total_seconds
             FROM users u
-            LEFT JOIN read_books rb ON rb.user_id = u.id
+            LEFT JOIN read_books rb ON rb.user_id = u.id AND rb.status = 'finished'
             LEFT JOIN reading_logs rl ON rl.user_id = u.id
             WHERE u.stats_public = TRUE
             GROUP BY u.id, u.name

@@ -560,13 +560,27 @@ function App() {
     if (!questions.thematic.length) return;
     const firstQuestion = questions.thematic[0];
     try {
+      // 로그인 상태이고 DB에 없는 책이면 먼저 서재에 등록
+      let readBookId = selectedBook?.id || null;
+      if (user?.token && selectedBook && !readBookId) {
+        const authH = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
+        const res = await fetch(`${API_URL}/api/books/read`, {
+          method: 'POST', headers: authH,
+          body: JSON.stringify({ title: stripHtml(selectedBook.title), author: selectedBook.author || '', image: selectedBook.image || '', status: 'reading' }),
+        });
+        if (res.ok) {
+          const newBook = await res.json();
+          readBookId = newBook.id;
+          setReadBooks(prev => [newBook, ...prev]);
+        }
+      }
       const response = await fetch(`${API_URL}/api/sessions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: user?.id || null,
-          book_title: stripHtml(selectedBook.title),
-          book_author: selectedBook.author,
+          read_book_id: readBookId,
+          book_title: selectedBook ? stripHtml(selectedBook.title) : null,
           book_analysis: analysisResult,
           first_question: firstQuestion,
         }),
@@ -631,36 +645,37 @@ function App() {
     if (!user?.token) return;
     const authH = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
     try {
-      // 독서 시간 기록
-      await fetch(`${API_URL}/api/reading/log`, {
-        method: 'POST',
-        headers: authH,
-        body: JSON.stringify({ book_title: book.title, book_author: book.author || '', book_image: book.image || '', duration_seconds: seconds, started_reading_at: book.startedAt || null }),
-      });
-      // 서재에 있는지 확인 (제목 매칭)
-      const existingBook = readBooks.find(b => b.title.replace(/<\/?[^>]+(>|$)/g, '') === book.title);
+      // 서재에서 책 찾기 (제목 매칭)
+      const existingBook = readBooks.find(b => stripHtml(b.title) === book.title);
+      let readBookId;
       if (existingBook) {
-        // 상태만 업데이트
+        readBookId = existingBook.id;
         const res = await fetch(`${API_URL}/api/books/read/${existingBook.id}/status`, {
-          method: 'PATCH',
-          headers: authH,
+          method: 'PATCH', headers: authH,
           body: JSON.stringify({ status: finished ? 'finished' : 'reading' }),
         });
         if (res.ok) {
           const updated = await res.json();
           setReadBooks(prev => prev.map(b => b.id === existingBook.id ? { ...b, status: updated.status } : b));
         }
-      } else if (finished) {
-        // 서재에 없고 완독이면 새로 등록
+      } else {
+        // 서재에 없으면 새로 등록 (읽는 중 또는 완독)
         const res = await fetch(`${API_URL}/api/books/read`, {
-          method: 'POST',
-          headers: authH,
-          body: JSON.stringify({ title: book.title, author: book.author || '', image: book.image || '', status: 'finished' }),
+          method: 'POST', headers: authH,
+          body: JSON.stringify({ title: book.title, author: book.author || '', image: book.image || '', status: finished ? 'finished' : 'reading' }),
         });
         if (res.ok) {
           const newBook = await res.json();
+          readBookId = newBook.id;
           setReadBooks(prev => [newBook, ...prev]);
         }
+      }
+      // 독서 로그 저장 (read_book_id 기반)
+      if (readBookId) {
+        await fetch(`${API_URL}/api/reading/log`, {
+          method: 'POST', headers: authH,
+          body: JSON.stringify({ read_book_id: readBookId, duration_seconds: seconds, started_reading_at: book.startedAt || null }),
+        });
       }
       setToast({ show: true, message: finished ? `완독 완료! ${book.title}` : `독서 기록 저장 완료!` });
     } catch (e) { console.error('Timer complete error:', e); }

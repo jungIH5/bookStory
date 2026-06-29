@@ -13,9 +13,12 @@ async def get_tendency(user_id: int, conn=Depends(db.get_db)):
 
     rows = await conn.fetch(
         """
-        SELECT rs.book_title, rs.book_author, sq.question, sq.answer
+        SELECT COALESCE(rb.title, rs.book_title) AS book_title,
+               COALESCE(rb.author, '')            AS book_author,
+               sq.question, sq.answer
         FROM session_qa sq
         JOIN reading_sessions rs ON sq.session_id = rs.id
+        LEFT JOIN read_books rb ON rs.read_book_id = rb.id
         WHERE rs.user_id = $1 AND sq.answer IS NOT NULL
         ORDER BY sq.created_at DESC
         LIMIT 50
