@@ -302,15 +302,15 @@ function App() {
         window.location.reload();
       }
     } catch (error) {
-      const fallback = { id: 1, ...testData, token: null };
-      setUser(fallback);
-      localStorage.setItem('bookstory_user', JSON.stringify(fallback));
-      localStorage.setItem('bookstory_test_user', JSON.stringify(fallback));
-      window.location.reload();
+      alert('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
     }
   };
 
   const handleRegisterBook = async (book) => {
+    if (!user?.token) {
+      setToast({ show: true, message: '로그인이 필요합니다. 다시 로그인해주세요.' });
+      return;
+    }
     setIsSaving(true);
     const tempId = `temp-${Date.now()}`;
     const cleanTitle = stripHtml(book.title);
@@ -330,12 +330,10 @@ function App() {
     setSelectedBook(null);
     setActiveTab('stack');
     setViewMode('tower');
-    setToast({ show: true, message: `"${cleanTitle.slice(0, 16)}${cleanTitle.length > 16 ? '...' : ''}" 서재에 추가됐어요 📚` });
     try {
-      const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
       const response = await fetch(`${API_URL}/api/books/read`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authH },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
         body: JSON.stringify({
           title: book.title, author: book.author, image: book.image,
           publisher: book.publisher, isbn: book.isbn, pages: currentBookPages,
@@ -345,9 +343,15 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         setReadBooks(prev => prev.map(b => b.id === tempId ? { ...data, title: stripHtml(data.title) } : b));
+        setToast({ show: true, message: `"${cleanTitle.slice(0, 16)}${cleanTitle.length > 16 ? '...' : ''}" 서재에 추가됐어요.` });
+      } else {
+        setReadBooks(prev => prev.filter(b => b.id !== tempId));
+        setToast({ show: true, message: response.status === 401 ? '로그인이 만료됐습니다. 다시 로그인해주세요.' : '저장 실패. 다시 시도해주세요.' });
       }
-    } catch (error) { console.error('Book save error:', error); }
-    finally { setIsSaving(false); }
+    } catch (error) {
+      setReadBooks(prev => prev.filter(b => b.id !== tempId));
+      console.error('Book save error:', error);
+    } finally { setIsSaving(false); }
   };
 
   const handleUpdatePages = async (bookId, pages) => {
@@ -365,12 +369,22 @@ function App() {
       setReadBooks(prev => prev.filter(b => b.id !== bookId));
       return;
     }
+    const snapshot = readBooks;
     setReadBooks(prev => prev.filter(b => b.id !== bookId));
     try {
       const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
-      await fetch(`${API_URL}/api/books/read/${bookId}`, { method: 'DELETE', headers: authH });
-    } catch (e) { console.error('Book delete error:', e); }
-    setToast({ show: true, message: '서재에서 삭제됐어요 🗑️' });
+      const res = await fetch(`${API_URL}/api/books/read/${bookId}`, { method: 'DELETE', headers: authH });
+      if (!res.ok) {
+        setReadBooks(snapshot);
+        setToast({ show: true, message: '삭제 실패: 권한이 없습니다.' });
+        return;
+      }
+    } catch (e) {
+      setReadBooks(snapshot);
+      console.error('Book delete error:', e);
+      return;
+    }
+    setToast({ show: true, message: '서재에서 삭제됐어요.' });
   };
 
   const handleSaveImpression = async () => {
@@ -678,6 +692,9 @@ function App() {
           const newBook = await res.json();
           readBookId = newBook.id;
           setReadBooks(prev => [newBook, ...prev]);
+        } else if (res.status === 401) {
+          setToast({ show: true, message: '로그인이 만료됐습니다. 다시 로그인해주세요.' });
+          return;
         }
       }
       // 독서 로그 저장 (read_book_id 기반)
@@ -1067,6 +1084,8 @@ function App() {
             setBookImpression={setBookImpression}
             bookImpressionPublic={bookImpressionPublic}
             setBookImpressionPublic={setBookImpressionPublic}
+            currentBookPages={currentBookPages}
+            setCurrentBookPages={setCurrentBookPages}
             isSaving={isSaving}
             isSavingImpression={isSavingImpression}
             timerBook={timerBook}

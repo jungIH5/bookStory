@@ -157,7 +157,7 @@ export default function TimerTab({ user, readBooks, timerBook, timerSeconds, tim
         </motion.div>
       ) : (
         /* ── 타이머 시작 설정 ── */
-        <div style={{ maxWidth: '480px' }}>
+        <div style={{ maxWidth: '480px', margin: '0 auto' }}>
           <div style={{ padding: '1.75rem', borderRadius: '1.25rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.12)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
             {/* 통합 검색 인풋 */}

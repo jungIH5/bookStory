@@ -7,6 +7,7 @@ export default function BookModal({
   book, analysisResult, questions, isAnalyzing,
   bookImpression, setBookImpression,
   bookImpressionPublic, setBookImpressionPublic,
+  currentBookPages, setCurrentBookPages,
   isSaving, isSavingImpression,
   timerBook,
   onClose, onRegister, onLoadAnalysis, onStartDiscussion, onSaveImpression, onDeleteBook, onStartTimer,
@@ -115,6 +116,25 @@ export default function BookModal({
               style={{ width: '100%', resize: 'vertical', fontSize: '0.8125rem', lineHeight: 1.6, color: '#1C140E', minHeight: '72px', boxSizing: 'border-box' }}
             />
           </div>
+
+          {!book?.fromStack && setCurrentBookPages && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(140,107,66,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
+                <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', borderRadius: '9999px', flexShrink: 0 }} />
+                <span style={{ fontSize: '9px', fontWeight: 900, color: '#A07840', textTransform: 'uppercase', letterSpacing: '0.12em' }}>책 두께 (페이지 수)</span>
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="9999"
+                value={currentBookPages}
+                onChange={e => { const v = parseInt(e.target.value, 10); if (v > 0) setCurrentBookPages(v); }}
+                onClick={e => e.stopPropagation()}
+                style={{ width: '72px', fontSize: '0.8125rem', fontWeight: 700, padding: '4px 8px', borderRadius: '8px', border: '1px solid rgba(139,107,66,0.3)', background: 'white', color: '#1C140E', outline: 'none', textAlign: 'center' }}
+              />
+              <span style={{ fontSize: '9px', color: '#9E8D7A', fontWeight: 700 }}>p</span>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '0.625rem' }}>
             {book?.fromStack ? (

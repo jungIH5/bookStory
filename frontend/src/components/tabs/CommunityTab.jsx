@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MessageSquare, BookOpen, Heart, MessageCircle, Plus, Loader2, Trophy } from 'lucide-react';
-import { renderMarkdown, formatReadingTime } from '../../utils';
+import { formatReadingTime } from '../../utils';
 import { API_URL } from '../../api';
 
 export default function CommunityTab({ user, communityPosts, hasMore, isFetchingMore, onOpenPost, onLikePost, onWritePost, onLoadMore, onOpenUserLibrary }) {
@@ -85,46 +85,55 @@ export default function CommunityTab({ user, communityPosts, hasMore, isFetching
                 animate={{ opacity: 1, y: 0 }}
                 className="group"
                 onClick={() => onOpenPost(post)}
-                style={{ position: 'relative', padding: '1.75rem 0', borderBottom: '1px solid rgba(139,107,66,0.1)', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                style={{ position: 'relative', padding: '1rem 0', borderBottom: '1px solid rgba(139,107,66,0.1)', cursor: 'pointer', transition: 'all 0.2s ease' }}
               >
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', opacity: 0, borderRadius: '0 2px 2px 0', transition: 'opacity 0.2s ease' }} className="group-hover:opacity-100" />
-                <div style={{ paddingLeft: '0.75rem' }}>
-                  {post.book_title && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.75rem', padding: '4px 12px 4px 8px', background: 'linear-gradient(135deg, rgba(140,107,66,0.1), rgba(196,148,86,0.08))', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '8px' }}>
-                      <BookOpen size={11} style={{ color: '#8C6B42', flexShrink: 0 }} />
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42' }}>{post.book_title}</span>
+                <div style={{ paddingLeft: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                  {/* 분류 */}
+                  <span style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '3px 8px', borderRadius: '6px', flexShrink: 0 }}>
+                    General
+                  </span>
+
+                  {/* 제목 + 책 */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <h3 className="group-hover:text-amber-700 transition-colors" style={{ fontSize: '0.9375rem', fontWeight: 800, lineHeight: 1.3, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.title}</h3>
+                      {post.book_title && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '2px 8px 2px 6px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.15)', borderRadius: '6px', flexShrink: 0 }}>
+                          <BookOpen size={9} style={{ color: '#8C6B42' }} />
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#8C6B42', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.book_title}</span>
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
-                    <span style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.2)', padding: '2px 8px', borderRadius: '6px' }}>General</span>
                   </div>
-                  <h3 className="group-hover:text-amber-700 transition-colors" style={{ fontSize: '1.1rem', fontWeight: 900, marginBottom: '0.5rem', lineHeight: 1.3, letterSpacing: '-0.01em' }}>{post.title}</h3>
-                  <p style={{ color: '#9E8D7A', lineHeight: 1.6, fontSize: '0.875rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }} />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                      <button onClick={(e) => { e.stopPropagation(); onLikePost(post.id); }} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: post.liked ? '#fb7185' : '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-rose-400">
-                        <Heart size={14} fill={post.liked ? '#fb7185' : 'none'} />
-                        {post.likes || 0}
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); onOpenPost(post); }} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', fontWeight: 700, color: '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', transition: 'color 0.2s ease' }} className="hover:text-sky-400">
-                        <MessageCircle size={14} />
-                        {post.comments || 0}
-                      </button>
+
+                  {/* 글쓴이 */}
+                  <div
+                    onClick={e => { e.stopPropagation(); if (post.user_id && onOpenUserLibrary) onOpenUserLibrary(post.user_id, post.author); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0, cursor: post.user_id ? 'pointer' : 'default' }}
+                  >
+                    <div style={{ width: '1.5rem', height: '1.5rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px' }}>
+                      {(post.author || '?')[0]}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.75rem' }}>
-                      <div
-                        onClick={e => { e.stopPropagation(); if (post.user_id && onOpenUserLibrary) onOpenUserLibrary(post.user_id, post.author); }}
-                        style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', cursor: post.user_id ? 'pointer' : 'default' }}
-                      >
-                        {(post.author || '?')[0]}
-                      </div>
-                      <span
-                        onClick={e => { e.stopPropagation(); if (post.user_id && onOpenUserLibrary) onOpenUserLibrary(post.user_id, post.author); }}
-                        style={{ color: '#7B6B55', fontWeight: 700, cursor: post.user_id ? 'pointer' : 'default', textDecoration: post.user_id ? 'underline' : 'none', textUnderlineOffset: '2px', textDecorationColor: 'rgba(139,107,66,0.3)' }}
-                      >{post.author || '익명'}</span>
-                      <span style={{ color: '#9E8D7A' }}>·</span>
-                      <span style={{ color: '#BDB0A0', fontSize: '11px' }}>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
-                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#7B6B55', fontWeight: 700, textDecoration: post.user_id ? 'underline' : 'none', textUnderlineOffset: '2px', textDecorationColor: 'rgba(139,107,66,0.3)' }}>
+                      {post.author || '익명'}
+                    </span>
+                  </div>
+
+                  {/* 좋아요 */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onLikePost(post.id); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: post.liked ? '#fb7185' : '#9E8D7A', cursor: 'pointer', background: 'none', border: 'none', flexShrink: 0, transition: 'color 0.2s ease' }}
+                    className="hover:text-rose-400"
+                  >
+                    <Heart size={13} fill={post.liked ? '#fb7185' : 'none'} />
+                    {post.likes || 0}
+                  </button>
+
+                  {/* 댓글 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: '#9E8D7A', flexShrink: 0 }}>
+                    <MessageCircle size={13} />
+                    {post.comments || 0}
                   </div>
                 </div>
               </motion.div>

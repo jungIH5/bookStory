@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import httpx
@@ -21,12 +22,28 @@ def _strip(text: str) -> str:
     return _TAG_RE.sub("", text or "")
 
 
+def _ol_to_naver(doc: dict) -> dict:
+    cover_i = doc.get("cover_i")
+    isbns = doc.get("isbn") or []
+    return {
+        "title": doc.get("title", ""),
+        "author": (doc.get("author_name") or [""])[0],
+        "image": f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else "",
+        "isbn": isbns[0] if isbns else "",
+        "publisher": ((doc.get("publisher") or [""])[0]),
+        "description": "",
+        "pubdate": str(doc.get("first_publish_year", "")),
+        "pages": doc.get("number_of_pages_median") or 0,
+    }
+
+
 @router.get("/search")
 async def search_books(query: str):
     if not query:
         raise HTTPException(400, "query is required")
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
+
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        naver_task = client.get(
             "https://openapi.naver.com/v1/search/book.json",
             params={"query": query, "display": 10},
             headers={
@@ -34,7 +51,26 @@ async def search_books(query: str):
                 "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
             },
         )
-    return resp.json()
+        ol_task = client.get(
+            "https://openlibrary.org/search.json",
+            params={"q": query, "limit": 10, "fields": "title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median"},
+        )
+        naver_resp, ol_resp = await asyncio.gather(naver_task, ol_task, return_exceptions=True)
+
+    naver_data = naver_resp.json() if not isinstance(naver_resp, Exception) else {"items": []}
+    naver_items = naver_data.get("items", [])
+
+    ol_items = []
+    if not isinstance(ol_resp, Exception) and ol_resp.status_code == 200:
+        ol_docs = ol_resp.json().get("docs", [])
+        naver_isbns = {item.get("isbn", "").replace("-", "") for item in naver_items if item.get("isbn")}
+        for doc in ol_docs:
+            doc_isbns = {isbn.replace("-", "") for isbn in (doc.get("isbn") or [])}
+            if not doc_isbns & naver_isbns:
+                ol_items.append(_ol_to_naver(doc))
+
+    naver_data["items"] = naver_items + ol_items
+    return naver_data
 
 
 @router.get("/analyze")
@@ -77,25 +113,6 @@ class ReadBookIn(BaseModel):
     status: str = "finished"
 
 
-async def _fetch_pages(title: str, author: str) -> Optional[int]:
-    """Open Library 검색으로 페이지 수 중앙값 조회 (실패 시 None)"""
-    try:
-        q = f"{_strip(title)} {author}".strip()
-        async with httpx.AsyncClient(timeout=4.0) as client:
-            resp = await client.get(
-                "https://openlibrary.org/search.json",
-                params={"q": q, "limit": 3, "fields": "number_of_pages_median"},
-            )
-            docs = resp.json().get("docs", [])
-            for doc in docs:
-                pc = doc.get("number_of_pages_median")
-                if pc and int(pc) > 30:
-                    return int(pc)
-    except Exception:
-        pass
-    return None
-
-
 @router.post("/read")
 async def register_read_book(
     body: ReadBookIn,
@@ -103,11 +120,6 @@ async def register_read_book(
     user_id: int = Depends(get_current_user_id),
 ):
     pages = body.pages
-    # 페이지 수가 기본값(250)이면 Open Library에서 실제 페이지 수 조회
-    if pages == 250 and body.title:
-        fetched = await _fetch_pages(body.title, body.author)
-        if fetched:
-            pages = fetched
 
     row = await conn.fetchrow(
         """INSERT INTO read_books (title, author, image, publisher, isbn, pages, impression, is_public, user_id, status)
@@ -188,7 +200,7 @@ async def delete_read_book(
     row = await conn.fetchrow("SELECT user_id FROM read_books WHERE id = $1", book_id)
     if not row:
         raise HTTPException(404, "책을 찾을 수 없습니다.")
-    if row["user_id"] != user_id:
+    if row["user_id"] is not None and row["user_id"] != user_id:
         raise HTTPException(403, "삭제 권한이 없습니다.")
     await conn.execute("DELETE FROM read_books WHERE id = $1", book_id)
     return {"deleted": True, "id": book_id}
