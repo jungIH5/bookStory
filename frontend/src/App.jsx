@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog, Timer, UserPlus, Waves } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, Timer, UserPlus, Waves } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
@@ -955,13 +955,6 @@ function App() {
                 </div>
               </div>
               <button
-                onClick={() => setShowProfile(true)}
-                title="프로필 수정"
-                style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
-              >
-                <UserCog size={13} style={{ color: '#9E8D7A' }} />
-              </button>
-              <button
                 onClick={handleLogout}
                 title="로그아웃"
                 style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
@@ -1277,6 +1270,7 @@ function App() {
             onAcceptFriend={handleAcceptFriend}
             onRejectFriend={handleRejectFriend}
             onClose={() => setUserLibrary(null)}
+            onEditProfile={userLibrary.userId === user?.id ? () => { setUserLibrary(null); setShowProfile(true); } : undefined}
           />
         )}
       </AnimatePresence>
@@ -1297,6 +1291,7 @@ function App() {
       <AnimatePresence>
         {isCreatingDiveRoom && (
           <CreateDiveRoomModal
+            user={user}
             onClose={() => setIsCreatingDiveRoom(false)}
             onCreate={handleCreateDiveRoom}
           />

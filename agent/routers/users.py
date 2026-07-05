@@ -39,6 +39,7 @@ class UserUpdate(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
     stats_public: Optional[bool] = None
+    allow_whisper: Optional[bool] = None
 
 
 @router.post("")
@@ -115,6 +116,161 @@ async def update_user(
     if not row:
         raise HTTPException(404, "사용자를 찾을 수 없습니다.")
     return dict(row)
+
+
+ALBUM_LIMIT = 5
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB (base64 문자열 기준)
+
+
+class AlbumImageIn(BaseModel):
+    image_data: str  # base64 data URL
+
+
+@router.get("/{user_id}/album")
+async def get_album(user_id: int, conn=Depends(db.get_db)):
+    rows = await conn.fetch(
+        "SELECT id, image_data, created_at FROM user_images WHERE user_id=$1 ORDER BY created_at DESC",
+        user_id,
+    )
+    return [dict(r) for r in rows]
+
+
+@router.post("/{user_id}/album")
+async def add_album_image(
+    user_id: int,
+    body: AlbumImageIn,
+    conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    if current_user_id != user_id:
+        raise HTTPException(403, "본인만 추가할 수 있습니다.")
+    if len(body.image_data) > MAX_IMAGE_SIZE:
+        raise HTTPException(400, "이미지 크기가 너무 큽니다. (최대 5MB)")
+    count = await conn.fetchval("SELECT COUNT(*) FROM user_images WHERE user_id=$1", user_id)
+    if count >= ALBUM_LIMIT:
+        raise HTTPException(400, f"앨범은 최대 {ALBUM_LIMIT}장까지 저장할 수 있습니다.")
+    row = await conn.fetchrow(
+        "INSERT INTO user_images (user_id, image_data) VALUES ($1,$2) RETURNING id, image_data, created_at",
+        user_id, body.image_data,
+    )
+    return dict(row)
+
+
+@router.delete("/{user_id}/album/{image_id}")
+async def delete_album_image(
+    user_id: int,
+    image_id: int,
+    conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    if current_user_id != user_id:
+        raise HTTPException(403, "본인만 삭제할 수 있습니다.")
+    await conn.execute(
+        "DELETE FROM user_images WHERE id=$1 AND user_id=$2", image_id, user_id,
+    )
+    return {"deleted": True}
+
+
+@router.get("/{user_id}/relation")
+async def get_relation(
+    user_id: int,
+    conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    is_following = await conn.fetchval(
+        "SELECT EXISTS(SELECT 1 FROM user_follows WHERE follower_id=$1 AND following_id=$2)",
+        current_user_id, user_id,
+    )
+    is_blocked = await conn.fetchval(
+        "SELECT EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id=$1 AND blocked_id=$2)",
+        current_user_id, user_id,
+    )
+    return {"is_following": is_following, "is_blocked": is_blocked}
+
+
+@router.post("/{user_id}/follow")
+async def follow_user(
+    user_id: int,
+    conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    if current_user_id == user_id:
+        raise HTTPException(400, "자기 자신을 팔로우할 수 없습니다.")
+    await conn.execute(
+        "INSERT INTO user_follows (follower_id, following_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
+        current_user_id, user_id,
+    )
+    return {"following": True}
+
+
+@router.delete("/{user_id}/follow")
+async def unfollow_user(
+    user_id: int,
+    conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    await conn.execute(
+        "DELETE FROM user_follows WHERE follower_id=$1 AND following_id=$2",
+        current_user_id, user_id,
+    )
+    return {"following": False}
+
+
+@router.get("/{user_id}/following")
+async def get_following(user_id: int, conn=Depends(db.get_db)):
+    rows = await conn.fetch("""
+        SELECT u.id, u.name, u.location
+        FROM user_follows uf
+        JOIN users u ON u.id = uf.following_id
+        WHERE uf.follower_id = $1
+        ORDER BY uf.created_at DESC
+    """, user_id)
+    return [dict(r) for r in rows]
+
+
+@router.get("/{user_id}/followers")
+async def get_followers(user_id: int, conn=Depends(db.get_db)):
+    rows = await conn.fetch("""
+        SELECT u.id, u.name, u.location
+        FROM user_follows uf
+        JOIN users u ON u.id = uf.follower_id
+        WHERE uf.following_id = $1
+        ORDER BY uf.created_at DESC
+    """, user_id)
+    return [dict(r) for r in rows]
+
+
+@router.post("/{user_id}/block")
+async def block_user(
+    user_id: int,
+    conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    if current_user_id == user_id:
+        raise HTTPException(400, "자기 자신을 차단할 수 없습니다.")
+    await conn.execute(
+        "INSERT INTO user_blocks (blocker_id, blocked_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
+        current_user_id, user_id,
+    )
+    # 차단 시 팔로우도 해제
+    await conn.execute(
+        "DELETE FROM user_follows WHERE follower_id=$1 AND following_id=$2",
+        current_user_id, user_id,
+    )
+    return {"blocked": True}
+
+
+@router.delete("/{user_id}/block")
+async def unblock_user(
+    user_id: int,
+    conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    await conn.execute(
+        "DELETE FROM user_blocks WHERE blocker_id=$1 AND blocked_id=$2",
+        current_user_id, user_id,
+    )
+    return {"blocked": False}
 
 
 @router.post("/{user_id}/voice-sample")

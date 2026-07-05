@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, User, MapPin, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { X, User, MapPin, Eye, EyeOff, Loader2, MessageSquareOff, MessageSquare } from 'lucide-react';
 import { searchKakaoLocation } from '../../utils';
 
 export default function ProfileModal({ user, onClose, onSave }) {
@@ -10,6 +10,7 @@ export default function ProfileModal({ user, onClose, onSave }) {
     lat: user?.lat || null,
     lng: user?.lng || null,
     stats_public: user?.stats_public !== false,
+    allow_whisper: user?.allow_whisper !== false,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState([]);
@@ -35,6 +36,7 @@ export default function ProfileModal({ user, onClose, onSave }) {
       lat: form.lat,
       lng: form.lng,
       stats_public: form.stats_public,
+      allow_whisper: form.allow_whisper,
     });
     setIsSaving(false);
   };
@@ -95,6 +97,7 @@ export default function ProfileModal({ user, onClose, onSave }) {
             )}
           </div>
 
+          {/* 독서 통계 공개 */}
           <div style={{ padding: '1rem', background: 'rgba(140,107,66,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.12)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
@@ -113,10 +116,31 @@ export default function ProfileModal({ user, onClose, onSave }) {
                   transition: 'all 0.2s', flexShrink: 0, marginLeft: '1rem',
                 }}
               >
-                {form.stats_public
-                  ? <><Eye size={12} /> 공개</>
-                  : <><EyeOff size={12} /> 비공개</>
-                }
+                {form.stats_public ? <><Eye size={12} /> 공개</> : <><EyeOff size={12} /> 비공개</>}
+              </button>
+            </div>
+          </div>
+
+          {/* 귓속말 설정 */}
+          <div style={{ padding: '1rem', background: 'rgba(140,107,66,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.12)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#1C140E', marginBottom: '0.25rem' }}>독서 모임 귓속말</p>
+                <p style={{ fontSize: '11px', color: '#9E8D7A', lineHeight: 1.5 }}>거부 시 모임 채팅방에서 귓속말을 받지 않습니다.<br />차단한 사용자의 귓속말은 항상 차단됩니다.</p>
+              </div>
+              <button
+                onClick={() => setForm(f => ({ ...f, allow_whisper: !f.allow_whisper }))}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  padding: '6px 14px', borderRadius: '9999px',
+                  background: form.allow_whisper ? 'rgba(140,107,66,0.12)' : 'rgba(239,68,68,0.08)',
+                  border: `1px solid ${form.allow_whisper ? 'rgba(140,107,66,0.3)' : 'rgba(239,68,68,0.25)'}`,
+                  cursor: 'pointer', fontSize: '11px', fontWeight: 800,
+                  color: form.allow_whisper ? '#8C6B42' : '#dc2626',
+                  transition: 'all 0.2s', flexShrink: 0, marginLeft: '1rem',
+                }}
+              >
+                {form.allow_whisper ? <><MessageSquare size={12} /> 허용</> : <><MessageSquareOff size={12} /> 거부</>}
               </button>
             </div>
           </div>

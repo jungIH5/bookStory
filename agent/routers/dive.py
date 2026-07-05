@@ -13,6 +13,7 @@ class DiveRoomIn(BaseModel):
     book_title: Optional[str] = ""
     book_image: Optional[str] = ""
     book_isbn: Optional[str] = ""
+    room_image: Optional[str] = ""
     scheduled_at: str
     reading_minutes: int = 30
     discussion_minutes: int = 20
@@ -44,14 +45,14 @@ async def create_room(
     scheduled_dt = datetime.fromisoformat(body.scheduled_at.replace('Z', '+00:00'))
     row = await conn.fetchrow("""
         INSERT INTO dive_rooms
-            (title, book_title, book_image, book_isbn, host_id, host_name,
+            (title, book_title, book_image, book_isbn, room_image, host_id, host_name,
              scheduled_at, reading_minutes, discussion_minutes,
              max_participants, late_join_cutoff_minutes, notice)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
         RETURNING *
     """,
         body.title, body.book_title or '', body.book_image or '',
-        body.book_isbn or '', user_id, body.host_name or '',
+        body.book_isbn or '', body.room_image or '', user_id, body.host_name or '',
         scheduled_dt,
         body.reading_minutes, body.discussion_minutes,
         body.max_participants, body.late_join_cutoff_minutes,
@@ -73,7 +74,20 @@ async def get_hosted_rooms(conn=Depends(get_db), user_id: int = Depends(get_curr
         LEFT JOIN dive_participants p ON p.room_id = r.id
         WHERE r.host_id = $1
         GROUP BY r.id
-        HAVING COUNT(DISTINCT p.id) > 1
+        ORDER BY r.scheduled_at DESC
+    """, user_id)
+    return [dict(r) for r in rows]
+
+
+@router.get("/rooms/joined")
+async def get_joined_rooms(conn=Depends(get_db), user_id: int = Depends(get_current_user_id)):
+    rows = await conn.fetch("""
+        SELECT r.*, COUNT(DISTINCT p.id)::int AS participant_count
+        FROM dive_rooms r
+        JOIN dive_participants dp ON dp.room_id = r.id AND dp.user_id = $1
+        LEFT JOIN dive_participants p ON p.room_id = r.id
+        WHERE r.host_id != $1
+        GROUP BY r.id
         ORDER BY r.scheduled_at DESC
     """, user_id)
     return [dict(r) for r in rows]
@@ -94,6 +108,27 @@ async def update_notice(
         raise HTTPException(403, "방장만 변경할 수 있습니다.")
     row = await conn.fetchrow(
         "UPDATE dive_rooms SET notice=$1 WHERE id=$2 RETURNING *", body.notice, room_id,
+    )
+    return dict(row)
+
+
+class RoomImageIn(BaseModel):
+    room_image: str
+
+
+@router.patch("/rooms/{room_id}/image")
+async def update_room_image(
+    room_id: int,
+    body: RoomImageIn,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    room = await conn.fetchrow("SELECT host_id FROM dive_rooms WHERE id=$1", room_id)
+    if not room or room['host_id'] != user_id:
+        raise HTTPException(403, "방장만 변경할 수 있습니다.")
+    row = await conn.fetchrow(
+        "UPDATE dive_rooms SET room_image=$1 WHERE id=$2 RETURNING *",
+        body.room_image, room_id,
     )
     return dict(row)
 
@@ -160,6 +195,16 @@ async def join_room(
     )
     if existing:
         return {"already_joined": True}
+
+    # 다른 활성 방에 이미 참가 중인지 확인
+    other = await conn.fetchrow("""
+        SELECT dp.room_id FROM dive_participants dp
+        JOIN dive_rooms dr ON dp.room_id = dr.id
+        WHERE dp.user_id = $1 AND dp.room_id != $2 AND dr.status != 'ended'
+        LIMIT 1
+    """, user_id, room_id)
+    if other:
+        raise HTTPException(400, "이미 다른 모임에 참가 중입니다. 나가신 후 참가해주세요.")
 
     row = await conn.fetchrow(
         "INSERT INTO dive_participants (room_id, user_id) VALUES ($1,$2) RETURNING *",

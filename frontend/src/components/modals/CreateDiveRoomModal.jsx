@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Waves, BookOpen, Search, Loader2, Calendar, Clock, Users, Lock, MessageSquare, MessageSquareOff } from 'lucide-react';
+import { X, Waves, BookOpen, Search, Loader2, Calendar, Clock, Users, Lock, MessageSquare, MessageSquareDashed, Camera } from 'lucide-react';
 import { API_URL } from '../../api';
 
 const TIME_OPTIONS = [30, 60, 90];
+const ALBUM_LIMIT = 5;
 const fmtMin = m => m < 60 ? `${m}분` : m === 60 ? '1시간' : `1시간 ${m - 60}분`;
 
 function localDatetimeDefault() {
@@ -13,12 +14,20 @@ function localDatetimeDefault() {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function CreateDiveRoomModal({ onClose, onCreate }) {
+const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = e => resolve(e.target.result);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
+export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
   const [form, setForm] = useState({
     title: '',
     book_title: '',
     book_image: '',
     book_isbn: '',
+    room_image: '',
     scheduled_at: localDatetimeDefault(),
     reading_minutes: 30,
     discussion_minutes: 30,
@@ -31,6 +40,10 @@ export default function CreateDiveRoomModal({ onClose, onCreate }) {
   const [bookResults, setBookResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [albumImages, setAlbumImages] = useState([]);
+  const [isLoadingAlbum, setIsLoadingAlbum] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const handleBookSearch = async () => {
     if (!bookQuery.trim()) return;
@@ -59,6 +72,58 @@ export default function CreateDiveRoomModal({ onClose, onCreate }) {
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
 
+  const fetchAlbum = async () => {
+    if (!user?.id) return;
+    setIsLoadingAlbum(true);
+    try {
+      const res = await fetch(`${API_URL}/api/users/${user.id}/album`);
+      if (res.ok) setAlbumImages(await res.json());
+    } catch {} finally { setIsLoadingAlbum(false); }
+  };
+
+  const toggleImagePicker = () => {
+    const next = !showImagePicker;
+    if (next && albumImages.length === 0) fetchAlbum();
+    setShowImagePicker(next);
+  };
+
+  const handlePickImage = (imageData) => {
+    setShowImagePicker(false);
+    set('room_image', imageData || '');
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.token) return;
+    e.target.value = '';
+    setIsUploadingImage(true);
+    try {
+      const imageData = await readFileAsDataURL(file);
+      const res = await fetch(`${API_URL}/api/users/${user.id}/album`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_data: imageData }),
+      });
+      if (res.ok) {
+        const newImg = await res.json();
+        setAlbumImages(prev => [newImg, ...prev]);
+        handlePickImage(newImg.image_data);
+      }
+    } finally { setIsUploadingImage(false); }
+  };
+
+  const handleDeleteAlbumImage = async (imageId) => {
+    if (!user?.token) return;
+    await fetch(`${API_URL}/api/users/${user.id}/album/${imageId}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` },
+    });
+    const deleted = albumImages.find(img => img.id === imageId);
+    setAlbumImages(prev => prev.filter(img => img.id !== imageId));
+    if (deleted && form.room_image === deleted.image_data) set('room_image', '');
+  };
+
+  const displayImage = form.room_image || form.book_image;
+
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
       <motion.div
@@ -80,16 +145,98 @@ export default function CreateDiveRoomModal({ onClose, onCreate }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* 방 제목 */}
-          <div>
-            <label className="form-label">방 제목 *</label>
-            <input
-              className="form-input"
-              value={form.title}
-              onChange={e => set('title', e.target.value)}
-              placeholder="예: 사피엔스 1장 함께 읽기"
-              style={{ color: '#1C140E' }}
-            />
+
+          {/* 방 이미지 + 제목 */}
+          <div style={{ display: 'flex', gap: '0.875rem', alignItems: 'flex-start' }}>
+            {/* 이미지 썸네일 */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div
+                onClick={toggleImagePicker}
+                style={{ width: '48px', height: '68px', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', background: 'rgba(140,107,66,0.08)', cursor: 'pointer', position: 'relative' }}
+              >
+                {displayImage
+                  ? <img src={displayImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#8C6B42,#C49456)', color: 'white', fontSize: '20px', fontWeight: 900 }}>
+                      {(user?.name || '?')[0]}
+                    </div>}
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '20px', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Camera size={10} style={{ color: 'white' }} />
+                </div>
+              </div>
+
+              {/* 앨범 픽커 */}
+              {showImagePicker && (
+                <div
+                  onClick={e => e.stopPropagation()}
+                  style={{ position: 'absolute', top: '100%', left: 0, zIndex: 300, marginTop: '0.375rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', padding: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', width: '220px' }}
+                >
+                  <div style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', marginBottom: '0.5rem' }}>
+                    앨범 ({albumImages.length}/{ALBUM_LIMIT})
+                  </div>
+                  {isLoadingAlbum
+                    ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#8C6B42' }} /></div>
+                    : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.375rem', marginBottom: '0.5rem' }}>
+                        {/* 기본 아바타 */}
+                        <div
+                          onClick={() => handlePickImage(null)}
+                          title="기본 (아바타)"
+                          style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: !form.room_image ? '2px solid #8C6B42' : '2px solid transparent' }}
+                        >
+                          <span style={{ color: 'white', fontWeight: 900, fontSize: '14px' }}>{(user?.name || '?')[0]}</span>
+                        </div>
+                        {/* 선택된 책 표지 */}
+                        {form.book_image && (
+                          <div
+                            onClick={() => handlePickImage(form.book_image)}
+                            title="책 표지"
+                            style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: form.room_image === form.book_image ? '2px solid #8C6B42' : '2px solid transparent' }}
+                          >
+                            <img src={form.book_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        )}
+                        {/* 앨범 이미지 */}
+                        {albumImages.map(img => (
+                          <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: form.room_image === img.image_data ? '2px solid #8C6B42' : '2px solid transparent' }}
+                            onClick={() => handlePickImage(img.image_data)}
+                          >
+                            <img src={img.image_data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <button
+                              onClick={e => { e.stopPropagation(); handleDeleteAlbumImage(img.id); }}
+                              style={{ position: 'absolute', top: '2px', right: '2px', width: '16px', height: '16px', borderRadius: '9999px', background: 'rgba(239,68,68,0.85)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            >
+                              <X size={9} style={{ color: 'white' }} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  {albumImages.length < ALBUM_LIMIT ? (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer', padding: '0.375rem 0.625rem', background: 'rgba(140,107,66,0.06)', border: '1px dashed rgba(140,107,66,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#8C6B42' }}>
+                      {isUploadingImage ? <Loader2 size={11} className="animate-spin" /> : <Camera size={11} />}
+                      새 이미지 추가
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={isUploadingImage} />
+                    </label>
+                  ) : (
+                    <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600, lineHeight: 1.5 }}>
+                      앨범이 가득 찼습니다 (최대 {ALBUM_LIMIT}장)<br />이후 확장 가능 예정
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 방 제목 */}
+            <div style={{ flex: 1 }}>
+              <label className="form-label">방 제목 *</label>
+              <input
+                className="form-input"
+                value={form.title}
+                onChange={e => set('title', e.target.value)}
+                placeholder="예: 사피엔스 1장 함께 읽기"
+                style={{ color: '#1C140E' }}
+              />
+            </div>
           </div>
 
           {/* 책 선택 */}
@@ -210,10 +357,10 @@ export default function CreateDiveRoomModal({ onClose, onCreate }) {
           {/* 채팅 허용 */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.12)', borderRadius: '0.875rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {form.chat_enabled ? <MessageSquare size={14} style={{ color: '#8C6B42' }} /> : <MessageSquareOff size={14} style={{ color: '#BDB0A0' }} />}
+              {form.chat_enabled ? <MessageSquare size={14} style={{ color: '#8C6B42' }} /> : <MessageSquareDashed size={14} style={{ color: '#BDB0A0' }} />}
               <div>
-                <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: form.chat_enabled ? '#1C140E' : '#9E8D7A' }}>토론 채팅</p>
-                <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600 }}>토론 단계에서 참가자간 채팅 허용 여부</p>
+                <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: form.chat_enabled ? '#1C140E' : '#9E8D7A' }}>독서 중 채팅</p>
+                <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600 }}>독서 시간 중 채팅 허용 여부 (토론 중엔 항상 열림)</p>
               </div>
             </div>
             <button

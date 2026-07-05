@@ -376,6 +376,18 @@ async def _init_db():
             await conn.execute("""
                 UPDATE dive_rooms SET chat_enabled = TRUE WHERE chat_enabled IS NULL
             """)
+            await conn.execute("""
+                ALTER TABLE dive_rooms ADD COLUMN IF NOT EXISTS room_image TEXT DEFAULT ''
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS user_images (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    image_data TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS friendships (
@@ -385,6 +397,28 @@ async def _init_db():
                     status VARCHAR(20) DEFAULT 'pending',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(requester_id, addressee_id)
+                )
+            """)
+
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS allow_whisper BOOLEAN DEFAULT TRUE"
+            )
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS user_follows (
+                    id SERIAL PRIMARY KEY,
+                    follower_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    following_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(follower_id, following_id)
+                )
+            """)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS user_blocks (
+                    id SERIAL PRIMARY KEY,
+                    blocker_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    blocked_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(blocker_id, blocked_id)
                 )
             """)
 
