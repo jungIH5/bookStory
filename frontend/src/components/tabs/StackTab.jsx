@@ -15,9 +15,9 @@ export default function StackTab({
         <div style={{ width: '100%', maxWidth: '460px', height: '70vh', maxHeight: '640px', minHeight: '380px', backgroundColor: '#2C1A10', borderRadius: '2rem', border: '1px solid rgba(139,107,66,0.1)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', boxShadow: '0 32px 64px -16px rgba(0,0,0,0.7)', marginBottom: '2.5rem' }}>
           <div style={{ width: '100%', flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'block', position: 'relative' }}>
             <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', padding: '60px 48px 8px 48px' }}>
-              {readBooks && readBooks.length > 0 ? (
+              {readBooks && readBooks.filter(b => b.status !== 'reading').length > 0 ? (
                 <AnimatePresence initial={false}>
-                  {readBooks.map((book, idx) => {
+                  {readBooks.filter(b => b.status !== 'reading').map((book, idx) => {
                     const bookColor = hexColors[idx % 10];
                     // 페이지 수에 따라 두께(높이) 결정 — 최소 36px, 최대 88px
                     const pages = book.pages && book.pages > 0 ? book.pages : 260;
@@ -101,25 +101,10 @@ export default function StackTab({
         </div>
       ) : (
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-          {readBooks.length === 0 && (
+          {readBooks.filter(b => b.status !== 'reading').length === 0 && (
             <div style={{ textAlign: 'center', padding: '4rem 2rem', borderRadius: '1.5rem', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)' }}>
               <BookOpen size={36} style={{ margin: '0 auto 1rem', color: '#BDB0A0' }} />
-              <p style={{ color: '#9E8D7A', fontWeight: 700 }}>아직 기록된 책이 없습니다.</p>
-            </div>
-          )}
-          {/* 읽는 중 섹션 */}
-          {readBooks.filter(b => b.status === 'reading').length > 0 && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
-                <div style={{ width: '3px', height: '14px', borderRadius: '9999px', background: '#C49456' }} />
-                <span style={{ fontSize: '11px', fontWeight: 900, color: '#C49456', textTransform: 'uppercase', letterSpacing: '0.1em' }}>읽는 중</span>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#BDB0A0' }}>{readBooks.filter(b => b.status === 'reading').length}권</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {readBooks.filter(b => b.status === 'reading').map((book, idx) => (
-                  <BookListItem key={book.id} book={book} idx={idx} onStackBookClick={onStackBookClick} onDeleteBook={onDeleteBook} onUpdatePages={onUpdatePages} />
-                ))}
-              </div>
+              <p style={{ color: '#9E8D7A', fontWeight: 700 }}>완독한 책이 없습니다.</p>
             </div>
           )}
           {/* 완독 섹션 */}

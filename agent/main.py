@@ -12,7 +12,7 @@ load_dotenv()
 load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 
 import db
-from routers import books, clubs, community, users, sessions, recordings, tendency, recommendations, reading
+from routers import books, clubs, community, users, sessions, recordings, tendency, recommendations, reading, oauth, friends
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/15minutes"])
 
@@ -48,6 +48,8 @@ app.include_router(recordings.router)
 app.include_router(tendency.router)
 app.include_router(recommendations.router)
 app.include_router(reading.router)
+app.include_router(oauth.router)
+app.include_router(friends.router)
 
 
 @app.get("/health")

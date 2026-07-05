@@ -82,6 +82,9 @@ async def _init_db():
             await conn.execute(
                 "ALTER TABLE read_books ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'finished'"
             )
+            await conn.execute(
+                "ALTER TABLE read_books ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''"
+            )
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS clubs (
@@ -303,6 +306,27 @@ async def _init_db():
             await conn.execute(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS stats_public BOOLEAN DEFAULT TRUE"
             )
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(200)"
+            )
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS oauth_provider VARCHAR(20)"
+            )
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS oauth_id VARCHAR(100)"
+            )
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS friendships (
+                    id SERIAL PRIMARY KEY,
+                    requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    addressee_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(requester_id, addressee_id)
+                )
+            """)
+
             # post_likes user_id FK 추가
             try:
                 async with conn.transaction():

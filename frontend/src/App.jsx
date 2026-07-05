@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog, Timer } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog, Timer, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
@@ -73,6 +73,7 @@ function App() {
   const timerRef = useRef(null);
   const [timerComplete, setTimerComplete] = useState(null); // { book, seconds }
   const [userLibrary, setUserLibrary] = useState(null); // { userId, userName }
+  const [friendRequests, setFriendRequests] = useState([]);
 
   const [tendencyResult, setTendencyResult] = useState(null);
   const [isFetchingTendency, setIsFetchingTendency] = useState(false);
@@ -122,6 +123,30 @@ function App() {
     }
   }, [selectedBook]);
 
+  // OAuth 콜백 처리 (소셜 로그인 후 code 파라미터 감지)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const provider = sessionStorage.getItem('oauth_provider');
+    if (!code || !provider) return;
+    sessionStorage.removeItem('oauth_provider');
+    window.history.replaceState({}, '', window.location.pathname);
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/auth/${provider}/callback?code=${encodeURIComponent(code)}`, { method: 'POST' });
+        if (!res.ok) throw new Error((await res.json()).detail || '오류');
+        const data = await res.json();
+        const toStore = { ...data.user, token: data.token };
+        setUser(toStore);
+        localStorage.setItem('bookstory_user', JSON.stringify(toStore));
+        const pName = provider === 'kakao' ? '카카오' : provider === 'naver' ? '네이버' : '구글';
+        setToast({ show: true, message: `${pName}로 로그인되었습니다!` });
+      } catch (e) {
+        setToast({ show: true, message: `소셜 로그인 실패: ${e.message}` });
+      }
+    })();
+  }, []);
+
   useEffect(() => {
     fetchReadBooks();
     fetchCommunityPosts();
@@ -131,6 +156,13 @@ function App() {
     fetchClubs();
     fetchJoinedClubs();
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.token) return;
+    fetchFriendRequests();
+    const iv = setInterval(fetchFriendRequests, 60000);
+    return () => clearInterval(iv);
+  }, [user?.token]);
 
   useEffect(() => {
     if (selectedClub) {
@@ -238,8 +270,9 @@ function App() {
   };
 
   const handleStackBookClick = (book) => {
-    setSelectedBook({ ...book, description: '', fromStack: true });
-    setAnalysisResult('');
+    setSelectedBook({ ...book, fromStack: true });
+    setAnalysisResult(stripHtml(book.description || ''));
+    setCurrentBookPages(book.pages || 250);
     setQuestions({ thematic: [], perspective_shift: [] });
     setIsAnalyzing(false);
   };
@@ -337,6 +370,7 @@ function App() {
         body: JSON.stringify({
           title: book.title, author: book.author, image: book.image,
           publisher: book.publisher, isbn: book.isbn, pages: currentBookPages,
+          description: stripHtml(book.description || ''),
           impression: bookImpression, is_public: bookImpressionPublic,
         })
       });
@@ -392,6 +426,14 @@ function App() {
     setIsSavingImpression(true);
     try {
       const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+      if (currentBookPages > 0 && currentBookPages !== selectedBook.pages) {
+        await fetch(`${API_URL}/api/books/read/${selectedBook.id}/pages`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...authH },
+          body: JSON.stringify({ pages: currentBookPages }),
+        });
+        setReadBooks(prev => prev.map(b => b.id === selectedBook.id ? { ...b, pages: currentBookPages } : b));
+      }
       const res = await fetch(`${API_URL}/api/books/read/${selectedBook.id}/impression`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authH },
@@ -399,7 +441,7 @@ function App() {
       });
       if (res.ok) {
         const updated = await res.json();
-        setReadBooks(prev => prev.map(b => b.id === selectedBook.id ? { ...b, ...updated, title: stripHtml(updated.title) } : b));
+        setReadBooks(prev => prev.map(b => b.id === selectedBook.id ? { ...b, ...updated, pages: currentBookPages, title: stripHtml(updated.title) } : b));
         setToast({ show: true, message: '감상평이 저장됐어요.' });
         setSelectedBook(null);
       }
@@ -732,6 +774,61 @@ function App() {
     window.location.reload();
   };
 
+  const handleOAuthLogin = (provider) => {
+    const ids = {
+      kakao: import.meta.env.VITE_KAKAO_CLIENT_ID,
+      naver: import.meta.env.VITE_NAVER_CLIENT_ID,
+      google: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+    };
+    const clientId = ids[provider];
+    if (!clientId) {
+      setToast({ show: true, message: `${provider} 로그인은 아직 준비 중입니다.` });
+      return;
+    }
+    sessionStorage.setItem('oauth_provider', provider);
+    const redirect = encodeURIComponent(window.location.origin);
+    if (provider === 'kakao') {
+      window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirect}&response_type=code`;
+    } else if (provider === 'naver') {
+      window.location.href = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirect}&state=bookstory`;
+    } else if (provider === 'google') {
+      window.location.href = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirect}&response_type=code&scope=email%20profile`;
+    }
+  };
+
+  const fetchFriendRequests = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/friends/requests`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (res.ok) setFriendRequests(await res.json());
+    } catch {}
+  };
+
+  const handleAcceptFriend = async (friendshipId) => {
+    if (!user?.token) return;
+    try {
+      await fetch(`${API_URL}/api/friends/${friendshipId}/accept`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      setFriendRequests(prev => prev.filter(r => r.id !== friendshipId));
+      setToast({ show: true, message: '친구 요청을 수락했습니다!' });
+    } catch {}
+  };
+
+  const handleRejectFriend = async (friendshipId) => {
+    if (!user?.token) return;
+    try {
+      await fetch(`${API_URL}/api/friends/${friendshipId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      setFriendRequests(prev => prev.filter(r => r.id !== friendshipId));
+    } catch {}
+  };
+
   const handleDeletePost = async (postId) => {
     setCommunityPosts(prev => prev.filter(p => p.id !== postId));
     setSelectedPost(null);
@@ -796,7 +893,24 @@ function App() {
                 {voiceSampleUploading ? <Loader2 className="animate-spin" size={13} style={{ color: '#8C6B42' }} /> : <Mic size={13} style={{ color: '#8C6B42' }} />}
                 <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleUploadVoiceSample} disabled={voiceSampleUploading} />
               </label>
-              <div className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)' }}>
+              {friendRequests.length > 0 && (
+                <button
+                  onClick={() => setUserLibrary({ userId: user.id, userName: user.name, showFriendRequests: true })}
+                  title="친구 요청"
+                  style={{ position: 'relative', cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                  <UserPlus size={13} style={{ color: '#8C6B42' }} />
+                  <span style={{ position: 'absolute', top: '-3px', right: '-3px', width: '14px', height: '14px', borderRadius: '9999px', background: '#C49456', color: 'white', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid white' }}>
+                    {friendRequests.length}
+                  </span>
+                </button>
+              )}
+            <div
+                onClick={() => setUserLibrary({ userId: user.id, userName: user.name })}
+                className="flex items-center gap-3 px-3 py-2 rounded-xl"
+                style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', cursor: 'pointer', transition: 'background 0.2s' }}
+                title="내 서재 보기"
+              >
                 <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
                   {user.name[0]}
                 </div>
@@ -964,6 +1078,7 @@ function App() {
             setRegForm={setRegForm}
             onRegister={handleRegisterUser}
             onTestLogin={handleTestLogin}
+            onOAuthLogin={handleOAuthLogin}
           />
         )}
       </AnimatePresence>
@@ -1121,6 +1236,10 @@ function App() {
             userId={userLibrary.userId}
             userName={userLibrary.userName}
             currentUserId={user?.id}
+            token={user?.token}
+            friendRequests={userLibrary.showFriendRequests ? friendRequests : []}
+            onAcceptFriend={handleAcceptFriend}
+            onRejectFriend={handleRejectFriend}
             onClose={() => setUserLibrary(null)}
           />
         )}

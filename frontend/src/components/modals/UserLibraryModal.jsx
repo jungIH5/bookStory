@@ -1,29 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, BookOpen, ChevronDown, ChevronUp, Loader2, Library } from 'lucide-react';
-import { stripHtml } from '../../utils';
+import { X, BookOpen, ChevronDown, ChevronUp, Loader2, Library, Clock, BookMarked, UserPlus, UserCheck, UserX } from 'lucide-react';
+import { stripHtml, formatReadingTime } from '../../utils';
 import { API_URL } from '../../api';
 import { hexColors } from '../../constants';
 
-export default function UserLibraryModal({ userId, userName, currentUserId, onClose }) {
+export default function UserLibraryModal({ userId, userName, currentUserId, token, friendRequests = [], onAcceptFriend, onRejectFriend, onClose }) {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [friendStatus, setFriendStatus] = useState(null); // null | {status, id?, is_requester?}
+  const [friendLoading, setFriendLoading] = useState(false);
+
+  const isMe = parseInt(currentUserId) === parseInt(userId);
+
+  const fetchFriendStatus = useCallback(async () => {
+    if (isMe || !token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/friends/status/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFriendStatus(await res.json());
+    } catch {}
+  }, [userId, token, isMe]);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_URL}/api/books/read?user_id=${userId}`);
-        const data = await res.json();
-        setBooks(Array.isArray(data) ? data : []);
+        const [booksRes, statsRes] = await Promise.all([
+          fetch(`${API_URL}/api/books/read?user_id=${userId}`),
+          fetch(`${API_URL}/api/reading/stats/${userId}`),
+        ]);
+        const booksData = await booksRes.json();
+        const statsData = await statsRes.json();
+        setBooks(Array.isArray(booksData) ? booksData : []);
+        setStats(statsData);
       } catch {} finally { setLoading(false); }
     })();
-  }, [userId]);
+    fetchFriendStatus();
+  }, [userId, fetchFriendStatus]);
+
+  const handleFriendAction = async () => {
+    if (!token || friendLoading) return;
+    setFriendLoading(true);
+    try {
+      if (!friendStatus || friendStatus.status === 'none') {
+        const res = await fetch(`${API_URL}/api/friends/request`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addressee_id: parseInt(userId) }),
+        });
+        if (res.ok) await fetchFriendStatus();
+      } else if (friendStatus.status === 'pending' && !friendStatus.is_requester) {
+        await fetch(`${API_URL}/api/friends/${friendStatus.id}/accept`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        await fetchFriendStatus();
+      } else {
+        await fetch(`${API_URL}/api/friends/${friendStatus.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFriendStatus({ status: 'none' });
+      }
+    } finally { setFriendLoading(false); }
+  };
+
+  const friendBtnLabel = () => {
+    if (!friendStatus || friendStatus.status === 'none') return '친구 추가';
+    if (friendStatus.status === 'accepted') return '친구';
+    if (friendStatus.status === 'pending' && !friendStatus.is_requester) return '수락하기';
+    return '요청 취소';
+  };
+
+  const friendBtnIcon = () => {
+    if (!friendStatus || friendStatus.status === 'none') return <UserPlus size={12} />;
+    if (friendStatus.status === 'accepted') return <UserCheck size={12} />;
+    if (friendStatus.status === 'pending' && !friendStatus.is_requester) return <UserCheck size={12} />;
+    return <UserX size={12} />;
+  };
+
+  const friendBtnStyle = () => {
+    const base = { display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', border: '1px solid' };
+    if (!friendStatus || friendStatus.status === 'none') return { ...base, background: 'rgba(140,107,66,0.1)', borderColor: 'rgba(140,107,66,0.3)', color: '#8C6B42' };
+    if (friendStatus.status === 'accepted') return { ...base, background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.3)', color: '#16a34a' };
+    if (friendStatus.status === 'pending' && !friendStatus.is_requester) return { ...base, background: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.3)', color: '#2563eb' };
+    return { ...base, background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)', color: '#dc2626' };
+  };
 
   const reading = books.filter(b => b.status === 'reading');
   const finished = books.filter(b => b.status !== 'reading');
-  const isMe = parseInt(currentUserId) === parseInt(userId);
 
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
@@ -36,22 +105,70 @@ export default function UserLibraryModal({ userId, userName, currentUserId, onCl
         style={{ maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflow: 'hidden' }}
       >
         {/* 헤더 */}
-        <div style={{ padding: '1.5rem 1.75rem 1.25rem', borderBottom: '1px solid rgba(139,107,66,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: '2.25rem', height: '2.25rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '13px' }}>
-              {(userName || '?')[0]}
+        <div style={{ padding: '1.5rem 1.75rem 1.25rem', borderBottom: '1px solid rgba(139,107,66,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>
+                {(userName || '?')[0]}
+              </div>
+              <div>
+                <p style={{ fontWeight: 900, fontSize: '1.0625rem', color: '#1C140E' }}>{isMe ? '내 서재' : `${userName}님의 서재`}</p>
+                <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginTop: '2px' }}>
+                  읽는 중 {reading.length}권 · 완독 {finished.length}권
+                </p>
+              </div>
             </div>
-            <div>
-              <p style={{ fontWeight: 900, fontSize: '1rem', color: '#1C140E' }}>{isMe ? '내 서재' : `${userName}님의 서재`}</p>
-              <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginTop: '1px' }}>
-                완독 {finished.length}권 · 읽는 중 {reading.length}권
-              </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {!isMe && token && (
+                <button onClick={handleFriendAction} disabled={friendLoading} style={friendBtnStyle()}>
+                  {friendLoading ? <Loader2 size={11} className="animate-spin" /> : friendBtnIcon()}
+                  {friendBtnLabel()}
+                </button>
+              )}
+              <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A', flexShrink: 0 }}>
+                <X size={14} />
+              </button>
             </div>
           </div>
-          <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}>
-            <X size={14} />
-          </button>
+          {/* 통계 카드 */}
+          <div style={{ display: 'flex', gap: '0.625rem' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.14)', borderRadius: '0.75rem' }}>
+              <BookMarked size={13} style={{ color: '#8C6B42', flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: '9px', color: '#9E8D7A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>완독</p>
+                <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', lineHeight: 1.2 }}>{stats?.books_count ?? finished.length}<span style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 700, marginLeft: '2px' }}>권</span></p>
+              </div>
+            </div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(196,148,86,0.06)', border: '1px solid rgba(196,148,86,0.14)', borderRadius: '0.75rem' }}>
+              <Clock size={13} style={{ color: '#C49456', flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: '9px', color: '#9E8D7A', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>독서 시간</p>
+                <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', lineHeight: 1.2 }}>{stats ? formatReadingTime(stats.total_seconds) : '—'}</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* 친구 요청 섹션 */}
+        {friendRequests.length > 0 && (
+          <div style={{ padding: '0.875rem 1.75rem', borderBottom: '1px solid rgba(139,107,66,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <p style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>받은 친구 요청 {friendRequests.length}건</p>
+            {friendRequests.map(req => (
+              <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.875rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.12)', borderRadius: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900 }}>
+                    {(req.requester_name || '?')[0]}
+                  </div>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1C140E' }}>{req.requester_name}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.375rem' }}>
+                  <button onClick={() => onAcceptFriend?.(req.id)} style={{ padding: '0.3rem 0.75rem', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.25)', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color: '#8C6B42', cursor: 'pointer' }}>수락</button>
+                  <button onClick={() => onRejectFriend?.(req.id)} style={{ padding: '0.3rem 0.75rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}>거절</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 본문 */}
         <div style={{ padding: '1.25rem 1.75rem 1.75rem', overflowY: 'auto', maxHeight: '70vh', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>

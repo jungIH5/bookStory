@@ -29,6 +29,20 @@ async def save_reading_log(
     return dict(row)
 
 
+@router.get("/stats/{user_id}")
+async def get_user_stats(user_id: int, conn=Depends(get_db)):
+    row = await conn.fetchrow("""
+        SELECT
+            COUNT(DISTINCT rb.id)::int AS books_count,
+            COALESCE(SUM(rl.duration_seconds), 0)::int AS total_seconds
+        FROM users u
+        LEFT JOIN read_books rb ON rb.user_id = u.id AND rb.status = 'finished'
+        LEFT JOIN reading_logs rl ON rl.user_id = u.id
+        WHERE u.id = $1
+    """, user_id)
+    return dict(row) if row else {"books_count": 0, "total_seconds": 0}
+
+
 @router.get("/leaderboard")
 async def get_leaderboard(conn=Depends(get_db)):
     rows = await conn.fetch("""

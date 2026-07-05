@@ -108,6 +108,7 @@ class ReadBookIn(BaseModel):
     publisher: str = ""
     isbn: str = ""
     pages: int = 250
+    description: str = ""
     impression: str = ""
     is_public: bool = True
     status: str = "finished"
@@ -119,13 +120,11 @@ async def register_read_book(
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
-    pages = body.pages
-
     row = await conn.fetchrow(
-        """INSERT INTO read_books (title, author, image, publisher, isbn, pages, impression, is_public, user_id, status)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *""",
+        """INSERT INTO read_books (title, author, image, publisher, isbn, pages, description, impression, is_public, user_id, status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *""",
         _strip(body.title), body.author, body.image, body.publisher, body.isbn,
-        pages, body.impression, body.is_public, user_id, body.status,
+        body.pages, _strip(body.description), body.impression, body.is_public, user_id, body.status,
     )
     return dict(row)
 

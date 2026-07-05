@@ -117,7 +117,7 @@ export default function BookModal({
             />
           </div>
 
-          {!book?.fromStack && setCurrentBookPages && (
+          {setCurrentBookPages && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(140,107,66,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1 }}>
                 <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', borderRadius: '9999px', flexShrink: 0 }} />
