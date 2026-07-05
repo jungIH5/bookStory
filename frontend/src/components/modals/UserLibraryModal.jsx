@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, BookOpen, ChevronDown, ChevronUp, Loader2, Library, Clock, BookMarked, UserPlus, UserCheck, UserX } from 'lucide-react';
+import { X, BookOpen, ChevronDown, ChevronUp, Loader2, Library, Clock, BookMarked, UserPlus, UserCheck, UserX, Waves, Users, MessageSquare } from 'lucide-react';
 import { stripHtml, formatReadingTime } from '../../utils';
 import { API_URL } from '../../api';
 import { hexColors } from '../../constants';
@@ -12,6 +12,10 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
   const [stats, setStats] = useState(null);
   const [friendStatus, setFriendStatus] = useState(null); // null | {status, id?, is_requester?}
   const [friendLoading, setFriendLoading] = useState(false);
+  const [hostedRooms, setHostedRooms] = useState([]);
+  const [expandedRoom, setExpandedRoom] = useState(null);
+  const [roomMessages, setRoomMessages] = useState({});
+  const [loadingMsgs, setLoadingMsgs] = useState(null);
 
   const isMe = parseInt(currentUserId) === parseInt(userId);
 
@@ -40,6 +44,12 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
       } catch {} finally { setLoading(false); }
     })();
     fetchFriendStatus();
+    if (isMe && token) {
+      fetch(`${API_URL}/api/dive/rooms/hosted`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : [])
+        .then(d => setHostedRooms(Array.isArray(d) ? d : []))
+        .catch(() => {});
+    }
   }, [userId, fetchFriendStatus]);
 
   const handleFriendAction = async () => {
@@ -89,6 +99,27 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
     if (friendStatus.status === 'accepted') return { ...base, background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.3)', color: '#16a34a' };
     if (friendStatus.status === 'pending' && !friendStatus.is_requester) return { ...base, background: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.3)', color: '#2563eb' };
     return { ...base, background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)', color: '#dc2626' };
+  };
+
+  const handleToggleRoom = async (roomId) => {
+    if (expandedRoom === roomId) { setExpandedRoom(null); return; }
+    setExpandedRoom(roomId);
+    if (!roomMessages[roomId]) {
+      setLoadingMsgs(roomId);
+      try {
+        const res = await fetch(`${API_URL}/api/dive/rooms/${roomId}/messages`);
+        if (res.ok) setRoomMessages(prev => ({ ...prev, [roomId]: await res.json() }));
+      } catch {} finally { setLoadingMsgs(null); }
+    }
+  };
+
+  const fmtAgo = (dt) => {
+    const diff = Date.now() - new Date(dt).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 60) return `${m}분 전`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}시간 전`;
+    return `${Math.floor(h / 24)}일 전`;
   };
 
   const reading = books.filter(b => b.status === 'reading');
@@ -185,27 +216,74 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
             <>
               {/* 읽는 중 */}
               {reading.length > 0 && (
-                <Section
-                  title="읽는 중"
-                  books={reading}
-                  expandedId={expandedId}
-                  onToggle={setExpandedId}
-                  isMe={isMe}
-                  accentColor="#C49456"
-                />
+                <Section title="읽는 중" books={reading} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} accentColor="#C49456" />
               )}
               {/* 완독 */}
               {finished.length > 0 && (
-                <Section
-                  title="완독"
-                  books={finished}
-                  expandedId={expandedId}
-                  onToggle={setExpandedId}
-                  isMe={isMe}
-                  accentColor="#8C6B42"
-                />
+                <Section title="완독" books={finished} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} accentColor="#8C6B42" />
               )}
             </>
+          )}
+
+          {/* 독서모임 개설 이력 (본인만) */}
+          {isMe && hostedRooms.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                <div style={{ width: '3px', height: '14px', borderRadius: '9999px', background: '#C49456' }} />
+                <Waves size={12} style={{ color: '#C49456' }} />
+                <span style={{ fontSize: '11px', fontWeight: 900, color: '#C49456', textTransform: 'uppercase', letterSpacing: '0.1em' }}>개설한 독서모임</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#BDB0A0' }}>{hostedRooms.length}건</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {hostedRooms.map(room => {
+                  const isOpen = expandedRoom === room.id;
+                  const msgs = roomMessages[room.id] || [];
+                  return (
+                    <div key={room.id} style={{ border: '1px solid rgba(139,107,66,0.12)', borderRadius: '0.875rem', overflow: 'hidden' }}>
+                      <div
+                        onClick={() => handleToggleRoom(room.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', cursor: 'pointer', background: isOpen ? 'rgba(140,107,66,0.06)' : 'transparent', transition: 'background 0.15s' }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{room.title}</p>
+                            <span style={{ fontSize: '9px', fontWeight: 800, color: '#9E8D7A', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', padding: '1px 6px', borderRadius: '9999px', flexShrink: 0 }}>{room.status === 'ended' ? '종료' : room.status === 'discussion' ? '토론 중' : room.status === 'reading' ? '독서 중' : '예정'}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={10} />{fmtAgo(room.scheduled_at)}</span>
+                            <span style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Users size={10} />{room.participant_count}명</span>
+                            <span style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MessageSquare size={10} />채팅 {msgs.length}건</span>
+                          </div>
+                        </div>
+                        {isOpen ? <ChevronUp size={14} style={{ color: '#9E8D7A', flexShrink: 0 }} /> : <ChevronDown size={14} style={{ color: '#9E8D7A', flexShrink: 0 }} />}
+                      </div>
+                      {isOpen && (
+                        <div style={{ borderTop: '1px solid rgba(139,107,66,0.08)', padding: '0.75rem 1rem', background: 'rgba(140,107,66,0.02)' }}>
+                          {loadingMsgs === room.id
+                            ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#8C6B42' }} /></div>
+                            : msgs.length === 0
+                              ? <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600, textAlign: 'center' }}>채팅 내역이 없습니다.</p>
+                              : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
+                                {msgs.map(m => (
+                                  <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                    <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#C49456,#F59E0B)' : 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0 }}>
+                                      {m.is_ai ? 'AI' : (m.user_name || '?')[0]}
+                                    </div>
+                                    <div>
+                                      <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#C49456' : '#8C6B42', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>
+                                      <p style={{ fontSize: '0.8125rem', color: '#3D2D1E', lineHeight: 1.5, wordBreak: 'break-word' }}>{m.content}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                          }
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
       </motion.div>

@@ -317,6 +317,67 @@ async def _init_db():
             )
 
             await conn.execute("""
+                CREATE TABLE IF NOT EXISTS highlights (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    read_book_id INTEGER REFERENCES read_books(id) ON DELETE CASCADE,
+                    text TEXT NOT NULL,
+                    page_num INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS dive_rooms (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(300) NOT NULL,
+                    book_title VARCHAR(300) DEFAULT '',
+                    book_image TEXT DEFAULT '',
+                    book_isbn VARCHAR(50) DEFAULT '',
+                    host_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    host_name VARCHAR(100) DEFAULT '',
+                    scheduled_at TIMESTAMPTZ NOT NULL,
+                    reading_minutes INTEGER NOT NULL DEFAULT 30,
+                    discussion_minutes INTEGER NOT NULL DEFAULT 20,
+                    max_participants INTEGER NOT NULL DEFAULT 8,
+                    late_join_cutoff_minutes INTEGER DEFAULT 10,
+                    notice TEXT DEFAULT '',
+                    status VARCHAR(20) DEFAULT 'scheduled',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS dive_participants (
+                    id SERIAL PRIMARY KEY,
+                    room_id INTEGER REFERENCES dive_rooms(id) ON DELETE CASCADE,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    status VARCHAR(20) DEFAULT 'waiting',
+                    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(room_id, user_id)
+                )
+            """)
+
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS dive_messages (
+                    id SERIAL PRIMARY KEY,
+                    room_id INTEGER REFERENCES dive_rooms(id) ON DELETE CASCADE,
+                    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    user_name VARCHAR(100) DEFAULT '',
+                    content TEXT NOT NULL,
+                    is_ai BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            await conn.execute("""
+                ALTER TABLE dive_rooms ADD COLUMN IF NOT EXISTS chat_enabled BOOLEAN DEFAULT TRUE
+            """)
+            await conn.execute("""
+                UPDATE dive_rooms SET chat_enabled = TRUE WHERE chat_enabled IS NULL
+            """)
+
+            await conn.execute("""
                 CREATE TABLE IF NOT EXISTS friendships (
                     id SERIAL PRIMARY KEY,
                     requester_id INTEGER REFERENCES users(id) ON DELETE CASCADE,

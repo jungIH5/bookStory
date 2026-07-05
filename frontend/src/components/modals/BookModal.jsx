@@ -1,7 +1,8 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { X, BookOpen, Sparkles, Loader2, Bookmark, Plus, MessageCircle, Trash2, Timer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, BookOpen, Sparkles, Loader2, Bookmark, Plus, MessageCircle, Trash2, Timer, Quote, ChevronDown, ChevronUp } from 'lucide-react';
 import { stripHtml } from '../../utils';
+import { API_URL } from '../../api';
 
 export default function BookModal({
   book, analysisResult, questions, isAnalyzing,
@@ -9,9 +10,50 @@ export default function BookModal({
   bookImpressionPublic, setBookImpressionPublic,
   currentBookPages, setCurrentBookPages,
   isSaving, isSavingImpression,
-  timerBook,
+  timerBook, token,
   onClose, onRegister, onLoadAnalysis, onStartDiscussion, onSaveImpression, onDeleteBook, onStartTimer,
 }) {
+  const [highlights, setHighlights] = useState([]);
+  const [hlText, setHlText] = useState('');
+  const [hlPage, setHlPage] = useState('');
+  const [hlSaving, setHlSaving] = useState(false);
+  const [hlOpen, setHlOpen] = useState(false);
+
+  useEffect(() => {
+    if (book?.fromStack && book?.id && token) {
+      fetch(`${API_URL}/api/highlights?read_book_id=${book.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.ok ? r.json() : []).then(setHighlights).catch(() => {});
+    } else {
+      setHighlights([]);
+    }
+  }, [book?.id, book?.fromStack, token]);
+
+  const handleSaveHighlight = async () => {
+    if (!hlText.trim() || !token || !book?.id) return;
+    setHlSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/api/highlights`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ read_book_id: book.id, text: hlText.trim(), page_num: parseInt(hlPage) || null }),
+      });
+      if (res.ok) {
+        const newHl = await res.json();
+        setHighlights(prev => [newHl, ...prev]);
+        setHlText('');
+        setHlPage('');
+      }
+    } finally { setHlSaving(false); }
+  };
+
+  const handleDeleteHighlight = async (hId) => {
+    setHighlights(prev => prev.filter(h => h.id !== hId));
+    await fetch(`${API_URL}/api/highlights/${hId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  };
   const thisTitle = stripHtml(book?.title || '');
   const isTimerRunningHere = timerBook?.title === thisTitle;
   return (
@@ -116,6 +158,91 @@ export default function BookModal({
               style={{ width: '100%', resize: 'vertical', fontSize: '0.8125rem', lineHeight: 1.6, color: '#1C140E', minHeight: '72px', boxSizing: 'border-box' }}
             />
           </div>
+
+          {/* 인상깊은 문장 — 서재에 등록된 책만 */}
+          {book?.fromStack && token && (
+            <div style={{ background: 'rgba(140,107,66,0.03)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.1)', overflow: 'hidden' }}>
+              <button
+                onClick={() => setHlOpen(o => !o)}
+                style={{ width: '100%', padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8C6B42, #C49456)', borderRadius: '9999px' }} />
+                  <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#A07840', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                    인상깊은 문장 <span style={{ fontSize: '8px', color: '#BDB0A0', textTransform: 'none', letterSpacing: 0 }}>({highlights.length})</span>
+                  </h3>
+                </div>
+                {hlOpen ? <ChevronUp size={13} style={{ color: '#9E8D7A' }} /> : <ChevronDown size={13} style={{ color: '#9E8D7A' }} />}
+              </button>
+
+              <AnimatePresence>
+                {hlOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div style={{ padding: '0 1rem 1rem' }}>
+                      {/* 입력 */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.875rem' }}>
+                        <textarea
+                          value={hlText}
+                          onChange={e => setHlText(e.target.value)}
+                          placeholder="기억하고 싶은 문장을 입력하세요..."
+                          rows={2}
+                          className="form-input"
+                          style={{ width: '100%', resize: 'none', fontSize: '0.8125rem', lineHeight: 1.6, color: '#1C140E', boxSizing: 'border-box' }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <input
+                            type="number"
+                            value={hlPage}
+                            onChange={e => setHlPage(e.target.value)}
+                            placeholder="p."
+                            style={{ width: '64px', fontSize: '0.8125rem', fontWeight: 700, padding: '6px 8px', borderRadius: '8px', border: '1px solid rgba(139,107,66,0.3)', background: 'white', color: '#1C140E', outline: 'none', textAlign: 'center' }}
+                          />
+                          <button
+                            onClick={handleSaveHighlight}
+                            disabled={!hlText.trim() || hlSaving}
+                            style={{ flex: 1, padding: '6px 12px', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.25)', borderRadius: '8px', fontSize: '0.8125rem', fontWeight: 800, color: '#8C6B42', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', opacity: !hlText.trim() || hlSaving ? 0.5 : 1 }}
+                          >
+                            {hlSaving ? <Loader2 size={13} className="animate-spin" /> : <Quote size={13} />}
+                            저장
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 저장된 문장 목록 */}
+                      {highlights.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {highlights.map(h => (
+                            <div key={h.id} style={{ display: 'flex', gap: '0.625rem', padding: '0.625rem 0.875rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(140,107,66,0.1)', borderRadius: '0.625rem' }}>
+                              <Quote size={12} style={{ color: '#C49456', flexShrink: 0, marginTop: '2px' }} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#3D2D1E', fontWeight: 500, wordBreak: 'break-word' }}>{h.text}</p>
+                                {h.page_num && <span style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 700 }}>p.{h.page_num}</span>}
+                              </div>
+                              <button
+                                onClick={() => handleDeleteHighlight(h.id)}
+                                style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}
+                              >
+                                <X size={10} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {highlights.length === 0 && (
+                        <p style={{ fontSize: '0.75rem', color: '#BDB0A0', fontWeight: 600, textAlign: 'center', padding: '0.5rem 0' }}>저장된 문장이 없습니다.</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {setCurrentBookPages && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(140,107,66,0.04)', borderRadius: '0.875rem', border: '1px solid rgba(140,107,66,0.1)' }}>

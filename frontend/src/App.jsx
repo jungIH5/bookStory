@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog, Timer, UserPlus } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, UserCog, Timer, UserPlus, Waves } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
@@ -8,6 +8,7 @@ import StackTab from './components/tabs/StackTab';
 import SearchTab from './components/tabs/SearchTab';
 import ClubsTab from './components/tabs/ClubsTab';
 import CommunityTab from './components/tabs/CommunityTab';
+import DiveTab from './components/tabs/DiveTab';
 import RecordingTab from './components/tabs/RecordingTab';
 import TimerTab from './components/tabs/TimerTab';
 
@@ -23,6 +24,8 @@ import ProfileModal from './components/modals/ProfileModal';
 import ReadingTimer from './components/ReadingTimer';
 import TimerCompleteModal from './components/modals/TimerCompleteModal';
 import UserLibraryModal from './components/modals/UserLibraryModal';
+import CreateDiveRoomModal from './components/modals/CreateDiveRoomModal';
+import DiveRoomModal from './components/modals/DiveRoomModal';
 
 function App() {
   const [activeTab, setActiveTab] = useState('stack');
@@ -74,6 +77,10 @@ function App() {
   const [timerComplete, setTimerComplete] = useState(null); // { book, seconds }
   const [userLibrary, setUserLibrary] = useState(null); // { userId, userName }
   const [friendRequests, setFriendRequests] = useState([]);
+  const [diveRooms, setDiveRooms] = useState([]);
+  const [isFetchingRooms, setIsFetchingRooms] = useState(false);
+  const [isCreatingDiveRoom, setIsCreatingDiveRoom] = useState(false);
+  const [selectedDiveRoom, setSelectedDiveRoom] = useState(null);
 
   const [tendencyResult, setTendencyResult] = useState(null);
   const [isFetchingTendency, setIsFetchingTendency] = useState(false);
@@ -150,6 +157,7 @@ function App() {
   useEffect(() => {
     fetchReadBooks();
     fetchCommunityPosts();
+    fetchDiveRooms();
   }, [user?.id]);
 
   useEffect(() => {
@@ -171,6 +179,33 @@ function App() {
       setMyReviewText('');
     }
   }, [selectedClub]);
+
+  const fetchDiveRooms = async () => {
+    setIsFetchingRooms(true);
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms`);
+      if (res.ok) setDiveRooms(await res.json());
+    } catch {} finally { setIsFetchingRooms(false); }
+  };
+
+  const handleCreateDiveRoom = async (formData) => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, host_name: user.name }),
+      });
+      if (res.ok) {
+        setIsCreatingDiveRoom(false);
+        await fetchDiveRooms();
+        setToast({ show: true, message: '독서 모임이 개설됐어요 🌊' });
+      } else {
+        const err = await res.json();
+        setToast({ show: true, message: err.detail || '개설 실패. 다시 시도해주세요.' });
+      }
+    } catch { setToast({ show: true, message: '개설 중 오류가 발생했습니다.' }); }
+  };
 
   const fetchReadBooks = async () => {
     try {
@@ -868,7 +903,7 @@ function App() {
   const navTabs = [
     { id: 'stack', label: '책쌓기', icon: <BookOpen size={15} /> },
     { id: 'clubs', label: '모임찾기', icon: <Users size={15} /> },
-    { id: 'community', label: '커뮤니티', icon: <MessageSquare size={15} /> },
+    { id: 'community', label: '독서모임', icon: <Waves size={15} /> },
     { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
     { id: 'timer', label: '독서 타이머', icon: <Timer size={15} />, dot: !!timerBook },
   ];
@@ -1025,15 +1060,15 @@ function App() {
             />
           )}
           {activeTab === 'community' && (
-            <CommunityTab
+            <DiveTab
               user={user}
-              communityPosts={communityPosts}
-              hasMore={communityHasMore}
-              isFetchingMore={isFetchingMorePosts}
-              onOpenPost={openPostDetail}
-              onLikePost={handleLikePost}
-              onWritePost={() => setIsWritingPost(true)}
-              onLoadMore={handleLoadMorePosts}
+              diveRooms={diveRooms}
+              isFetchingRooms={isFetchingRooms}
+              onCreateRoom={() => {
+                if (!user) { setToast({ show: true, message: '로그인이 필요합니다.' }); return; }
+                setIsCreatingDiveRoom(true);
+              }}
+              onOpenRoom={setSelectedDiveRoom}
               onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
             />
           )}
@@ -1192,6 +1227,7 @@ function App() {
         {selectedBook && (
           <BookModal
             book={selectedBook}
+            token={user?.token}
             analysisResult={analysisResult}
             questions={questions}
             isAnalyzing={isAnalyzing}
@@ -1253,6 +1289,31 @@ function App() {
             seconds={timerComplete.seconds}
             onFinished={() => handleTimerComplete(true)}
             onStillReading={() => handleTimerComplete(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Create dive room modal */}
+      <AnimatePresence>
+        {isCreatingDiveRoom && (
+          <CreateDiveRoomModal
+            onClose={() => setIsCreatingDiveRoom(false)}
+            onCreate={handleCreateDiveRoom}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Dive room detail modal */}
+      <AnimatePresence>
+        {selectedDiveRoom && (
+          <DiveRoomModal
+            room={selectedDiveRoom}
+            user={user}
+            onClose={() => setSelectedDiveRoom(null)}
+            onJoin={fetchDiveRooms}
+            onLeave={fetchDiveRooms}
+            onDelete={fetchDiveRooms}
+            onStatusChange={fetchDiveRooms}
           />
         )}
       </AnimatePresence>
