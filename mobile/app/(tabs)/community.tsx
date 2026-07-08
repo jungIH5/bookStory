@@ -41,7 +41,7 @@ export default function CommunityScreen() {
       if (!offline && fetchErrorRef.current) fetchPosts();
     });
     return unsubscribe;
-  }, []);
+  }, [user]);
 
   const onRefresh = async () => {
     setRefreshing(true);

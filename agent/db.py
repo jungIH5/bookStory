@@ -379,6 +379,9 @@ async def _init_db():
             await conn.execute("""
                 ALTER TABLE dive_rooms ADD COLUMN IF NOT EXISTS room_image TEXT DEFAULT ''
             """)
+            await conn.execute("""
+                ALTER TABLE dive_messages ADD COLUMN IF NOT EXISTS to_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+            """)
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS user_images (

@@ -933,7 +933,8 @@ function App() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch(`${API_URL}/api/users/${user.id}/voice-sample`, { method: 'POST', body: formData });
+      const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+      const res = await fetch(`${API_URL}/api/users/${user.id}/voice-sample`, { method: 'POST', headers: authH, body: formData });
       if (!res.ok) throw new Error();
       alert('목소리 샘플이 등록되었습니다.');
     } catch { alert('목소리 샘플 등록 중 오류가 발생했습니다.'); }
@@ -951,6 +952,7 @@ function App() {
   const navTabs = [
     { id: 'stack', label: '책쌓기', icon: <BookOpen size={15} /> },
     { id: 'clubs', label: '모임찾기', icon: <Users size={15} /> },
+    { id: 'board', label: '게시판', icon: <MessageSquare size={15} /> },
     { id: 'community', label: '독서모임', icon: <Waves size={15} /> },
     { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
     { id: 'timer', label: '독서 타이머', icon: <Timer size={15} />, dot: !!timerBook },
@@ -1098,6 +1100,22 @@ function App() {
               joinedClubs={joinedClubs}
               onSelectClub={setSelectedClub}
               onCreateClub={() => setIsCreatingClub(true)}
+            />
+          )}
+          {activeTab === 'board' && (
+            <CommunityTab
+              user={user}
+              communityPosts={communityPosts}
+              hasMore={communityHasMore}
+              isFetchingMore={isFetchingMorePosts}
+              onOpenPost={openPostDetail}
+              onLikePost={handleLikePost}
+              onWritePost={() => {
+                if (!user) { setToast({ show: true, message: '로그인이 필요합니다.' }); return; }
+                setIsWritingPost(true);
+              }}
+              onLoadMore={handleLoadMorePosts}
+              onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
             />
           )}
           {activeTab === 'community' && (

@@ -30,22 +30,25 @@ async def fetch_blog_reviews_node(state: BookAnalysisState) -> dict:
 
     query = f"{title} {author} {suffix}".strip()
 
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        resp = await client.get(
-            "https://openapi.naver.com/v1/search/blog.json",
-            params={"query": query, "display": 5},
-            headers={
-                "X-Naver-Client-Id": NAVER_CLIENT_ID,
-                "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
-            },
-        )
-        data = resp.json()
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                "https://openapi.naver.com/v1/search/blog.json",
+                params={"query": query, "display": 5},
+                headers={
+                    "X-Naver-Client-Id": NAVER_CLIENT_ID,
+                    "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
+                },
+            )
+            data = resp.json()
 
-    reviews = [
-        f"{item['title']}: {item['description']}"
-        for item in data.get("items", [])
-        if item.get("description")
-    ]
+        reviews = [
+            f"{item['title']}: {item['description']}"
+            for item in data.get("items", [])
+            if item.get("description")
+        ]
+    except Exception:
+        reviews = []
 
     return {
         "blog_reviews": reviews,

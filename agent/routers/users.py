@@ -278,7 +278,10 @@ async def upload_voice_sample(
     user_id: int,
     file: UploadFile = File(...),
     conn=Depends(db.get_db),
+    current_user_id: int = Depends(get_current_user_id),
 ):
+    if current_user_id != user_id:
+        raise HTTPException(403, "본인만 등록할 수 있습니다.")
     if file.content_type not in ALLOWED_AUDIO_TYPES:
         raise HTTPException(400, "지원하지 않는 오디오 형식입니다.")
 

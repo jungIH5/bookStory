@@ -230,21 +230,29 @@ async def leave_room(
 
 
 @router.get("/rooms/{room_id}/messages")
-async def get_messages(room_id: int, conn=Depends(get_db)):
+async def get_messages(
+    room_id: int,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
     rows = await conn.fetch("""
-        SELECT dm.id, dm.room_id, dm.user_id, dm.content, dm.is_ai, dm.created_at,
-               COALESCE(u.name, dm.user_name) AS user_name
+        SELECT dm.id, dm.room_id, dm.user_id, dm.to_user_id, dm.content, dm.is_ai, dm.created_at,
+               COALESCE(u.name, dm.user_name) AS user_name,
+               tu.name AS to_user_name
         FROM dive_messages dm
         LEFT JOIN users u ON u.id = dm.user_id
+        LEFT JOIN users tu ON tu.id = dm.to_user_id
         WHERE dm.room_id = $1
+          AND (dm.to_user_id IS NULL OR dm.to_user_id = $2 OR dm.user_id = $2)
         ORDER BY dm.created_at ASC
-    """, room_id)
+    """, room_id, user_id)
     return [dict(r) for r in rows]
 
 
 class MessageIn(BaseModel):
     content: str
     is_ai: bool = False
+    to_user_id: Optional[int] = None  # 지정 시 귓속말(해당 유저 + 본인에게만 노출)
 
 
 @router.post("/rooms/{room_id}/messages")
@@ -254,11 +262,34 @@ async def send_message(
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
+    if body.to_user_id:
+        if body.to_user_id == user_id:
+            raise HTTPException(400, "자기 자신에게 귓속말을 보낼 수 없습니다.")
+        participant = await conn.fetchrow(
+            "SELECT 1 FROM dive_participants WHERE room_id=$1 AND user_id=$2",
+            room_id, body.to_user_id,
+        )
+        if not participant:
+            raise HTTPException(400, "해당 참가자를 찾을 수 없습니다.")
+        blocked = await conn.fetchval("""
+            SELECT EXISTS(
+                SELECT 1 FROM user_blocks
+                WHERE (blocker_id=$1 AND blocked_id=$2) OR (blocker_id=$2 AND blocked_id=$1)
+            )
+        """, user_id, body.to_user_id)
+        if blocked:
+            raise HTTPException(403, "차단 관계로 인해 귓속말을 보낼 수 없습니다.")
+        allow_whisper = await conn.fetchval(
+            "SELECT allow_whisper FROM users WHERE id=$1", body.to_user_id,
+        )
+        if allow_whisper is False:
+            raise HTTPException(403, "상대방이 귓속말을 거부했습니다.")
+
     user = await conn.fetchrow("SELECT name FROM users WHERE id=$1", user_id)
     row = await conn.fetchrow("""
-        INSERT INTO dive_messages (room_id, user_id, user_name, content, is_ai)
-        VALUES ($1,$2,$3,$4,$5) RETURNING *
-    """, room_id, user_id, user['name'] if user else '', body.content, body.is_ai)
+        INSERT INTO dive_messages (room_id, user_id, user_name, content, is_ai, to_user_id)
+        VALUES ($1,$2,$3,$4,$5,$6) RETURNING *
+    """, room_id, user_id, user['name'] if user else '', body.content, body.is_ai, body.to_user_id)
     return dict(row)
 
 

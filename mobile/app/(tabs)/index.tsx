@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Image, StyleSheet,
   Dimensions, Pressable, RefreshControl,
@@ -25,6 +25,19 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const fetchErrorRef = useRef(false);
+
+  const fetchBooks = useCallback(async () => {
+    fetchErrorRef.current = false;
+    setFetchError(false);
+    try {
+      const data = await booksApi.getReadBooks();
+      setReadBooks(data);
+    } catch {
+      fetchErrorRef.current = true;
+      setFetchError(true);
+    }
+  }, []);
 
   useEffect(() => {
     loadUser();
@@ -33,19 +46,9 @@ export default function HomeScreen() {
     const unsubscribe = NetInfo.addEventListener((state) => {
       const offline = !(state.isConnected && state.isInternetReachable !== false);
       setIsOffline(offline);
-      if (!offline && fetchError) fetchBooks();
+      if (!offline && fetchErrorRef.current) fetchBooks();
     });
     return unsubscribe;
-  }, []);
-
-  const fetchBooks = useCallback(async () => {
-    setFetchError(false);
-    try {
-      const data = await booksApi.getReadBooks();
-      setReadBooks(data);
-    } catch {
-      setFetchError(true);
-    }
   }, []);
 
   const onRefresh = async () => {

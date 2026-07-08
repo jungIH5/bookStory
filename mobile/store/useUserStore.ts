@@ -51,6 +51,8 @@ export const useUserStore = create<UserStore>((set) => ({
       AsyncStorage.getItem(USER_KEY),
       secureGet(TOKEN_KEY),
     ]);
-    if (raw) set({ user: JSON.parse(raw), token: token ?? null });
+    // raw(user)와 token은 별개의 스토리지 write로 저장되므로 하나만 남아있을 수 있다.
+    // 존재하는 값은 항상 반영해 토큰이 유실되지 않도록 한다.
+    set({ user: raw ? JSON.parse(raw) : null, token: token ?? null });
   },
 }));

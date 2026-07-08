@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, User, MapPin, Eye, EyeOff, Loader2, MessageSquareOff, MessageSquare } from 'lucide-react';
+import { X, User, MapPin, Eye, EyeOff, Loader2, MessageSquareDashed, MessageSquare } from 'lucide-react';
 import { searchKakaoLocation } from '../../utils';
 
 export default function ProfileModal({ user, onClose, onSave }) {
@@ -140,7 +140,7 @@ export default function ProfileModal({ user, onClose, onSave }) {
                   transition: 'all 0.2s', flexShrink: 0, marginLeft: '1rem',
                 }}
               >
-                {form.allow_whisper ? <><MessageSquare size={12} /> 허용</> : <><MessageSquareOff size={12} /> 거부</>}
+                {form.allow_whisper ? <><MessageSquare size={12} /> 허용</> : <><MessageSquareDashed size={12} /> 거부</>}
               </button>
             </div>
           </div>

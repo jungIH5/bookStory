@@ -53,6 +53,8 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const [isSending, setIsSending] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [isLoadingMsgs, setIsLoadingMsgs] = useState(false);
+  const [whisperTarget, setWhisperTarget] = useState(null); // { id, name } | null
+  const [msgError, setMsgError] = useState('');
   const [editingNotice, setEditingNotice] = useState(false);
   const [noticeInput, setNoticeInput] = useState('');
   const [isSavingNotice, setIsSavingNotice] = useState(false);
@@ -166,9 +168,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   };
 
   const fetchMessages = async () => {
+    if (!user?.token) return;
     setIsLoadingMsgs(true);
     try {
-      const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/messages`);
+      const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/messages`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
       if (res.ok) setMessages(await res.json());
     } catch {} finally { setIsLoadingMsgs(false); }
   };
@@ -216,13 +221,21 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const handleSendMsg = async () => {
     if (!msgInput.trim() || !user?.token || isSending || chatLocked) return;
     setIsSending(true);
+    setMsgError('');
     try {
       const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/messages`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: msgInput.trim() }),
+        body: JSON.stringify({ content: msgInput.trim(), to_user_id: whisperTarget?.id || null }),
       });
-      if (res.ok) { const msg = await res.json(); setMessages(prev => [...prev, msg]); setMsgInput(''); }
+      if (res.ok) {
+        const msg = await res.json();
+        setMessages(prev => [...prev, msg]);
+        setMsgInput('');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setMsgError(err.detail || '메시지 전송에 실패했습니다.');
+      }
     } finally { setIsSending(false); }
   };
 
@@ -612,13 +625,18 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                         </p>
                       </div>
                     : messages.map(m => (
-                      <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                      <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', opacity: m.to_user_id ? 0.85 : 1 }}>
                         <div style={{ width: '20px', height: '20px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#C49456,#F59E0B)' : 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0 }}>
                           {m.is_ai ? 'AI' : (m.user_name || '?')[0]}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#C49456' : '#8C6B42', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>
-                          <p style={{ fontSize: '0.8125rem', color: '#3D2D1E', lineHeight: 1.5, wordBreak: 'break-word' }}>{m.content}</p>
+                          {m.to_user_id && (
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#C49456', marginRight: '0.25rem' }}>
+                              → {m.to_user_id === parseInt(user?.id) ? '나' : (m.to_user_name || '?')} 귓속말
+                            </span>
+                          )}
+                          <p style={{ fontSize: '0.8125rem', color: m.to_user_id ? '#8C6B42' : '#3D2D1E', lineHeight: 1.5, wordBreak: 'break-word', fontStyle: m.to_user_id ? 'italic' : 'normal' }}>{m.content}</p>
                         </div>
                       </div>
                     ))}
@@ -633,13 +651,24 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                 <div style={{ width: '36px', height: '3px', borderRadius: '9999px', background: 'rgba(139,107,66,0.18)' }} />
               </div>
 
+              {whisperTarget && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#8C6B42' }}>
+                  <span style={{ flex: 1 }}>{whisperTarget.name}님에게 귓속말 중</span>
+                  <button onClick={() => setWhisperTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8C6B42', display: 'flex' }}>
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+              {msgError && (
+                <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700 }}>{msgError}</p>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input
                   className="form-input"
                   value={msgInput}
                   onChange={e => setMsgInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMsg()}
-                  placeholder={chatLocked ? '🔒 토론 시작 후 채팅 가능' : '메시지를 입력하세요...'}
+                  placeholder={chatLocked ? '🔒 토론 시작 후 채팅 가능' : whisperTarget ? `${whisperTarget.name}님에게 귓속말...` : '메시지를 입력하세요...'}
                   disabled={!canSendMsg}
                   style={{ flex: 1, color: '#1C140E', opacity: canSendMsg ? 1 : 0.5, cursor: canSendMsg ? 'text' : 'not-allowed' }}
                 />
@@ -661,15 +690,23 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', overflowY: 'auto', flex: 1, minHeight: '160px' }}>
                 {(room.participants?.length || 0) === 0
                   ? <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>없음</p>
-                  : room.participants.map(p => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: 'rgba(140,107,66,0.05)', border: '1px solid rgba(140,107,66,0.1)', borderRadius: '0.625rem' }}>
+                  : room.participants.map(p => {
+                    const isSelf = p.user_id === parseInt(user?.id);
+                    return (
+                    <div
+                      key={p.id}
+                      onClick={() => !isSelf && setWhisperTarget(whisperTarget?.id === p.user_id ? null : { id: p.user_id, name: p.name })}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: whisperTarget?.id === p.user_id ? 'rgba(196,148,86,0.18)' : 'rgba(140,107,66,0.05)', border: `1px solid ${whisperTarget?.id === p.user_id ? 'rgba(196,148,86,0.4)' : 'rgba(140,107,66,0.1)'}`, borderRadius: '0.625rem', cursor: isSelf ? 'default' : 'pointer' }}
+                      title={isSelf ? '' : `${p.name}님에게 귓속말`}
+                    >
                       <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0 }}>
                         {(p.name || '?')[0]}
                       </div>
                       <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                       {room.host_id === p.user_id && <span style={{ fontSize: '10px' }}>👑</span>}
                     </div>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
           </div>
