@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Mic, Square, Upload, FileAudio, Sparkles, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mic, Square, Upload, FileAudio, Sparkles, Loader2, History, ChevronDown, ChevronUp, MessageSquare, BookOpen } from 'lucide-react';
 import { API_URL } from '../../api';
 import { formatDuration } from '../../utils';
 
@@ -10,6 +10,12 @@ export default function RecordingTab({ user }) {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [recordingResult, setRecordingResult] = useState(null);
   const [isAnalyzingRecording, setIsAnalyzingRecording] = useState(false);
+  const [pastRecordings, setPastRecordings] = useState([]);
+  const [pastSessions, setPastSessions] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [expandedRecording, setExpandedRecording] = useState(null);
+  const [expandedSession, setExpandedSession] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -22,6 +28,18 @@ export default function RecordingTab({ user }) {
       audioStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setHistoryLoading(true);
+    Promise.all([
+      fetch(`${API_URL}/api/recordings?user_id=${user.id}`).then(r => r.ok ? r.json() : []),
+      fetch(`${API_URL}/api/sessions?user_id=${user.id}`).then(r => r.ok ? r.json() : []),
+    ]).then(([recs, sessions]) => {
+      setPastRecordings(Array.isArray(recs) ? recs : []);
+      setPastSessions(Array.isArray(sessions) ? sessions : []);
+    }).catch(() => {}).finally(() => setHistoryLoading(false));
+  }, [user?.id]);
 
   const startRecording = async () => {
     try {
@@ -162,6 +180,107 @@ export default function RecordingTab({ user }) {
           <><Sparkles size={18} /><span>대화내용 분석하기</span></>
         )}
       </button>
+
+      {/* 이력 섹션 */}
+      {user && (pastRecordings.length > 0 || pastSessions.length > 0) && (
+        <div style={{ marginBottom: '2rem' }}>
+          <button
+            onClick={() => setShowHistory(h => !h)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.75rem 1rem', background: 'rgba(139,107,66,0.05)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', cursor: 'pointer', marginBottom: showHistory ? '0.75rem' : 0, transition: 'background 0.15s' }}
+          >
+            <History size={14} style={{ color: '#8C6B42' }} />
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#8C6B42', flex: 1, textAlign: 'left' }}>
+              분석 이력 {historyLoading ? '' : `(녹음 ${pastRecordings.length}건 · 대화 ${pastSessions.length}건)`}
+            </span>
+            {historyLoading ? <Loader2 size={14} className="animate-spin" style={{ color: '#9E8D7A' }} /> : showHistory ? <ChevronUp size={14} style={{ color: '#9E8D7A' }} /> : <ChevronDown size={14} style={{ color: '#9E8D7A' }} />}
+          </button>
+
+          <AnimatePresence>
+            {showHistory && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+
+                  {/* 녹음 분석 이력 */}
+                  {pastRecordings.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: '10px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                        <Mic size={10} /> 녹음 분석
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                        {pastRecordings.map(rec => (
+                          <div key={rec.id} style={{ border: '1px solid rgba(139,107,66,0.12)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                            <div onClick={() => setExpandedRecording(expandedRecording === rec.id ? null : rec.id)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', cursor: 'pointer', background: expandedRecording === rec.id ? 'rgba(140,107,66,0.06)' : 'transparent' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {rec.filename || `녹음 #${rec.id}`}
+                                </p>
+                                <p style={{ fontSize: '10px', color: '#9E8D7A', marginTop: '1px' }}>
+                                  {new Date(rec.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                              {expandedRecording === rec.id ? <ChevronUp size={13} style={{ color: '#9E8D7A', flexShrink: 0 }} /> : <ChevronDown size={13} style={{ color: '#9E8D7A', flexShrink: 0 }} />}
+                            </div>
+                            {expandedRecording === rec.id && (
+                              <div style={{ borderTop: '1px solid rgba(139,107,66,0.08)', padding: '0.75rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                                {rec.summary && <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#5C4F42' }}>{rec.summary}</p>}
+                                {rec.key_topics?.length > 0 && (
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                                    {rec.key_topics.map((t, i) => (
+                                      <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: '#8C6B42', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', padding: '2px 8px', borderRadius: '9999px' }}>{t}</span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Q&A 세션 이력 */}
+                  {pastSessions.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: '10px', fontWeight: 900, color: '#C49456', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                        <MessageSquare size={10} /> AI 대화 이력
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                        {pastSessions.map(session => (
+                          <div key={session.id} style={{ border: '1px solid rgba(196,148,86,0.15)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                            <div onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', cursor: 'pointer', background: expandedSession === session.id ? 'rgba(196,148,86,0.06)' : 'transparent' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '1px' }}>
+                                  <BookOpen size={10} style={{ color: '#C49456', flexShrink: 0 }} />
+                                  <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {session.resolved_title || session.book_title || '제목 없음'}
+                                  </p>
+                                </div>
+                                <p style={{ fontSize: '10px', color: '#9E8D7A' }}>
+                                  {new Date(session.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+                                </p>
+                              </div>
+                              {expandedSession === session.id ? <ChevronUp size={13} style={{ color: '#9E8D7A', flexShrink: 0 }} /> : <ChevronDown size={13} style={{ color: '#9E8D7A', flexShrink: 0 }} />}
+                            </div>
+                            {expandedSession === session.id && session.book_analysis && (
+                              <div style={{ borderTop: '1px solid rgba(196,148,86,0.1)', padding: '0.75rem 0.875rem' }}>
+                                <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#5C4F42', maxHeight: '120px', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                                  {session.book_analysis.slice(0, 400)}{session.book_analysis.length > 400 ? '…' : ''}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {recordingResult && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

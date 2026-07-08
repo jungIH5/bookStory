@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, BookOpen, Heart, Loader2, Send, CornerDownRight, Trash2 } from 'lucide-react';
+import { X, BookOpen, Heart, Loader2, Send, CornerDownRight, Trash2, Pencil } from 'lucide-react';
 import { renderMarkdown } from '../../utils';
 
 export default function PostModal({
@@ -10,7 +10,7 @@ export default function PostModal({
   replyInput, setReplyInput,
   replyingToMention, setReplyingToMention,
   isSubmittingComment,
-  onClose, onLike, onSubmitComment, onSubmitReply, onDeletePost, onOpenUserLibrary,
+  onClose, onLike, onSubmitComment, onSubmitReply, onDeletePost, onDeleteComment, onOpenUserLibrary,
 }) {
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={() => { setReplyingTo(null); onClose(); }}>
@@ -80,12 +80,20 @@ export default function PostModal({
                       <span style={{ fontSize: '10px', color: '#BDB0A0' }}>{new Date(comment.created_at).toLocaleDateString('ko-KR')}</span>
                     </div>
                     <p style={{ fontSize: '0.8125rem', lineHeight: 1.6, color: '#5C4F42' }}>{comment.content}</p>
-                    {user && (
-                      <button onClick={() => { const same = replyingTo === comment.id && !replyingToMention; setReplyingTo(same ? null : comment.id); setReplyingToMention(''); setReplyInput(''); }}
-                        style={{ fontSize: '10px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.375rem', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
-                        <CornerDownRight size={10} /> 답글
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.375rem' }}>
+                      {user && (
+                        <button onClick={() => { const same = replyingTo === comment.id && !replyingToMention; setReplyingTo(same ? null : comment.id); setReplyingToMention(''); setReplyInput(''); }}
+                          style={{ fontSize: '10px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
+                          <CornerDownRight size={10} /> 답글
+                        </button>
+                      )}
+                      {onDeleteComment && user && comment.user_id && Number(comment.user_id) === Number(user.id) && (
+                        <button onClick={() => onDeleteComment(comment.id)}
+                          style={{ fontSize: '10px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
+                          <Trash2 size={10} /> 삭제
+                        </button>
+                      )}
+                    </div>}
                   </div>
                 </div>
 
@@ -107,12 +115,20 @@ export default function PostModal({
                             </>
                           ) : reply.content}
                         </p>
-                        {user && (
-                          <button onClick={() => { setReplyingTo(comment.id); setReplyingToMention(`@${reply.author} `); setReplyInput(''); }}
-                            style={{ fontSize: '10px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
-                            <CornerDownRight size={10} /> 답글
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
+                          {user && (
+                            <button onClick={() => { setReplyingTo(comment.id); setReplyingToMention(`@${reply.author} `); setReplyInput(''); }}
+                              style={{ fontSize: '10px', color: '#9E8D7A', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
+                              <CornerDownRight size={10} /> 답글
+                            </button>
+                          )}
+                          {onDeleteComment && user && reply.user_id && Number(reply.user_id) === Number(user.id) && (
+                            <button onClick={() => onDeleteComment(reply.id)}
+                              style={{ fontSize: '10px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: 0 }}>
+                              <Trash2 size={10} /> 삭제
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

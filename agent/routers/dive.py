@@ -26,11 +26,13 @@ class DiveRoomIn(BaseModel):
 @router.get("/rooms")
 async def get_rooms(conn=Depends(get_db)):
     rows = await conn.fetch("""
-        SELECT r.*, COUNT(p.id)::int AS participant_count
+        SELECT r.*, COALESCE(u.name, r.host_name) AS host_name,
+               COUNT(p.id)::int AS participant_count
         FROM dive_rooms r
+        LEFT JOIN users u ON u.id = r.host_id
         LEFT JOIN dive_participants p ON p.room_id = r.id
         WHERE r.status != 'ended'
-        GROUP BY r.id
+        GROUP BY r.id, u.name
         ORDER BY r.scheduled_at ASC
     """)
     return [dict(r) for r in rows]
@@ -152,11 +154,13 @@ async def toggle_chat(
 @router.get("/rooms/{room_id}")
 async def get_room(room_id: int, conn=Depends(get_db)):
     row = await conn.fetchrow("""
-        SELECT r.*, COUNT(p.id)::int AS participant_count
+        SELECT r.*, COALESCE(u.name, r.host_name) AS host_name,
+               COUNT(p.id)::int AS participant_count
         FROM dive_rooms r
+        LEFT JOIN users u ON u.id = r.host_id
         LEFT JOIN dive_participants p ON p.room_id = r.id
         WHERE r.id = $1
-        GROUP BY r.id
+        GROUP BY r.id, u.name
     """, room_id)
     if not row:
         raise HTTPException(404, "방을 찾을 수 없습니다.")
@@ -227,9 +231,14 @@ async def leave_room(
 
 @router.get("/rooms/{room_id}/messages")
 async def get_messages(room_id: int, conn=Depends(get_db)):
-    rows = await conn.fetch(
-        "SELECT * FROM dive_messages WHERE room_id=$1 ORDER BY created_at ASC", room_id,
-    )
+    rows = await conn.fetch("""
+        SELECT dm.id, dm.room_id, dm.user_id, dm.content, dm.is_ai, dm.created_at,
+               COALESCE(u.name, dm.user_name) AS user_name
+        FROM dive_messages dm
+        LEFT JOIN users u ON u.id = dm.user_id
+        WHERE dm.room_id = $1
+        ORDER BY dm.created_at ASC
+    """, room_id)
     return [dict(r) for r in rows]
 
 

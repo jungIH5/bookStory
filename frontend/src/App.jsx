@@ -343,6 +343,27 @@ function App() {
     } catch (error) { alert('가입 중 오류가 발생했습니다.'); }
   };
 
+  const handleLoginUser = async (name, onError) => {
+    try {
+      const response = await fetch(`${API_URL}/api/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const stored = { ...data.user, token: data.token };
+        setUser(stored);
+        localStorage.setItem('bookstory_user', JSON.stringify(stored));
+        window.location.reload();
+      } else {
+        onError?.('해당 이름의 계정을 찾을 수 없습니다. 이름을 확인하거나 새 계정을 만들어주세요.');
+      }
+    } catch {
+      onError?.('서버에 연결할 수 없습니다.');
+    }
+  };
+
   const handleTestLogin = async () => {
     const cached = localStorage.getItem('bookstory_test_user');
     if (cached) {
@@ -354,6 +375,23 @@ function App() {
       window.location.reload();
       return;
     }
+    // 기존 테스트유저 로그인 시도 후, 없으면 생성
+    try {
+      const loginRes = await fetch(`${API_URL}/api/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '테스트유저' }),
+      });
+      if (loginRes.ok) {
+        const data = await loginRes.json();
+        const stored = { ...data.user, token: data.token };
+        setUser(stored);
+        localStorage.setItem('bookstory_user', JSON.stringify(stored));
+        localStorage.setItem('bookstory_test_user', JSON.stringify(stored));
+        window.location.reload();
+        return;
+      }
+    } catch {}
     const testData = { name: '테스트유저', gender: '기타', age: 20, location: '서울 강남구', lat: 37.4979, lng: 127.0276 };
     try {
       const response = await fetch(`${API_URL}/api/users`, {
@@ -611,6 +649,16 @@ function App() {
       fetchCommunityPosts();
     } catch {}
     finally { setIsSubmittingComment(false); }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!user?.token) return;
+    const authH = { Authorization: `Bearer ${user.token}` };
+    await fetch(`${API_URL}/api/community/posts/${selectedPost.id}/comments/${commentId}`, {
+      method: 'DELETE', headers: authH,
+    });
+    await fetchPostComments(selectedPost.id);
+    fetchCommunityPosts();
   };
 
   const handleSubmitReview = async () => {
@@ -1105,6 +1153,7 @@ function App() {
             regForm={regForm}
             setRegForm={setRegForm}
             onRegister={handleRegisterUser}
+            onLogin={handleLoginUser}
             onTestLogin={handleTestLogin}
             onOAuthLogin={handleOAuthLogin}
           />
@@ -1210,6 +1259,7 @@ function App() {
             onSubmitComment={handleSubmitComment}
             onSubmitReply={handleSubmitReply}
             onDeletePost={() => handleDeletePost(selectedPost.id)}
+            onDeleteComment={handleDeleteComment}
             onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
           />
         )}
