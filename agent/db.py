@@ -54,6 +54,9 @@ async def _init_db():
             await conn.execute(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS voice_sample VARCHAR(500)"
             )
+            await conn.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"
+            )
 
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS read_books (

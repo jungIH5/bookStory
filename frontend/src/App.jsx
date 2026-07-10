@@ -56,7 +56,7 @@ function App() {
     } catch { return null; }
   });
 
-  const [regForm, setRegForm] = useState({ name: '', gender: '남성', age: 20, location: '', lat: null, lng: null });
+  const [regForm, setRegForm] = useState({ name: '', password: '', gender: '남성', age: 20, location: '', lat: null, lng: null });
   const [selectedClub, setSelectedClub] = useState(null);
   const [isCreatingClub, setIsCreatingClub] = useState(false);
   const [clubForm, setClubForm] = useState({ name: '', description: '', category: '독서/기록', location: '', lat: null, lng: null, image: '' });
@@ -325,7 +325,7 @@ function App() {
     finally { setIsAnalyzing(false); }
   };
 
-  const handleRegisterUser = async () => {
+  const handleRegisterUser = async (onError) => {
     if (!regForm.name || !regForm.location) return alert('이름과 지역을 입력해주세요.');
     try {
       const response = await fetch(`${API_URL}/api/users`, {
@@ -339,16 +339,18 @@ function App() {
         setUser(stored);
         localStorage.setItem('bookstory_user', JSON.stringify(stored));
         window.location.reload();
+      } else {
+        onError?.(typeof data.detail === 'string' ? data.detail : '가입 중 오류가 발생했습니다.');
       }
-    } catch (error) { alert('가입 중 오류가 발생했습니다.'); }
+    } catch (error) { onError?.('서버에 연결할 수 없습니다.'); }
   };
 
-  const handleLoginUser = async (name, onError) => {
+  const handleLoginUser = async (name, password, onError, onNeedsSetup) => {
     try {
       const response = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, password }),
       });
       if (response.ok) {
         const data = await response.json();
@@ -356,13 +358,39 @@ function App() {
         setUser(stored);
         localStorage.setItem('bookstory_user', JSON.stringify(stored));
         window.location.reload();
+      } else if (response.status === 409) {
+        onNeedsSetup?.();
       } else {
-        onError?.('해당 이름의 계정을 찾을 수 없습니다. 이름을 확인하거나 새 계정을 만들어주세요.');
+        const data = await response.json().catch(() => ({}));
+        onError?.(typeof data.detail === 'string' ? data.detail : '로그인에 실패했습니다.');
       }
     } catch {
       onError?.('서버에 연결할 수 없습니다.');
     }
   };
+
+  const handleSetInitialPassword = async (name, password, onError) => {
+    try {
+      const response = await fetch(`${API_URL}/api/users/set-initial-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, password }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const stored = { ...data.user, token: data.token };
+        setUser(stored);
+        localStorage.setItem('bookstory_user', JSON.stringify(stored));
+        window.location.reload();
+      } else {
+        onError?.(typeof data.detail === 'string' ? data.detail : '비밀번호 설정에 실패했습니다.');
+      }
+    } catch {
+      onError?.('서버에 연결할 수 없습니다.');
+    }
+  };
+
+  const TEST_USER_PASSWORD = 'bookstory-test-1234';
 
   const handleTestLogin = async () => {
     const cached = localStorage.getItem('bookstory_test_user');
@@ -375,38 +403,43 @@ function App() {
       window.location.reload();
       return;
     }
-    // 기존 테스트유저 로그인 시도 후, 없으면 생성
+    const finish = (data) => {
+      const stored = { ...data.user, token: data.token };
+      setUser(stored);
+      localStorage.setItem('bookstory_user', JSON.stringify(stored));
+      localStorage.setItem('bookstory_test_user', JSON.stringify(stored));
+      window.location.reload();
+    };
     try {
+      // 1) 기존 테스트유저로 로그인 시도
       const loginRes = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: '테스트유저' }),
+        body: JSON.stringify({ name: '테스트유저', password: TEST_USER_PASSWORD }),
       });
-      if (loginRes.ok) {
-        const data = await loginRes.json();
-        const stored = { ...data.user, token: data.token };
-        setUser(stored);
-        localStorage.setItem('bookstory_user', JSON.stringify(stored));
-        localStorage.setItem('bookstory_test_user', JSON.stringify(stored));
-        window.location.reload();
-        return;
+      if (loginRes.ok) return finish(await loginRes.json());
+
+      // 2) 비밀번호 도입 이전에 만들어진 레거시 테스트유저 → 비밀번호 최초 설정
+      if (loginRes.status === 409) {
+        const setupRes = await fetch(`${API_URL}/api/users/set-initial-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: '테스트유저', password: TEST_USER_PASSWORD }),
+        });
+        if (setupRes.ok) return finish(await setupRes.json());
       }
     } catch {}
-    const testData = { name: '테스트유저', gender: '기타', age: 20, location: '서울 강남구', lat: 37.4979, lng: 127.0276 };
+
+    // 3) 테스트유저 자체가 없으면 새로 생성
+    const testData = { name: '테스트유저', password: TEST_USER_PASSWORD, gender: '기타', age: 20, location: '서울 강남구', lat: 37.4979, lng: 127.0276 };
     try {
       const response = await fetch(`${API_URL}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testData)
       });
-      const data = await response.json();
-      if (response.ok) {
-        const stored = { ...data.user, token: data.token };
-        setUser(stored);
-        localStorage.setItem('bookstory_user', JSON.stringify(stored));
-        localStorage.setItem('bookstory_test_user', JSON.stringify(stored));
-        window.location.reload();
-      }
+      if (response.ok) return finish(await response.json());
+      alert('테스트 유저 생성에 실패했습니다.');
     } catch (error) {
       alert('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
     }
@@ -1172,6 +1205,7 @@ function App() {
             setRegForm={setRegForm}
             onRegister={handleRegisterUser}
             onLogin={handleLoginUser}
+            onSetInitialPassword={handleSetInitialPassword}
             onTestLogin={handleTestLogin}
             onOAuthLogin={handleOAuthLogin}
           />

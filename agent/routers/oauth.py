@@ -142,5 +142,5 @@ async def _get_or_create(conn, provider: str, oauth_id: str, name: str, email):
         )
 
     token = create_token(row["id"])
-    user_dict = {k: v for k, v in dict(row).items() if k not in ("oauth_id",)}
+    user_dict = {k: v for k, v in dict(row).items() if k not in ("oauth_id", "password_hash")}
     return {"token": token, "user": user_dict}

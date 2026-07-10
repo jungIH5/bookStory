@@ -1,24 +1,63 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, User, MapPin, ChevronRight, Loader2, MapIcon, LogIn } from 'lucide-react';
+import { BookOpen, User, MapPin, ChevronRight, Loader2, MapIcon, LogIn, Lock } from 'lucide-react';
 import { searchKakaoLocation } from '../utils';
 
-export default function RegistrationModal({ regForm, setRegForm, onRegister, onLogin, onTestLogin, onOAuthLogin }) {
-  const [mode, setMode] = useState('register'); // 'register' | 'login'
+export default function RegistrationModal({ regForm, setRegForm, onRegister, onLogin, onSetInitialPassword, onTestLogin, onOAuthLogin }) {
+  const [mode, setMode] = useState('register'); // 'register' | 'login' | 'set-password'
   const [loginName, setLoginName] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [registerError, setRegisterError] = useState('');
+  const [setupPassword, setSetupPassword] = useState('');
+  const [setupConfirm, setSetupConfirm] = useState('');
+  const [setupError, setSetupError] = useState('');
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
   const handleLogin = async () => {
-    if (!loginName.trim()) return;
+    if (!loginName.trim() || !loginPassword) return;
     setIsLoggingIn(true);
     setLoginError('');
     try {
-      await onLogin(loginName.trim(), (err) => setLoginError(err));
+      await onLogin(loginName.trim(), loginPassword, (err) => setLoginError(err), () => {
+        setSetupPassword('');
+        setSetupConfirm('');
+        setSetupError('');
+        setMode('set-password');
+      });
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleRegisterClick = () => {
+    if (!regForm.password || regForm.password.length < 4) {
+      return setRegisterError('비밀번호는 4자 이상 입력해주세요.');
+    }
+    if (regForm.password !== confirmPassword) {
+      return setRegisterError('비밀번호가 일치하지 않습니다.');
+    }
+    setRegisterError('');
+    onRegister((err) => setRegisterError(err));
+  };
+
+  const handleSetPassword = async () => {
+    if (!setupPassword || setupPassword.length < 4) {
+      return setSetupError('비밀번호는 4자 이상 입력해주세요.');
+    }
+    if (setupPassword !== setupConfirm) {
+      return setSetupError('비밀번호가 일치하지 않습니다.');
+    }
+    setIsSettingPassword(true);
+    setSetupError('');
+    try {
+      await onSetInitialPassword(loginName.trim(), setupPassword, (err) => setSetupError(err));
+    } finally {
+      setIsSettingPassword(false);
     }
   };
 
@@ -51,23 +90,25 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
           </div>
           <h2 className="font-black gradient-text" style={{ fontSize: '2rem', letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>bookStory</h2>
           <p style={{ color: '#9E8D7A', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.6 }}>
-            {mode === 'login' ? '기존 계정으로 로그인합니다.' : '당신만의 독서 여정을 시작하기 위해\n회원 정보를 입력해주세요.'}
+            {mode === 'set-password' ? '처음 접속하는 계정을 위한 비밀번호 설정입니다.' : mode === 'login' ? '기존 계정으로 로그인합니다.' : '당신만의 독서 여정을 시작하기 위해\n회원 정보를 입력해주세요.'}
           </p>
         </div>
 
         {/* 탭 전환 */}
-        <div style={{ display: 'flex', background: 'rgba(139,107,66,0.07)', borderRadius: '0.875rem', padding: '0.25rem', marginBottom: '0.5rem' }}>
-          {['register', 'login'].map((m) => (
-            <button key={m} onClick={() => { setMode(m); setLoginError(''); }}
-              style={{ flex: 1, padding: '0.5rem', borderRadius: '0.625rem', border: 'none', fontSize: '0.8125rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.18s',
-                background: mode === m ? 'white' : 'transparent',
-                color: mode === m ? '#8C6B42' : '#9E8D7A',
-                boxShadow: mode === m ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
-              }}>
-              {m === 'register' ? '새 계정 만들기' : '기존 계정 로그인'}
-            </button>
-          ))}
-        </div>
+        {mode !== 'set-password' && (
+          <div style={{ display: 'flex', background: 'rgba(139,107,66,0.07)', borderRadius: '0.875rem', padding: '0.25rem', marginBottom: '0.5rem' }}>
+            {['register', 'login'].map((m) => (
+              <button key={m} onClick={() => { setMode(m); setLoginError(''); }}
+                style={{ flex: 1, padding: '0.5rem', borderRadius: '0.625rem', border: 'none', fontSize: '0.8125rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.18s',
+                  background: mode === m ? 'white' : 'transparent',
+                  color: mode === m ? '#8C6B42' : '#9E8D7A',
+                  boxShadow: mode === m ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
+                }}>
+                {m === 'register' ? '새 계정 만들기' : '기존 계정 로그인'}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 로그인 모드 */}
         {mode === 'login' && (
@@ -85,12 +126,70 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
                   autoFocus
                 />
               </div>
+            </div>
+            <div>
+              <label className="form-label">비밀번호</label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+                <input type="password" placeholder="비밀번호를 입력하세요"
+                  value={loginPassword}
+                  onChange={(e) => { setLoginPassword(e.target.value); setLoginError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  className="form-input"
+                  style={{ paddingLeft: '2.75rem', color: '#1C140E' }}
+                />
+              </div>
               {loginError && <p style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, marginTop: '0.375rem' }}>{loginError}</p>}
             </div>
-            <button onClick={handleLogin} disabled={!loginName.trim() || isLoggingIn} className="premium-button disabled:opacity-50"
+            <button onClick={handleLogin} disabled={!loginName.trim() || !loginPassword || isLoggingIn} className="premium-button disabled:opacity-50"
               style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem' }}>
               {isLoggingIn ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
               로그인
+            </button>
+          </div>
+        )}
+
+        {/* 비밀번호 미설정 레거시 계정용 — 최초 비밀번호 설정 */}
+        {mode === 'set-password' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <p style={{ fontSize: '0.8125rem', color: '#9E8D7A', fontWeight: 600, lineHeight: 1.5 }}>
+              <strong style={{ color: '#8C6B42' }}>{loginName}</strong>님은 비밀번호 도입 이전에 만들어진 계정이에요.
+              앞으로 사용할 비밀번호를 새로 설정해주세요.
+            </p>
+            <div>
+              <label className="form-label">새 비밀번호</label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+                <input type="password" placeholder="4자 이상 입력하세요"
+                  value={setupPassword}
+                  onChange={(e) => { setSetupPassword(e.target.value); setSetupError(''); }}
+                  className="form-input"
+                  style={{ paddingLeft: '2.75rem', color: '#1C140E' }}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div>
+              <label className="form-label">새 비밀번호 확인</label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+                <input type="password" placeholder="다시 한 번 입력하세요"
+                  value={setupConfirm}
+                  onChange={(e) => { setSetupConfirm(e.target.value); setSetupError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
+                  className="form-input"
+                  style={{ paddingLeft: '2.75rem', color: '#1C140E' }}
+                />
+              </div>
+              {setupError && <p style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, marginTop: '0.375rem' }}>{setupError}</p>}
+            </div>
+            <button onClick={handleSetPassword} disabled={!setupPassword || !setupConfirm || isSettingPassword} className="premium-button disabled:opacity-50"
+              style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem' }}>
+              {isSettingPassword ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
+              비밀번호 설정하고 로그인
+            </button>
+            <button onClick={() => setMode('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A', fontSize: '0.8125rem', fontWeight: 700 }}>
+              ← 로그인으로 돌아가기
             </button>
           </div>
         )}
@@ -103,6 +202,24 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
               <User style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
               <input type="text" placeholder="어떻게 불러드릴까요?" value={regForm.name} onChange={(e) => setRegForm({ ...regForm, name: e.target.value })} className="form-input" style={{ paddingLeft: '2.75rem', color: '#1C140E' }} />
             </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+            <div>
+              <label className="form-label">비밀번호</label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+                <input type="password" placeholder="4자 이상" value={regForm.password || ''} onChange={(e) => { setRegForm({ ...regForm, password: e.target.value }); setRegisterError(''); }} className="form-input" style={{ paddingLeft: '2.75rem', color: '#1C140E' }} />
+              </div>
+            </div>
+            <div>
+              <label className="form-label">비밀번호 확인</label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+                <input type="password" placeholder="다시 입력" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setRegisterError(''); }} className="form-input" style={{ paddingLeft: '2.75rem', color: '#1C140E' }} />
+              </div>
+            </div>
+            {registerError && <p style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#dc2626', fontWeight: 700 }}>{registerError}</p>}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
@@ -145,7 +262,7 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             )}
           </div>
 
-          <button onClick={onRegister} className="premium-button" style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginTop: '0.5rem' }}>
+          <button onClick={handleRegisterClick} className="premium-button" style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem', marginTop: '0.5rem' }}>
             <span>bookStory 시작하기</span>
             <ChevronRight size={18} />
           </button>

@@ -1,9 +1,9 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import db
-from auth import create_token, get_current_user_id
+from auth import create_token, get_current_user_id, hash_password, verify_password
 
 router = APIRouter(prefix="/api/users")
 
@@ -20,6 +20,7 @@ ALLOWED_AUDIO_TYPES = {
 
 class UserIn(BaseModel):
     name: str
+    password: str = Field(min_length=4)
     gender: str = "기타"
     age: int = 20
     location: str = ""
@@ -29,6 +30,18 @@ class UserIn(BaseModel):
 
 class LoginIn(BaseModel):
     name: str
+    password: str
+
+
+class SetInitialPasswordIn(BaseModel):
+    name: str
+    password: str = Field(min_length=4)
+
+
+def _public_user(row) -> dict:
+    d = dict(row)
+    d.pop("password_hash", None)
+    return d
 
 
 class UserUpdate(BaseModel):
@@ -44,24 +57,56 @@ class UserUpdate(BaseModel):
 
 @router.post("")
 async def register_user(body: UserIn, conn=Depends(db.get_db)):
+    existing = await conn.fetchval("SELECT 1 FROM users WHERE name = $1", body.name)
+    if existing:
+        raise HTTPException(409, "이미 사용 중인 이름입니다.")
     row = await conn.fetchrow(
-        "INSERT INTO users (name, gender, age, location, lat, lng) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *",
-        body.name, body.gender, body.age, body.location, body.lat, body.lng,
+        """INSERT INTO users (name, password_hash, gender, age, location, lat, lng)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *""",
+        body.name, hash_password(body.password), body.gender, body.age, body.location, body.lat, body.lng,
     )
-    user = dict(row)
+    user = _public_user(row)
     token = create_token(user["id"])
     return {"user": user, "token": token}
 
 
 @router.post("/login")
 async def login_user(body: LoginIn, conn=Depends(db.get_db)):
+    rows = await conn.fetch(
+        "SELECT * FROM users WHERE name = $1 ORDER BY created_at DESC", body.name,
+    )
+    if not rows:
+        raise HTTPException(404, "해당 이름의 사용자를 찾을 수 없습니다.")
+
+    needs_setup = False
+    for row in rows:
+        if row["password_hash"]:
+            if verify_password(body.password, row["password_hash"]):
+                user = _public_user(row)
+                token = create_token(user["id"])
+                return {"user": user, "token": token}
+        else:
+            needs_setup = True
+
+    if needs_setup:
+        raise HTTPException(409, "비밀번호가 설정되지 않은 계정입니다. 비밀번호를 설정해주세요.")
+    raise HTTPException(401, "이름 또는 비밀번호가 일치하지 않습니다.")
+
+
+@router.post("/set-initial-password")
+async def set_initial_password(body: SetInitialPasswordIn, conn=Depends(db.get_db)):
+    """비밀번호 도입 이전에 만들어진 계정(password_hash 없음)에 처음으로 비밀번호를 설정한다."""
     row = await conn.fetchrow(
-        "SELECT * FROM users WHERE name = $1 ORDER BY created_at DESC LIMIT 1",
+        "SELECT * FROM users WHERE name = $1 AND password_hash IS NULL ORDER BY created_at DESC LIMIT 1",
         body.name,
     )
     if not row:
-        raise HTTPException(404, "해당 이름의 사용자를 찾을 수 없습니다.")
-    user = dict(row)
+        raise HTTPException(404, "비밀번호 설정이 필요한 계정을 찾을 수 없습니다.")
+    updated = await conn.fetchrow(
+        "UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING *",
+        hash_password(body.password), row["id"],
+    )
+    user = _public_user(updated)
     token = create_token(user["id"])
     return {"user": user, "token": token}
 
@@ -89,7 +134,7 @@ async def get_user(user_id: int, conn=Depends(db.get_db)):
     row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", user_id)
     if not row:
         raise HTTPException(404, "사용자를 찾을 수 없습니다.")
-    return dict(row)
+    return _public_user(row)
 
 
 @router.patch("/{user_id}")
@@ -105,7 +150,7 @@ async def update_user(
     fields = {k: v for k, v in body.model_dump().items() if v is not None}
     if not fields:
         row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", user_id)
-        return dict(row)
+        return _public_user(row)
 
     set_clause = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields))
     values = list(fields.values())
@@ -115,7 +160,7 @@ async def update_user(
     )
     if not row:
         raise HTTPException(404, "사용자를 찾을 수 없습니다.")
-    return dict(row)
+    return _public_user(row)
 
 
 ALBUM_LIMIT = 5
