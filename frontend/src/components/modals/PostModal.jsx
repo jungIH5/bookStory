@@ -93,7 +93,7 @@ export default function PostModal({
                           <Trash2 size={10} /> 삭제
                         </button>
                       )}
-                    </div>}
+                    </div>
                   </div>
                 </div>
 
