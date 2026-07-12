@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, User, MapPin, Eye, EyeOff, Loader2, MessageSquareDashed, MessageSquare } from 'lucide-react';
+import { X, User, MapPin, Eye, EyeOff, Loader2, MessageSquareDashed, MessageSquare, Camera, Trash2 } from 'lucide-react';
 import { searchKakaoLocation } from '../../utils';
+
+const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = e => resolve(e.target.result);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
 
 export default function ProfileModal({ user, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -11,10 +20,29 @@ export default function ProfileModal({ user, onClose, onSave }) {
     lng: user?.lng || null,
     stats_public: user?.stats_public !== false,
     allow_whisper: user?.allow_whisper !== false,
+    profile_image: user?.profile_image || '',
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+
+  const handleImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+      setImageError('이미지 크기가 너무 큽니다. (최대 5MB)');
+      return;
+    }
+    setImageError('');
+    setIsUploadingImage(true);
+    try {
+      const dataUrl = await readFileAsDataURL(file);
+      setForm(f => ({ ...f, profile_image: dataUrl }));
+    } finally { setIsUploadingImage(false); }
+  };
 
   const handleLocationChange = (value) => {
     setForm(f => ({ ...f, location: value, lat: null, lng: null }));
@@ -37,6 +65,7 @@ export default function ProfileModal({ user, onClose, onSave }) {
       lng: form.lng,
       stats_public: form.stats_public,
       allow_whisper: form.allow_whisper,
+      profile_image: form.profile_image,
     });
     setIsSaving(false);
   };
@@ -62,6 +91,32 @@ export default function ProfileModal({ user, onClose, onSave }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            <label
+              htmlFor="profile-image-input"
+              style={{ position: 'relative', width: '5.5rem', height: '5.5rem', borderRadius: '9999px', cursor: isUploadingImage ? 'default' : 'pointer', display: 'block' }}
+            >
+              {form.profile_image
+                ? <img src={form.profile_image} alt="" style={{ width: '100%', height: '100%', borderRadius: '9999px', objectFit: 'cover' }} />
+                : <div style={{ width: '100%', height: '100%', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '1.75rem' }}>
+                    {(form.name || '?')[0]}
+                  </div>}
+              <div style={{ position: 'absolute', bottom: 0, right: 0, width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: '#8C6B42', border: '2px solid #FEFCF9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isUploadingImage ? <Loader2 size={12} className="animate-spin" color="white" /> : <Camera size={12} color="white" />}
+              </div>
+              <input id="profile-image-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageSelect} disabled={isUploadingImage} />
+            </label>
+            {form.profile_image && (
+              <button
+                onClick={() => setForm(f => ({ ...f, profile_image: '' }))}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A', fontSize: '11px', fontWeight: 700 }}
+              >
+                <Trash2 size={11} /> 사진 제거
+              </button>
+            )}
+            {imageError && <p style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>{imageError}</p>}
+          </div>
+
           <div>
             <label className="form-label">이름</label>
             <input

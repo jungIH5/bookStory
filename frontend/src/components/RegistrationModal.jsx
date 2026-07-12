@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { BookOpen, User, MapPin, ChevronRight, Loader2, MapIcon, LogIn, Lock } from 'lucide-react';
 import { searchKakaoLocation } from '../utils';
 
-export default function RegistrationModal({ regForm, setRegForm, onRegister, onLogin, onSetInitialPassword, onTestLogin, onOAuthLogin }) {
-  const [mode, setMode] = useState('register'); // 'register' | 'login' | 'set-password'
+export default function RegistrationModal({ regForm, setRegForm, onRegister, onLogin, onSetInitialPassword, onAdminLogin, onOAuthLogin }) {
+  const [mode, setMode] = useState('login'); // 'register' | 'login' | 'set-password' | 'admin'
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -15,6 +15,9 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
   const [setupConfirm, setSetupConfirm] = useState('');
   const [setupError, setSetupError] = useState('');
   const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
+  const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
 
@@ -61,6 +64,17 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
     }
   };
 
+  const handleAdminLogin = async () => {
+    if (!adminPassword) return;
+    setIsAdminLoggingIn(true);
+    setAdminError('');
+    try {
+      await onAdminLogin(adminPassword, (err) => setAdminError(err));
+    } finally {
+      setIsAdminLoggingIn(false);
+    }
+  };
+
   const handleLocationChange = (value) => {
     setRegForm({ ...regForm, location: value, lat: null, lng: null });
     searchKakaoLocation(value, setLocationSuggestions, setIsSearchingLocation);
@@ -73,8 +87,8 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F7F4EF', padding: '1.5rem' }}>
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F7F4EF', padding: '1.5rem', overflowY: 'auto' }}>
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
         <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: '55%', height: '55%', background: 'rgba(140,107,66,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
         <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '55%', height: '55%', background: 'rgba(196,148,86,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
       </div>
@@ -82,7 +96,7 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
       <motion.div
         initial={{ scale: 0.93, y: 24 }}
         animate={{ scale: 1, y: 0 }}
-        style={{ width: '100%', maxWidth: '420px', background: '#FEFCF9', backdropFilter: 'blur(24px)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '1.75rem', padding: '2.5rem', position: 'relative', zIndex: 10, boxShadow: '0 40px 80px rgba(0,0,0,0.6)' }}
+        style={{ width: '100%', maxWidth: '420px', background: '#FEFCF9', backdropFilter: 'blur(24px)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '1.75rem', padding: '2.5rem', position: 'relative', zIndex: 10, boxShadow: '0 40px 80px rgba(0,0,0,0.6)', margin: 'auto' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ width: '4.5rem', height: '4.5rem', background: 'linear-gradient(135deg, #8C6B42, #C49456)', borderRadius: '1.25rem', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(140,107,66,0.4)', transform: 'rotate(3deg)' }}>
@@ -90,25 +104,12 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
           </div>
           <h2 className="font-black gradient-text" style={{ fontSize: '2rem', letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>bookStory</h2>
           <p style={{ color: '#9E8D7A', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.6 }}>
-            {mode === 'set-password' ? '처음 접속하는 계정을 위한 비밀번호 설정입니다.' : mode === 'login' ? '기존 계정으로 로그인합니다.' : '당신만의 독서 여정을 시작하기 위해\n회원 정보를 입력해주세요.'}
+            {mode === 'set-password' ? '처음 접속하는 계정을 위한 비밀번호 설정입니다.'
+              : mode === 'admin' ? '관리자 비밀번호를 입력해주세요.'
+              : mode === 'login' ? '기존 계정으로 로그인합니다.'
+              : '당신만의 독서 여정을 시작하기 위해\n회원 정보를 입력해주세요.'}
           </p>
         </div>
-
-        {/* 탭 전환 */}
-        {mode !== 'set-password' && (
-          <div style={{ display: 'flex', background: 'rgba(139,107,66,0.07)', borderRadius: '0.875rem', padding: '0.25rem', marginBottom: '0.5rem' }}>
-            {['register', 'login'].map((m) => (
-              <button key={m} onClick={() => { setMode(m); setLoginError(''); }}
-                style={{ flex: 1, padding: '0.5rem', borderRadius: '0.625rem', border: 'none', fontSize: '0.8125rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.18s',
-                  background: mode === m ? 'white' : 'transparent',
-                  color: mode === m ? '#8C6B42' : '#9E8D7A',
-                  boxShadow: mode === m ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
-                }}>
-                {m === 'register' ? '새 계정 만들기' : '기존 계정 로그인'}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* 로그인 모드 */}
         {mode === 'login' && (
@@ -146,6 +147,12 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
               {isLoggingIn ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
               로그인
             </button>
+            <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#9E8D7A', fontWeight: 600 }}>
+              아직 계정이 없으신가요?{' '}
+              <button onClick={() => { setMode('register'); setLoginError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8C6B42', fontWeight: 800, padding: 0 }}>
+                회원가입
+              </button>
+            </p>
           </div>
         )}
 
@@ -189,6 +196,35 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
               비밀번호 설정하고 로그인
             </button>
             <button onClick={() => setMode('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A', fontSize: '0.8125rem', fontWeight: 700 }}>
+              ← 로그인으로 돌아가기
+            </button>
+          </div>
+        )}
+
+        {/* 관리자 진입 */}
+        {mode === 'admin' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label className="form-label">관리자 비밀번호</label>
+              <div style={{ position: 'relative' }}>
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={16} />
+                <input type="password" placeholder="비밀번호를 입력하세요"
+                  value={adminPassword}
+                  onChange={(e) => { setAdminPassword(e.target.value); setAdminError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+                  className="form-input"
+                  style={{ paddingLeft: '2.75rem', color: '#1C140E' }}
+                  autoFocus
+                />
+              </div>
+              {adminError && <p style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, marginTop: '0.375rem' }}>{adminError}</p>}
+            </div>
+            <button onClick={handleAdminLogin} disabled={!adminPassword || isAdminLoggingIn} className="premium-button disabled:opacity-50"
+              style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem' }}>
+              {isAdminLoggingIn ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
+              관리자로 진입
+            </button>
+            <button onClick={() => { setMode('login'); setAdminPassword(''); setAdminError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A', fontSize: '0.8125rem', fontWeight: 700 }}>
               ← 로그인으로 돌아가기
             </button>
           </div>
@@ -303,18 +339,27 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
               구글
             </button>
           </div>
+
+          <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#9E8D7A', fontWeight: 600 }}>
+            이미 계정이 있으신가요?{' '}
+            <button onClick={() => { setMode('login'); setRegisterError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8C6B42', fontWeight: 800, padding: 0 }}>
+              로그인
+            </button>
+          </p>
         </div>}  {/* end register mode */}
 
-        <div style={{ textAlign: 'right', marginTop: '1rem' }}>
-          <button
-            onClick={onTestLogin}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#BDB0A0', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0', transition: 'color 0.2s ease' }}
-            onMouseEnter={(e) => e.target.style.color = '#8C6B42'}
-            onMouseLeave={(e) => e.target.style.color = '#BDB0A0'}
-          >
-            테스트 유저로 진입 →
-          </button>
-        </div>
+        {(mode === 'login' || mode === 'register') && (
+          <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+            <button
+              onClick={() => { setMode('admin'); setAdminPassword(''); setAdminError(''); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#BDB0A0', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0', transition: 'color 0.2s ease' }}
+              onMouseEnter={(e) => e.target.style.color = '#8C6B42'}
+              onMouseLeave={(e) => e.target.style.color = '#BDB0A0'}
+            >
+              관리자 유저로 진입 →
+            </button>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

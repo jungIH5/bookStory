@@ -12,7 +12,8 @@ async def get_friends(conn=Depends(get_db), user_id: int = Depends(get_current_u
         SELECT
             f.id, f.status, f.created_at,
             CASE WHEN f.requester_id = $1 THEN f.addressee_id ELSE f.requester_id END AS friend_id,
-            u.name AS friend_name
+            u.name AS friend_name,
+            u.profile_image AS friend_image
         FROM friendships f
         JOIN users u ON u.id = CASE WHEN f.requester_id = $1 THEN f.addressee_id ELSE f.requester_id END
         WHERE (f.requester_id = $1 OR f.addressee_id = $1) AND f.status = 'accepted'
@@ -24,7 +25,7 @@ async def get_friends(conn=Depends(get_db), user_id: int = Depends(get_current_u
 @router.get("/requests")
 async def get_pending_requests(conn=Depends(get_db), user_id: int = Depends(get_current_user_id)):
     rows = await conn.fetch("""
-        SELECT f.id, f.requester_id, f.created_at, u.name AS requester_name
+        SELECT f.id, f.requester_id, f.created_at, u.name AS requester_name, u.profile_image AS requester_image
         FROM friendships f
         JOIN users u ON u.id = f.requester_id
         WHERE f.addressee_id = $1 AND f.status = 'pending'

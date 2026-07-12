@@ -112,8 +112,8 @@ export default function CommunityTab({ user, communityPosts, hasMore, isFetching
                     onClick={e => { e.stopPropagation(); if (post.user_id && onOpenUserLibrary) onOpenUserLibrary(post.user_id, post.author); }}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0, cursor: post.user_id ? 'pointer' : 'default' }}
                   >
-                    <div style={{ width: '1.5rem', height: '1.5rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px' }}>
-                      {(post.author || '?')[0]}
+                    <div style={{ width: '1.5rem', height: '1.5rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', overflow: 'hidden' }}>
+                      {post.author_image ? <img src={post.author_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (post.author || '?')[0]}
                     </div>
                     <span style={{ fontSize: '0.75rem', color: '#7B6B55', fontWeight: 700, textDecoration: post.user_id ? 'underline' : 'none', textUnderlineOffset: '2px', textDecorationColor: 'rgba(139,107,66,0.3)' }}>
                       {post.author || '익명'}

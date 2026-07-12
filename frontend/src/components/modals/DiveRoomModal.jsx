@@ -626,8 +626,8 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                       </div>
                     : messages.map(m => (
                       <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', opacity: m.to_user_id ? 0.85 : 1 }}>
-                        <div style={{ width: '20px', height: '20px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#C49456,#F59E0B)' : 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0 }}>
-                          {m.is_ai ? 'AI' : (m.user_name || '?')[0]}
+                        <div style={{ width: '20px', height: '20px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#C49456,#F59E0B)' : 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                          {m.is_ai ? 'AI' : m.user_image ? <img src={m.user_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (m.user_name || '?')[0]}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#C49456' : '#8C6B42', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>
@@ -699,8 +699,8 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                       style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: whisperTarget?.id === p.user_id ? 'rgba(196,148,86,0.18)' : 'rgba(140,107,66,0.05)', border: `1px solid ${whisperTarget?.id === p.user_id ? 'rgba(196,148,86,0.4)' : 'rgba(140,107,66,0.1)'}`, borderRadius: '0.625rem', cursor: isSelf ? 'default' : 'pointer' }}
                       title={isSelf ? '' : `${p.name}님에게 귓속말`}
                     >
-                      <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0 }}>
-                        {(p.name || '?')[0]}
+                      <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                        {p.profile_image ? <img src={p.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || '?')[0]}
                       </div>
                       <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                       {room.host_id === p.user_id && <span style={{ fontSize: '10px' }}>👑</span>}

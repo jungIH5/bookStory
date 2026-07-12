@@ -8,6 +8,7 @@ import { hexColors } from '../../constants';
 export default function UserLibraryModal({ userId, userName, currentUserId, token, friendRequests = [], onAcceptFriend, onRejectFriend, onClose, onEditProfile }) {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [profileImage, setProfileImage] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [stats, setStats] = useState(null);
   const [friendStatus, setFriendStatus] = useState(null);
@@ -74,14 +75,16 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
     (async () => {
       setLoading(true);
       try {
-        const [booksRes, statsRes] = await Promise.all([
+        const [booksRes, statsRes, userRes] = await Promise.all([
           fetch(`${API_URL}/api/books/read?user_id=${userId}`),
           fetch(`${API_URL}/api/reading/stats/${userId}`),
+          fetch(`${API_URL}/api/users/${userId}`),
         ]);
         const booksData = await booksRes.json();
         const statsData = await statsRes.json();
         setBooks(Array.isArray(booksData) ? booksData : []);
         setStats(statsData);
+        if (userRes.ok) { const userData = await userRes.json(); setProfileImage(userData.profile_image || ''); }
       } catch {} finally { setLoading(false); }
     })();
     fetchFriendStatus();
@@ -153,10 +156,12 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
   const handleToggleRoom = async (roomId) => {
     if (expandedRoom === roomId) { setExpandedRoom(null); return; }
     setExpandedRoom(roomId);
-    if (!roomMessages[roomId]) {
+    if (!roomMessages[roomId] && token) {
       setLoadingMsgs(roomId);
       try {
-        const res = await fetch(`${API_URL}/api/dive/rooms/${roomId}/messages`);
+        const res = await fetch(`${API_URL}/api/dive/rooms/${roomId}/messages`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) { const msgs = await res.json(); setRoomMessages(prev => ({ ...prev, [roomId]: msgs })); }
       } catch {} finally { setLoadingMsgs(null); }
     }
@@ -208,8 +213,8 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
         <div style={{ padding: '1.5rem 1.75rem 1.25rem', borderBottom: '1px solid rgba(139,107,66,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>
-                {(userName || '?')[0]}
+              <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '15px', flexShrink: 0, overflow: 'hidden' }}>
+                {profileImage ? <img src={profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (userName || '?')[0]}
               </div>
               <div>
                 <p style={{ fontWeight: 900, fontSize: '1.0625rem', color: '#1C140E' }}>{isMe ? '내 서재' : `${userName}님의 서재`}</p>
@@ -274,8 +279,8 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
             {friendRequests.map(req => (
               <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.875rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.12)', borderRadius: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900 }}>
-                    {(req.requester_name || '?')[0]}
+                  <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900, overflow: 'hidden' }}>
+                    {req.requester_image ? <img src={req.requester_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (req.requester_name || '?')[0]}
                   </div>
                   <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1C140E' }}>{req.requester_name}</span>
                 </div>
@@ -438,8 +443,8 @@ function FollowSection({ title, accentColor, users, emptyText, children }) {
         : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
             {users.map(u => (
               <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.75rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.1)', borderRadius: '0.75rem' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900, flexShrink: 0 }}>
-                  {(u.name || '?')[0]}
+                <div style={{ width: '28px', height: '28px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                  {u.profile_image ? <img src={u.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.name || '?')[0]}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
@@ -501,8 +506,8 @@ function RoomSection({ title, accentColor, rooms, expandedRoom, roomMessages, lo
                       : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
                           {msgs.map(m => (
                             <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                              <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#C49456,#F59E0B)' : 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0 }}>
-                                {m.is_ai ? 'AI' : (m.user_name || '?')[0]}
+                              <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#C49456,#F59E0B)' : 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                                {m.is_ai ? 'AI' : m.user_image ? <img src={m.user_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (m.user_name || '?')[0]}
                               </div>
                               <div>
                                 <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#C49456' : '#8C6B42', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>

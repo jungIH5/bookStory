@@ -27,12 +27,13 @@ class DiveRoomIn(BaseModel):
 async def get_rooms(conn=Depends(get_db)):
     rows = await conn.fetch("""
         SELECT r.*, COALESCE(u.name, r.host_name) AS host_name,
+               u.profile_image AS host_image,
                COUNT(p.id)::int AS participant_count
         FROM dive_rooms r
         LEFT JOIN users u ON u.id = r.host_id
         LEFT JOIN dive_participants p ON p.room_id = r.id
         WHERE r.status != 'ended'
-        GROUP BY r.id, u.name
+        GROUP BY r.id, u.name, u.profile_image
         ORDER BY r.scheduled_at ASC
     """)
     return [dict(r) for r in rows]
@@ -155,17 +156,18 @@ async def toggle_chat(
 async def get_room(room_id: int, conn=Depends(get_db)):
     row = await conn.fetchrow("""
         SELECT r.*, COALESCE(u.name, r.host_name) AS host_name,
+               u.profile_image AS host_image,
                COUNT(p.id)::int AS participant_count
         FROM dive_rooms r
         LEFT JOIN users u ON u.id = r.host_id
         LEFT JOIN dive_participants p ON p.room_id = r.id
         WHERE r.id = $1
-        GROUP BY r.id, u.name
+        GROUP BY r.id, u.name, u.profile_image
     """, room_id)
     if not row:
         raise HTTPException(404, "방을 찾을 수 없습니다.")
     participants = await conn.fetch("""
-        SELECT p.id, p.user_id, p.status, u.name
+        SELECT p.id, p.user_id, p.status, u.name, u.profile_image
         FROM dive_participants p
         JOIN users u ON u.id = p.user_id
         WHERE p.room_id = $1
@@ -238,6 +240,7 @@ async def get_messages(
     rows = await conn.fetch("""
         SELECT dm.id, dm.room_id, dm.user_id, dm.to_user_id, dm.content, dm.is_ai, dm.created_at,
                COALESCE(u.name, dm.user_name) AS user_name,
+               u.profile_image AS user_image,
                tu.name AS to_user_name
         FROM dive_messages dm
         LEFT JOIN users u ON u.id = dm.user_id
@@ -285,12 +288,14 @@ async def send_message(
         if allow_whisper is False:
             raise HTTPException(403, "상대방이 귓속말을 거부했습니다.")
 
-    user = await conn.fetchrow("SELECT name FROM users WHERE id=$1", user_id)
+    user = await conn.fetchrow("SELECT name, profile_image FROM users WHERE id=$1", user_id)
     row = await conn.fetchrow("""
         INSERT INTO dive_messages (room_id, user_id, user_name, content, is_ai, to_user_id)
         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *
     """, room_id, user_id, user['name'] if user else '', body.content, body.is_ai, body.to_user_id)
-    return dict(row)
+    result = dict(row)
+    result["user_image"] = user["profile_image"] if user else None
+    return result
 
 
 @router.patch("/rooms/{room_id}/status")

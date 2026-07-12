@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, Timer, UserPlus, Waves } from 'lucide-react';
+import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, Timer, UserPlus, Waves, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
@@ -11,6 +11,7 @@ import CommunityTab from './components/tabs/CommunityTab';
 import DiveTab from './components/tabs/DiveTab';
 import RecordingTab from './components/tabs/RecordingTab';
 import TimerTab from './components/tabs/TimerTab';
+import AdminTab from './components/tabs/AdminTab';
 
 import RegistrationModal from './components/RegistrationModal';
 import BookModal from './components/modals/BookModal';
@@ -390,58 +391,24 @@ function App() {
     }
   };
 
-  const TEST_USER_PASSWORD = 'bookstory-test-1234';
-
-  const handleTestLogin = async () => {
-    const cached = localStorage.getItem('bookstory_test_user');
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      const stored = (parsed?.user && parsed?.token && !parsed?.id)
-        ? { ...parsed.user, token: parsed.token } : parsed;
-      setUser(stored);
-      localStorage.setItem('bookstory_user', JSON.stringify(stored));
-      window.location.reload();
-      return;
-    }
-    const finish = (data) => {
-      const stored = { ...data.user, token: data.token };
-      setUser(stored);
-      localStorage.setItem('bookstory_user', JSON.stringify(stored));
-      localStorage.setItem('bookstory_test_user', JSON.stringify(stored));
-      window.location.reload();
-    };
+  const handleAdminLogin = async (password, onError) => {
     try {
-      // 1) 기존 테스트유저로 로그인 시도
-      const loginRes = await fetch(`${API_URL}/api/users/login`, {
+      const response = await fetch(`${API_URL}/api/users/admin-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: '테스트유저', password: TEST_USER_PASSWORD }),
+        body: JSON.stringify({ password }),
       });
-      if (loginRes.ok) return finish(await loginRes.json());
-
-      // 2) 비밀번호 도입 이전에 만들어진 레거시 테스트유저 → 비밀번호 최초 설정
-      if (loginRes.status === 409) {
-        const setupRes = await fetch(`${API_URL}/api/users/set-initial-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: '테스트유저', password: TEST_USER_PASSWORD }),
-        });
-        if (setupRes.ok) return finish(await setupRes.json());
+      const data = await response.json();
+      if (response.ok) {
+        const stored = { ...data.user, token: data.token };
+        setUser(stored);
+        localStorage.setItem('bookstory_user', JSON.stringify(stored));
+        window.location.reload();
+      } else {
+        onError?.(typeof data.detail === 'string' ? data.detail : '관리자 로그인에 실패했습니다.');
       }
-    } catch {}
-
-    // 3) 테스트유저 자체가 없으면 새로 생성
-    const testData = { name: '테스트유저', password: TEST_USER_PASSWORD, gender: '기타', age: 20, location: '서울 강남구', lat: 37.4979, lng: 127.0276 };
-    try {
-      const response = await fetch(`${API_URL}/api/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testData)
-      });
-      if (response.ok) return finish(await response.json());
-      alert('테스트 유저 생성에 실패했습니다.');
-    } catch (error) {
-      alert('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
+    } catch {
+      onError?.('서버에 연결할 수 없습니다.');
     }
   };
 
@@ -989,6 +956,7 @@ function App() {
     { id: 'community', label: '독서모임', icon: <Waves size={15} /> },
     { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
     { id: 'timer', label: '독서 타이머', icon: <Timer size={15} />, dot: !!timerBook },
+    ...(user?.is_admin ? [{ id: 'admin', label: '관리자', icon: <ShieldCheck size={15} /> }] : []),
   ];
 
   return (
@@ -1029,8 +997,8 @@ function App() {
                 style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', cursor: 'pointer', transition: 'background 0.2s' }}
                 title="내 서재 보기"
               >
-                <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
-                  {user.name[0]}
+                <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0, overflow: 'hidden' }}>
+                  {user.profile_image ? <img src={user.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user.name[0]}
                 </div>
                 <div className="sm:block hidden">
                   <p style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
@@ -1180,6 +1148,9 @@ function App() {
               onStop={handleStopTimer}
             />
           )}
+          {activeTab === 'admin' && user?.is_admin && (
+            <AdminTab user={user} />
+          )}
         </main>
       </div>
 
@@ -1206,7 +1177,7 @@ function App() {
             onRegister={handleRegisterUser}
             onLogin={handleLoginUser}
             onSetInitialPassword={handleSetInitialPassword}
-            onTestLogin={handleTestLogin}
+            onAdminLogin={handleAdminLogin}
             onOAuthLogin={handleOAuthLogin}
           />
         )}

@@ -34,8 +34,8 @@ export default function PostModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#9E8D7A' }}>
               <div
                 onClick={() => post.user_id && onOpenUserLibrary && onOpenUserLibrary(post.user_id, post.author)}
-                style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', cursor: post.user_id ? 'pointer' : 'default' }}
-              >{(post.author || '?')[0]}</div>
+                style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', cursor: post.user_id ? 'pointer' : 'default', overflow: 'hidden' }}
+              >{post.author_image ? <img src={post.author_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (post.author || '?')[0]}</div>
               <span
                 onClick={() => post.user_id && onOpenUserLibrary && onOpenUserLibrary(post.user_id, post.author)}
                 style={{ fontWeight: 700, color: '#7B6B55', cursor: post.user_id ? 'pointer' : 'default', textDecoration: post.user_id ? 'underline' : 'none', textUnderlineOffset: '2px', textDecorationColor: 'rgba(139,107,66,0.3)' }}
@@ -73,7 +73,7 @@ export default function PostModal({
             {comments.filter(c => !c.parent_comment_id).map(comment => (
               <div key={comment.id}>
                 <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
-                  <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', flexShrink: 0 }}>{(comment.author || '?')[0]}</div>
+                  <div style={{ width: '1.625rem', height: '1.625rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '9px', flexShrink: 0, overflow: 'hidden' }}>{comment.author_image ? <img src={comment.author_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (comment.author || '?')[0]}</div>
                   <div style={{ flex: 1, background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.625rem 0.875rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
                       <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3D2D1E' }}>{comment.author}</span>
@@ -101,7 +101,7 @@ export default function PostModal({
                   <div key={reply.id} style={{ marginTop: '0.5rem', marginLeft: '2.25rem' }}>
                     <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
                       <CornerDownRight size={12} style={{ color: '#BDB0A0', flexShrink: 0, marginTop: '6px' }} />
-                      <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(196,148,86,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8C6B42', fontWeight: 900, fontSize: '9px', flexShrink: 0 }}>{(reply.author || '?')[0]}</div>
+                      <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(196,148,86,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8C6B42', fontWeight: 900, fontSize: '9px', flexShrink: 0, overflow: 'hidden' }}>{reply.author_image ? <img src={reply.author_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (reply.author || '?')[0]}</div>
                       <div style={{ flex: 1, background: 'rgba(196,148,86,0.04)', border: '1px solid rgba(196,148,86,0.12)', borderRadius: '0 0.75rem 0.75rem 0.75rem', padding: '0.5rem 0.75rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                           <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3D2D1E' }}>{reply.author}</span>

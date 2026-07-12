@@ -53,6 +53,7 @@ class UserUpdate(BaseModel):
     lng: Optional[float] = None
     stats_public: Optional[bool] = None
     allow_whisper: Optional[bool] = None
+    profile_image: Optional[str] = None  # base64 데이터 URL, 빈 문자열이면 제거
 
 
 @router.post("")
@@ -111,6 +112,39 @@ async def set_initial_password(body: SetInitialPasswordIn, conn=Depends(db.get_d
     return {"user": user, "token": token}
 
 
+ADMIN_ACCOUNT_NAME = "테스트유저"
+ADMIN_ENTRY_PASSWORD = os.getenv("ADMIN_ENTRY_PASSWORD", "2345")
+
+
+class AdminLoginIn(BaseModel):
+    password: str
+
+
+@router.post("/admin-login")
+async def admin_login(body: AdminLoginIn, conn=Depends(db.get_db)):
+    """고정된 관리자 계정으로 진입. 일반 로그인/회원가입과는 별개의 우회 경로."""
+    if body.password != ADMIN_ENTRY_PASSWORD:
+        raise HTTPException(401, "비밀번호가 일치하지 않습니다.")
+
+    row = await conn.fetchrow(
+        "SELECT * FROM users WHERE name = $1 ORDER BY created_at DESC LIMIT 1", ADMIN_ACCOUNT_NAME,
+    )
+    if not row:
+        row = await conn.fetchrow(
+            """INSERT INTO users (name, is_admin, gender, age, location)
+               VALUES ($1, TRUE, '기타', 20, '서울') RETURNING *""",
+            ADMIN_ACCOUNT_NAME,
+        )
+    elif not row["is_admin"]:
+        row = await conn.fetchrow(
+            "UPDATE users SET is_admin = TRUE WHERE id = $1 RETURNING *", row["id"],
+        )
+
+    user = _public_user(row)
+    token = create_token(user["id"])
+    return {"user": user, "token": token}
+
+
 @router.get("/{user_id}/stats")
 async def get_user_stats(user_id: int, conn=Depends(db.get_db)):
     row = await conn.fetchrow("""
@@ -151,6 +185,9 @@ async def update_user(
     if not fields:
         row = await conn.fetchrow("SELECT * FROM users WHERE id = $1", user_id)
         return _public_user(row)
+
+    if fields.get("profile_image") and len(fields["profile_image"]) > MAX_IMAGE_SIZE:
+        raise HTTPException(400, "이미지 크기가 너무 큽니다. (최대 5MB)")
 
     set_clause = ", ".join(f"{k} = ${i+2}" for i, k in enumerate(fields))
     values = list(fields.values())
@@ -264,7 +301,7 @@ async def unfollow_user(
 @router.get("/{user_id}/following")
 async def get_following(user_id: int, conn=Depends(db.get_db)):
     rows = await conn.fetch("""
-        SELECT u.id, u.name, u.location
+        SELECT u.id, u.name, u.location, u.profile_image
         FROM user_follows uf
         JOIN users u ON u.id = uf.following_id
         WHERE uf.follower_id = $1
@@ -276,7 +313,7 @@ async def get_following(user_id: int, conn=Depends(db.get_db)):
 @router.get("/{user_id}/followers")
 async def get_followers(user_id: int, conn=Depends(db.get_db)):
     rows = await conn.fetch("""
-        SELECT u.id, u.name, u.location
+        SELECT u.id, u.name, u.location, u.profile_image
         FROM user_follows uf
         JOIN users u ON u.id = uf.follower_id
         WHERE uf.following_id = $1

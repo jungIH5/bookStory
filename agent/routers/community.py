@@ -20,6 +20,7 @@ async def get_posts(
         """
         SELECT p.*,
             COALESCE(u.name, '익명') AS author,
+            u.profile_image AS author_image,
             COUNT(DISTINCT pl.user_id)::int AS likes,
             COUNT(DISTINCT c.id)::int AS comments,
             EXISTS(SELECT 1 FROM post_likes WHERE user_id = $1 AND post_id = p.id) AS liked
@@ -27,7 +28,7 @@ async def get_posts(
         LEFT JOIN users u ON p.user_id = u.id
         LEFT JOIN post_likes pl ON pl.post_id = p.id
         LEFT JOIN comments c ON c.post_id = p.id
-        GROUP BY p.id, u.name
+        GROUP BY p.id, u.name, u.profile_image
         ORDER BY p.created_at DESC
         LIMIT $2 OFFSET $3
         """,
@@ -82,6 +83,7 @@ async def get_post(
     row = await conn.fetchrow(
         """
         SELECT p.*, COALESCE(u.name, '익명') AS author,
+            u.profile_image AS author_image,
             COUNT(DISTINCT pl.user_id)::int AS likes,
             COUNT(DISTINCT c.id)::int AS comments,
             EXISTS(SELECT 1 FROM post_likes WHERE user_id = $1 AND post_id = p.id) AS liked
@@ -90,7 +92,7 @@ async def get_post(
         LEFT JOIN post_likes pl ON pl.post_id = p.id
         LEFT JOIN comments c ON c.post_id = p.id
         WHERE p.id = $2
-        GROUP BY p.id, u.name
+        GROUP BY p.id, u.name, u.profile_image
         """,
         uid or 0, post_id,
     )
@@ -104,7 +106,8 @@ async def get_comments(post_id: int, conn=Depends(get_db)):
     rows = await conn.fetch(
         """
         SELECT c.id, c.post_id, c.user_id, c.content, c.parent_comment_id, c.created_at,
-               COALESCE(u.name, '익명') AS author
+               COALESCE(u.name, '익명') AS author,
+               u.profile_image AS author_image
         FROM comments c
         LEFT JOIN users u ON c.user_id = u.id
         WHERE c.post_id = $1
@@ -134,8 +137,9 @@ async def create_comment(
         post_id, user_id, body.content.strip(), body.parent_comment_id,
     )
     result = dict(row)
-    name_row = await conn.fetchrow("SELECT name FROM users WHERE id = $1", user_id)
-    result["author"] = name_row["name"] if name_row else "익명"
+    user_row = await conn.fetchrow("SELECT name, profile_image FROM users WHERE id = $1", user_id)
+    result["author"] = user_row["name"] if user_row else "익명"
+    result["author_image"] = user_row["profile_image"] if user_row else None
     return result
 
 

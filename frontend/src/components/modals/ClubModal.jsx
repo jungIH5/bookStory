@@ -75,7 +75,7 @@ export default function ClubModal({
                 {clubReviews.map(rv => (
                   <div key={rv.id} style={{ padding: '0.625rem 0.875rem', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'white', fontWeight: 900 }}>{(rv.author_name || '?')[0]}</div>
+                      <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'white', fontWeight: 900, overflow: 'hidden' }}>{rv.author_image ? <img src={rv.author_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (rv.author_name || '?')[0]}</div>
                       <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3D2D1E' }}>{rv.author_name}</span>
                       <div style={{ display: 'flex', gap: '1px' }}>
                         {[1, 2, 3, 4, 5].map(s => <Star key={s} size={10} fill={s <= rv.rating ? '#C49456' : 'none'} color={s <= rv.rating ? '#C49456' : 'rgba(139,107,66,0.3)'} />)}

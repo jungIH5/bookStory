@@ -6,6 +6,8 @@ from jose import jwe
 from jose.constants import ALGORITHMS
 import json
 
+from db import get_db
+
 security = HTTPBearer(auto_error=False)
 
 
@@ -59,3 +61,13 @@ def optional_user_id(
         return int(payload.get("userId", 0)) or None
     except Exception:
         return None
+
+
+async def get_current_admin_id(
+    user_id: int = Depends(get_current_user_id),
+    conn=Depends(get_db),
+) -> int:
+    is_admin = await conn.fetchval("SELECT is_admin FROM users WHERE id = $1", user_id)
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="관리자만 접근할 수 있습니다.")
+    return user_id

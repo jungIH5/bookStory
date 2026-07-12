@@ -112,7 +112,7 @@ async def leave_club(
 async def get_reviews(club_id: int, conn=Depends(get_db)):
     rows = await conn.fetch(
         """
-        SELECT r.*, COALESCE(u.name, '익명') AS author_name
+        SELECT r.*, COALESCE(u.name, '익명') AS author_name, u.profile_image AS author_image
         FROM club_reviews r
         LEFT JOIN users u ON r.user_id = u.id
         WHERE r.club_id = $1
