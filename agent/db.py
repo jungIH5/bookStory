@@ -392,6 +392,14 @@ async def _init_db():
                 ALTER TABLE dive_messages ADD COLUMN IF NOT EXISTS to_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
             """)
 
+            # 참가자별 독서 시간 추적 + 개별 도서 선택
+            await conn.execute("ALTER TABLE dive_participants ADD COLUMN IF NOT EXISTS book_title TEXT DEFAULT ''")
+            await conn.execute("ALTER TABLE dive_participants ADD COLUMN IF NOT EXISTS book_image TEXT DEFAULT ''")
+            await conn.execute("ALTER TABLE dive_participants ADD COLUMN IF NOT EXISTS book_isbn VARCHAR(50) DEFAULT ''")
+            await conn.execute("ALTER TABLE dive_participants ADD COLUMN IF NOT EXISTS reading_seconds INTEGER DEFAULT 0")
+            await conn.execute("ALTER TABLE dive_participants ADD COLUMN IF NOT EXISTS status_changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            await conn.execute("ALTER TABLE dive_participants ALTER COLUMN status SET DEFAULT 'reading'")
+
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS user_images (
                     id SERIAL PRIMARY KEY,

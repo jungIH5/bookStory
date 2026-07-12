@@ -82,6 +82,7 @@ function App() {
   const [isFetchingRooms, setIsFetchingRooms] = useState(false);
   const [isCreatingDiveRoom, setIsCreatingDiveRoom] = useState(false);
   const [selectedDiveRoom, setSelectedDiveRoom] = useState(null);
+  const [activeDiveRoom, setActiveDiveRoom] = useState(null);
 
   const [tendencyResult, setTendencyResult] = useState(null);
   const [isFetchingTendency, setIsFetchingTendency] = useState(false);
@@ -162,6 +163,13 @@ function App() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!user?.token) { setActiveDiveRoom(null); return; }
+    fetchActiveDiveRoom();
+    const iv = setInterval(fetchActiveDiveRoom, 30000);
+    return () => clearInterval(iv);
+  }, [user?.token]);
+
+  useEffect(() => {
     fetchClubs();
     fetchJoinedClubs();
   }, [user]);
@@ -187,6 +195,16 @@ function App() {
       const res = await fetch(`${API_URL}/api/dive/rooms`);
       if (res.ok) setDiveRooms(await res.json());
     } catch {} finally { setIsFetchingRooms(false); }
+  };
+
+  const fetchActiveDiveRoom = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms/active`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (res.ok) setActiveDiveRoom(await res.json());
+    } catch {}
   };
 
   const handleCreateDiveRoom = async (formData) => {
@@ -532,9 +550,12 @@ function App() {
         body: JSON.stringify({ ...clubForm, image: clubForm.image || 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=800', creator_id: getValidUserId(user) })
       });
       if (response.ok) {
+        const created = await response.json();
+        setJoinedClubs(prev => new Set([...prev, created.id]));
         await fetchClubs();
         setIsCreatingClub(false);
         setClubForm({ name: '', description: '', category: '독서/기록', location: '', lat: null, lng: null, image: '' });
+        setToast({ show: true, message: '모임이 개설됐어요. 자동으로 가입되었습니다.' });
       }
     } catch (error) { alert('모임 개설 중 오류가 발생했습니다.'); }
     finally { setIsSavingClub(false); }
@@ -548,21 +569,25 @@ function App() {
     const authH = user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
     try {
       if (isJoined) {
-        await fetch(`${API_URL}/api/clubs/${clubId}/leave`, {
+        const res = await fetch(`${API_URL}/api/clubs/${clubId}/leave`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', ...authH },
           body: JSON.stringify({ user_id: uid })
         });
+        if (!res.ok) return alert('탈퇴 중 오류가 발생했습니다.');
         setJoinedClubs(prev => { const s = new Set(prev); s.delete(clubId); return s; });
         if (selectedClub?.id === clubId) setSelectedClub(prev => ({ ...prev, member_count: prev.member_count - 1 }));
+        setToast({ show: true, message: '모임에서 탈퇴했어요.' });
       } else {
-        await fetch(`${API_URL}/api/clubs/${clubId}/join`, {
+        const res = await fetch(`${API_URL}/api/clubs/${clubId}/join`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authH },
           body: JSON.stringify({ user_id: uid })
         });
+        if (!res.ok) return alert('가입 중 오류가 발생했습니다.');
         setJoinedClubs(prev => new Set([...prev, clubId]));
         if (selectedClub?.id === clubId) setSelectedClub(prev => ({ ...prev, member_count: prev.member_count + 1 }));
+        setToast({ show: true, message: '모임에 가입했어요!' });
       }
       await fetchClubs();
     } catch (error) { alert('오류가 발생했습니다.'); }
@@ -1371,17 +1396,20 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Dive room detail modal */}
+      {/* Dive room detail modal — 명시적으로 연 방(selectedDiveRoom) 또는 새로고침 후에도
+          여전히 활성 참여 중인 방(activeDiveRoom, 최소화 위젯으로 복원)을 보여준다 */}
       <AnimatePresence>
-        {selectedDiveRoom && (
+        {(selectedDiveRoom || activeDiveRoom) && (
           <DiveRoomModal
-            room={selectedDiveRoom}
+            room={selectedDiveRoom || activeDiveRoom}
             user={user}
-            onClose={() => setSelectedDiveRoom(null)}
-            onJoin={fetchDiveRooms}
-            onLeave={fetchDiveRooms}
-            onDelete={fetchDiveRooms}
-            onStatusChange={fetchDiveRooms}
+            startMinimized={!selectedDiveRoom}
+            onClose={() => { setSelectedDiveRoom(null); setActiveDiveRoom(null); }}
+            onJoin={() => { fetchDiveRooms(); fetchActiveDiveRoom(); }}
+            onLeave={() => { fetchDiveRooms(); fetchActiveDiveRoom(); }}
+            onDelete={() => { fetchDiveRooms(); fetchActiveDiveRoom(); }}
+            onStatusChange={() => { fetchDiveRooms(); fetchActiveDiveRoom(); }}
+            onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
           />
         )}
       </AnimatePresence>

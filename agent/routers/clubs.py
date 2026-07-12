@@ -69,6 +69,11 @@ async def create_club(
         body.name, body.description, body.category, body.location,
         body.lat, body.lng, body.image, user_id,
     )
+    # 개설자를 자동으로 멤버로 등록
+    await conn.execute(
+        "INSERT INTO club_members (club_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
+        row["id"], user_id,
+    )
     return dict(row)
 
 

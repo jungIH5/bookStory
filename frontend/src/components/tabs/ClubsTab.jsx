@@ -5,6 +5,8 @@ import { getValidUserId } from '../../utils';
 
 export default function ClubsTab({ user, clubs, joinedClubs, onSelectClub, onCreateClub }) {
   const validUserId = getValidUserId(user);
+  const showsNearby = !!(user && user.lat && user.lng);
+  const allClubs = showsNearby ? clubs.slice(5) : clubs;
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '3.5rem' }}>
@@ -117,7 +119,7 @@ export default function ClubsTab({ user, clubs, joinedClubs, onSelectClub, onCre
           <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#BDB0A0' }}>총 {clubs.length}개 활동 중</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.875rem' }}>
-          {clubs.slice(5).map((club) => (
+          {allClubs.map((club) => (
             <div
               key={club.id}
               onClick={() => onSelectClub(club)}

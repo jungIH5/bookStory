@@ -51,7 +51,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
     try {
       const res = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(bookQuery)}`);
       const data = await res.json();
-      setBookResults(Array.isArray(data) ? data.slice(0, 5) : []);
+      setBookResults((data.items || []).slice(0, 5));
     } catch {} finally { setIsSearching(false); }
   };
 

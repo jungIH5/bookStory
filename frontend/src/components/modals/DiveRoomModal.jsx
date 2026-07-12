@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Waves, Users, Clock, Calendar, Lock, Loader2, Send, RefreshCw, Trash2, MessageSquare, MessageSquareDashed, Pencil, Check, Camera, Minimize2, Maximize2 } from 'lucide-react';
+import { X, Waves, Users, Clock, Calendar, Lock, Loader2, Send, RefreshCw, Trash2, MessageSquare, MessageSquareDashed, Pencil, Check, Camera, Minimize2, Maximize2, BookOpen, Pause, Play, Search, UserX } from 'lucide-react';
 import { API_URL } from '../../api';
 
 const ALBUM_LIMIT = 5;
@@ -46,7 +46,7 @@ const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
-export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin, onLeave, onDelete, onStatusChange }) {
+export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin, onLeave, onDelete, onStatusChange, onOpenUserLibrary, startMinimized }) {
   const [room, setRoom] = useState(initialRoom);
   const [messages, setMessages] = useState([]);
   const [msgInput, setMsgInput] = useState('');
@@ -68,8 +68,16 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const [chatHeight, setChatHeight] = useState(400);
   const [modalW, setModalW] = useState(() => Math.min(Math.round(window.innerWidth * 0.92), 1100));
   const [modalH, setModalH] = useState(() => Math.round(window.innerHeight * 0.85));
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(!!startMinimized);
   const [toast, setToast] = useState(null);
+  const [joinBookQuery, setJoinBookQuery] = useState('');
+  const [joinBookResults, setJoinBookResults] = useState([]);
+  const [isSearchingJoinBook, setIsSearchingJoinBook] = useState(false);
+  const [selectedJoinBook, setSelectedJoinBook] = useState(null); // { title, image, isbn } | null
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [openMenuFor, setOpenMenuFor] = useState(null); // user_id | null
+  const [kickTarget, setKickTarget] = useState(null); // { user_id, name } | null
+  const [isKicking, setIsKicking] = useState(false);
   const prevPhaseRef = useRef(null);
   const msgEndRef = useRef(null);
   const modalRef = useRef(null);
@@ -138,13 +146,21 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   };
 
   const isHost = user && room.host_id === parseInt(user.id);
-  const isParticipant = room.participants?.some(p => p.user_id === parseInt(user?.id));
+  const myParticipant = room.participants?.find(p => p.user_id === parseInt(user?.id));
+  const isParticipant = !!myParticipant;
   const isFull = (room.participant_count || 0) >= room.max_participants;
   const isEnded = room.status === 'ended';
+  const needsBookChoice = !room.book_title;
 
   const chatDisabled = room.chat_enabled === false;
   const chatLocked = computedPhase === 'waiting' || (computedPhase === 'reading' && chatDisabled);
   const canSendMsg = isParticipant && !chatLocked && !isEnded;
+
+  // 참가 중인 방은 닫아도(배경 클릭/X) 완전히 없애지 않고 최소화 위젯으로 남긴다
+  const handleCloseOrMinimize = () => {
+    if (isParticipant && !isEnded) setMinimized(true);
+    else onClose();
+  };
 
   const displayImage = room.room_image || room.book_image;
 
@@ -198,15 +214,37 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
   const handleJoin = async () => {
     if (!user?.token || isJoining) return;
+    if (needsBookChoice && !selectedJoinBook) { setJoinError('먼저 읽으실 책을 선택해주세요.'); return; }
     setIsJoining(true);
     setJoinError('');
     try {
       const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/join`, {
-        method: 'POST', headers: { Authorization: `Bearer ${user.token}` },
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(needsBookChoice ? {
+          book_title: selectedJoinBook.title, book_image: selectedJoinBook.image, book_isbn: selectedJoinBook.isbn,
+        } : {}),
       });
       if (res.ok) { await fetchRoom(); onJoin?.(); }
       else { const err = await res.json(); setJoinError(err.detail || '참가에 실패했습니다.'); }
     } finally { setIsJoining(false); }
+  };
+
+  const handleJoinBookSearch = async () => {
+    if (!joinBookQuery.trim()) return;
+    setIsSearchingJoinBook(true);
+    try {
+      const res = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(joinBookQuery)}`);
+      const data = await res.json();
+      setJoinBookResults((data.items || []).slice(0, 5));
+    } catch {} finally { setIsSearchingJoinBook(false); }
+  };
+
+  const selectJoinBook = (book) => {
+    setSelectedJoinBook({ title: (book.title || '').replace(/<\/?[^>]+>/g, ''), image: book.image || '', isbn: book.isbn || '' });
+    setJoinBookResults([]);
+    setJoinBookQuery('');
+    setJoinError('');
   };
 
   const handleLeave = async () => {
@@ -216,6 +254,31 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     });
     await fetchRoom();
     onLeave?.();
+  };
+
+  const handleToggleMyStatus = async () => {
+    if (!user?.token || !myParticipant || isTogglingStatus) return;
+    const nextStatus = myParticipant.status === 'paused' ? 'reading' : 'paused';
+    setIsTogglingStatus(true);
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/my-status`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) await fetchRoom();
+    } finally { setIsTogglingStatus(false); }
+  };
+
+  const handleKickParticipant = async () => {
+    if (!user?.token || !kickTarget || isKicking) return;
+    setIsKicking(true);
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/participants/${kickTarget.user_id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (res.ok) await fetchRoom();
+    } finally { setIsKicking(false); setKickTarget(null); }
   };
 
   const handleSendMsg = async () => {
@@ -396,7 +459,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           {remainingLabel && (
             <>
               <span style={{ width: '1px', height: '14px', background: 'rgba(139,107,66,0.2)', flexShrink: 0 }} />
-              <span style={{ fontSize: '12px', fontWeight: 700, color: showReadingWarning ? '#ef4444' : '#8C6B42', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: showReadingWarning ? '#ef4444' : '#8C6B42', whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-block', minWidth: '52px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
                 {remainingLabel}
               </span>
             </>
@@ -418,7 +481,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   return (
     <>
       {ToastEl}
-      <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
+      <div className="modal-backdrop overflow-y-auto" onClick={handleCloseOrMinimize}>
         <motion.div
           ref={modalRef}
           initial={{ opacity: 0, scale: 0.93, y: 32 }}
@@ -518,8 +581,8 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                       {badge.label}
                     </span>
                     {remainingLabel && (
-                      <span style={{ fontSize: '9px', fontWeight: 800, color: showReadingWarning ? '#ef4444' : '#9E8D7A', whiteSpace: 'nowrap' }}>
-                        · {remainingLabel}
+                      <span style={{ fontSize: '9px', fontWeight: 800, color: showReadingWarning ? '#ef4444' : '#9E8D7A', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
+                        · <span style={{ display: 'inline-block', minWidth: '42px', textAlign: 'left', fontVariantNumeric: 'tabular-nums' }}>{remainingLabel}</span>
                       </span>
                     )}
                   </div>
@@ -533,7 +596,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                 <button onClick={() => setMinimized(true)} title="최소화" style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}>
                   <Minimize2 size={13} />
                 </button>
-                <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}>
+                <button onClick={handleCloseOrMinimize} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}>
                   <X size={14} />
                 </button>
               </div>
@@ -599,7 +662,29 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             ) : null}
           </div>
 
-          {/* 본문 — 좌: 채팅 / 우: 참가자 */}
+          {/* 본문 — 대기 중에는 참가자 목록만, 그 외엔 좌: 채팅 / 우: 참가자 */}
+          {computedPhase === 'waiting' ? (
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139,107,66,0.08)', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
+                참가자 ({room.participants?.length || 0}명)
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem', overflowY: 'auto', flex: 1, alignContent: 'flex-start' }}>
+                {(room.participants?.length || 0) === 0
+                  ? <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
+                  : room.participants.map(p => (
+                    <ParticipantRow
+                      key={p.id} p={p} room={room} currentUserId={user?.id} isHost={isHost}
+                      whisperTarget={whisperTarget}
+                      menuOpen={openMenuFor === p.user_id}
+                      onToggleMenu={(uid) => setOpenMenuFor(prev => prev === uid ? null : uid)}
+                      onWhisper={(target) => { setWhisperTarget(whisperTarget?.id === target.user_id ? null : { id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
+                      onOpenProfile={(uid, name) => { onOpenUserLibrary?.(uid, name); setOpenMenuFor(null); }}
+                      onKick={(target) => { setKickTarget({ user_id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
+                    />
+                  ))}
+              </div>
+            </div>
+          ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', borderBottom: '1px solid rgba(139,107,66,0.08)', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
             {/* 좌: 채팅 */}
@@ -690,26 +775,33 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', overflowY: 'auto', flex: 1, minHeight: '160px' }}>
                 {(room.participants?.length || 0) === 0
                   ? <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>없음</p>
-                  : room.participants.map(p => {
-                    const isSelf = p.user_id === parseInt(user?.id);
-                    return (
-                    <div
-                      key={p.id}
-                      onClick={() => !isSelf && setWhisperTarget(whisperTarget?.id === p.user_id ? null : { id: p.user_id, name: p.name })}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: whisperTarget?.id === p.user_id ? 'rgba(196,148,86,0.18)' : 'rgba(140,107,66,0.05)', border: `1px solid ${whisperTarget?.id === p.user_id ? 'rgba(196,148,86,0.4)' : 'rgba(140,107,66,0.1)'}`, borderRadius: '0.625rem', cursor: isSelf ? 'default' : 'pointer' }}
-                      title={isSelf ? '' : `${p.name}님에게 귓속말`}
-                    >
-                      <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
-                        {p.profile_image ? <img src={p.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || '?')[0]}
-                      </div>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-                      {room.host_id === p.user_id && <span style={{ fontSize: '10px' }}>👑</span>}
-                    </div>
-                    );
-                  })}
+                  : room.participants.map(p => (
+                    <ParticipantRow
+                      key={p.id} p={p} room={room} currentUserId={user?.id} isHost={isHost}
+                      whisperTarget={whisperTarget}
+                      menuOpen={openMenuFor === p.user_id}
+                      onToggleMenu={(uid) => setOpenMenuFor(prev => prev === uid ? null : uid)}
+                      onWhisper={(target) => { setWhisperTarget(whisperTarget?.id === target.user_id ? null : { id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
+                      onOpenProfile={(uid, name) => { onOpenUserLibrary?.(uid, name); setOpenMenuFor(null); }}
+                      onKick={(target) => { setKickTarget({ user_id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
+                    />
+                  ))}
               </div>
             </div>
           </div>
+          )}
+
+          {kickTarget && (
+            <div style={{ margin: '0.75rem 1.5rem 0', padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#dc2626' }}>{kickTarget.name}님을 추방하시겠습니까?</p>
+              <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                <button onClick={() => setKickTarget(null)} style={ctrlBtnStyle('#9E8D7A')}>취소</button>
+                <button onClick={handleKickParticipant} disabled={isKicking} style={{ ...ctrlBtnStyle('#ef4444'), background: 'rgba(239,68,68,0.12)', fontWeight: 900 }}>
+                  {isKicking ? <Loader2 size={11} className="animate-spin" /> : '추방 확인'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* 하단 */}
           <div style={{ padding: '0.875rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.625rem', flexShrink: 0 }}>
@@ -749,6 +841,14 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               </div>
             )}
 
+            {user && !isEnded && isParticipant && myParticipant?.status !== 'ended' && (
+              <button onClick={handleToggleMyStatus} disabled={isTogglingStatus}
+                style={{ width: '100%', padding: '0.625rem', background: myParticipant?.status === 'paused' ? 'rgba(34,197,94,0.08)' : 'rgba(158,141,122,0.08)', border: `1px solid ${myParticipant?.status === 'paused' ? 'rgba(34,197,94,0.25)' : 'rgba(158,141,122,0.2)'}`, borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: myParticipant?.status === 'paused' ? '#16a34a' : '#7B6B55', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                {isTogglingStatus ? <Loader2 size={14} className="animate-spin" /> : myParticipant?.status === 'paused' ? <Play size={14} /> : <Pause size={14} />}
+                {myParticipant?.status === 'paused' ? '독서 다시 시작하기' : '일시정지 (자리 비움)'}
+              </button>
+            )}
+
             {user && !isEnded && (
               isParticipant
                 ? (!isHost && (
@@ -758,7 +858,46 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                 ))
                 : (
                   <div>
-                    <button onClick={handleJoin} disabled={isFull || isJoining} className="premium-button" style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: isFull ? 0.5 : 1 }}>
+                    {needsBookChoice && !selectedJoinBook && (
+                      <div style={{ marginBottom: '0.625rem', padding: '0.75rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.15)', borderRadius: '0.875rem' }}>
+                        <p style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42', marginBottom: '0.5rem' }}>📚 이 모임은 지정된 도서가 없어요. 읽으실 책을 선택해주세요.</p>
+                        <div style={{ display: 'flex', gap: '0.375rem' }}>
+                          <input
+                            value={joinBookQuery}
+                            onChange={e => setJoinBookQuery(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleJoinBookSearch()}
+                            placeholder="책 제목 검색..."
+                            className="form-input"
+                            style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#1C140E' }}
+                          />
+                          <button onClick={handleJoinBookSearch} disabled={isSearchingJoinBook} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8C6B42', flexShrink: 0 }}>
+                            {isSearchingJoinBook ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                          </button>
+                        </div>
+                        {joinBookResults.length > 0 && (
+                          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '160px', overflowY: 'auto' }}>
+                            {joinBookResults.map((b, i) => (
+                              <div key={i} onClick={() => selectJoinBook(b)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.5rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                                <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2' }}>
+                                  {b.image && <img src={b.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                                </div>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(b.title || '').replace(/<\/?[^>]+>/g, '')}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {needsBookChoice && selectedJoinBook && (
+                      <div style={{ marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.75rem' }}>
+                        <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2' }}>
+                          {selectedJoinBook.image && <img src={selectedJoinBook.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        </div>
+                        <span style={{ flex: 1, fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedJoinBook.title}</span>
+                        <button onClick={() => setSelectedJoinBook(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A' }}><X size={13} /></button>
+                      </div>
+                    )}
+                    <button onClick={handleJoin} disabled={isFull || isJoining || (needsBookChoice && !selectedJoinBook)} className="premium-button" style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (isFull || (needsBookChoice && !selectedJoinBook)) ? 0.5 : 1 }}>
                       {isJoining ? <Loader2 className="animate-spin" size={16} /> : <Waves size={16} />}
                       {isFull ? '인원이 가득 찼습니다' : '모임 참가하기'}
                     </button>
@@ -795,3 +934,65 @@ const ctrlBtnStyle = (color) => ({
   borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color, cursor: 'pointer',
   display: 'flex', alignItems: 'center', gap: '0.25rem',
 });
+
+const menuBtnStyle = {
+  width: '100%', textAlign: 'left', padding: '0.5rem 0.625rem', background: 'none', border: 'none',
+  cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#3D2D1E', borderRadius: '0.5rem',
+  display: 'flex', alignItems: 'center', gap: '0.375rem',
+};
+
+function ParticipantRow({ p, room, currentUserId, isHost, whisperTarget, menuOpen, onToggleMenu, onWhisper, onOpenProfile, onKick }) {
+  const isSelf = p.user_id === parseInt(currentUserId);
+  const bookTitle = p.book_title || room.book_title;
+  const bookImage = p.book_image || room.book_image;
+  const isWhisperTarget = whisperTarget?.id === p.user_id;
+  const statusInfo =
+    p.status === 'paused' ? { label: '일시정지', color: '#9E8D7A', icon: <Pause size={9} /> }
+    : p.status === 'ended' ? { label: '종료', color: '#BDB0A0', icon: null }
+    : { label: '독서 중', color: '#22c55e', icon: <BookOpen size={9} /> };
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div
+        onClick={() => onToggleMenu(p.user_id)}
+        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: isWhisperTarget ? 'rgba(196,148,86,0.18)' : 'rgba(140,107,66,0.05)', border: `1px solid ${isWhisperTarget ? 'rgba(196,148,86,0.4)' : 'rgba(140,107,66,0.1)'}`, borderRadius: '0.625rem', cursor: 'pointer' }}
+      >
+        <div style={{ width: '18px', height: '25px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {bookImage ? <img src={bookImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BookOpen size={9} style={{ color: '#BDB0A0' }} />}
+        </div>
+        <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+          {p.profile_image ? <img src={p.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || '?')[0]}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            {room.host_id === p.user_id && <span style={{ fontSize: '10px' }}>👑</span>}
+          </div>
+          {bookTitle && <div style={{ fontSize: '9px', color: '#9E8D7A', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bookTitle}</div>}
+        </div>
+        <span style={{ fontSize: '9px', fontWeight: 800, color: statusInfo.color, display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+          {statusInfo.icon}{statusInfo.label}
+        </span>
+      </div>
+
+      {menuOpen && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'absolute', top: '100%', right: 0, zIndex: 50, marginTop: '0.25rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.75rem', padding: '0.25rem', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '150px' }}
+        >
+          <button onClick={() => onOpenProfile(p.user_id, p.name)} style={menuBtnStyle}>프로필 보기</button>
+          {!isSelf && (
+            <button onClick={() => onWhisper(p)} style={menuBtnStyle}>
+              {isWhisperTarget ? '귓속말 해제' : '귓속말 보내기'}
+            </button>
+          )}
+          {isHost && !isSelf && (
+            <button onClick={() => onKick(p)} style={{ ...menuBtnStyle, color: '#dc2626' }}>
+              <UserX size={12} /> 추방하기
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
