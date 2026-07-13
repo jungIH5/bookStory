@@ -981,7 +981,6 @@ function App() {
     { id: 'community', label: '독서모임', icon: <Waves size={15} /> },
     { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
     { id: 'timer', label: '독서 타이머', icon: <Timer size={15} />, dot: !!timerBook },
-    ...(user?.is_admin ? [{ id: 'admin', label: '관리자', icon: <ShieldCheck size={15} /> }] : []),
   ];
 
   return (
@@ -1014,6 +1013,15 @@ function App() {
                   <span style={{ position: 'absolute', top: '-3px', right: '-3px', width: '14px', height: '14px', borderRadius: '9999px', background: '#C49456', color: 'white', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid white' }}>
                     {friendRequests.length}
                   </span>
+                </button>
+              )}
+              {user.is_admin && (
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  title="관리자 페이지"
+                  style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: activeTab === 'admin' ? 'rgba(140,107,66,0.2)' : 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                  <ShieldCheck size={13} style={{ color: '#8C6B42' }} />
                 </button>
               )}
             <div
