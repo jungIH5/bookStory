@@ -38,38 +38,54 @@ def _ol_to_naver(doc: dict) -> dict:
 
 
 @router.get("/search")
-async def search_books(query: str):
+async def search_books(query: str, page: int = 1, display: int = 20):
     if not query:
         raise HTTPException(400, "query is required")
 
+    page = max(1, page)
+    display = max(1, min(display, 100))
+    start = (page - 1) * display + 1
+
+    # 네이버 검색 API는 start(조회 시작 위치)가 1000을 넘는 요청을 지원하지 않는다
+    if start > 1000:
+        return {"items": [], "total": 0, "start": start, "display": display, "page": page, "has_more": False}
+
     async with httpx.AsyncClient(timeout=8.0) as client:
-        naver_task = client.get(
+        tasks = [client.get(
             "https://openapi.naver.com/v1/search/book.json",
-            params={"query": query, "display": 30},
+            params={"query": query, "display": display, "start": start},
             headers={
                 "X-Naver-Client-Id": NAVER_CLIENT_ID,
                 "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
             },
-        )
-        ol_task = client.get(
-            "https://openlibrary.org/search.json",
-            params={"q": query, "limit": 30, "fields": "title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median"},
-        )
-        naver_resp, ol_resp = await asyncio.gather(naver_task, ol_task, return_exceptions=True)
+        )]
+        # OpenLibrary 보강 결과는 중복 방지가 페이지 간에 걸치면 복잡해지므로 첫 페이지에서만 덧붙인다
+        if page == 1:
+            tasks.append(client.get(
+                "https://openlibrary.org/search.json",
+                params={"q": query, "limit": display, "fields": "title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median"},
+            ))
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    naver_data = naver_resp.json() if not isinstance(naver_resp, Exception) else {"items": []}
+    naver_resp = results[0]
+    naver_data = naver_resp.json() if not isinstance(naver_resp, Exception) else {"items": [], "total": 0}
     naver_items = naver_data.get("items", [])
 
     ol_items = []
-    if not isinstance(ol_resp, Exception) and ol_resp.status_code == 200:
-        ol_docs = ol_resp.json().get("docs", [])
-        naver_isbns = {item.get("isbn", "").replace("-", "") for item in naver_items if item.get("isbn")}
-        for doc in ol_docs:
-            doc_isbns = {isbn.replace("-", "") for isbn in (doc.get("isbn") or [])}
-            if not doc_isbns & naver_isbns:
-                ol_items.append(_ol_to_naver(doc))
+    if page == 1 and len(results) > 1:
+        ol_resp = results[1]
+        if not isinstance(ol_resp, Exception) and ol_resp.status_code == 200:
+            ol_docs = ol_resp.json().get("docs", [])
+            naver_isbns = {item.get("isbn", "").replace("-", "") for item in naver_items if item.get("isbn")}
+            for doc in ol_docs:
+                doc_isbns = {isbn.replace("-", "") for isbn in (doc.get("isbn") or [])}
+                if not doc_isbns & naver_isbns:
+                    ol_items.append(_ol_to_naver(doc))
 
     naver_data["items"] = naver_items + ol_items
+    naver_data["page"] = page
+    total = naver_data.get("total") or 0
+    naver_data["has_more"] = bool(naver_items) and (start - 1 + len(naver_items)) < total
     return naver_data
 
 

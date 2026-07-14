@@ -34,6 +34,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchHasMore, setSearchHasMore] = useState(false);
+  const [isFetchingMoreSearch, setIsFetchingMoreSearch] = useState(false);
   const [selectedBook, setSelectedBook] = useState(null);
   const [analysisResult, setAnalysisResult] = useState('');
   const [questions, setQuestions] = useState({ thematic: [], perspective_shift: [] });
@@ -307,13 +310,30 @@ function App() {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     setSearchResults([]);
+    setSearchPage(1);
+    setSearchHasMore(false);
     setActiveTab('search');
     try {
-      const response = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(searchQuery)}&page=1`);
       const data = await response.json();
       setSearchResults(data.items || []);
+      setSearchHasMore(!!data.has_more);
     } catch (error) { console.error('Search error:', error); }
     finally { setIsSearching(false); }
+  };
+
+  const handleLoadMoreSearch = async () => {
+    if (!searchQuery.trim() || isFetchingMoreSearch || !searchHasMore) return;
+    const nextPage = searchPage + 1;
+    setIsFetchingMoreSearch(true);
+    try {
+      const response = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(searchQuery)}&page=${nextPage}`);
+      const data = await response.json();
+      setSearchResults(prev => [...prev, ...(data.items || [])]);
+      setSearchPage(nextPage);
+      setSearchHasMore(!!data.has_more);
+    } catch (error) { console.error('Search load-more error:', error); }
+    finally { setIsFetchingMoreSearch(false); }
   };
 
   const handleBookClick = (book) => {
@@ -1125,6 +1145,9 @@ function App() {
               searchQuery={searchQuery}
               isSearching={isSearching}
               onBookClick={handleBookClick}
+              hasMore={searchHasMore}
+              isFetchingMore={isFetchingMoreSearch}
+              onLoadMore={handleLoadMoreSearch}
             />
           )}
           {activeTab === 'clubs' && (

@@ -82,17 +82,18 @@ export default function AdminTab({ user }) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!user?.token || !deleteTarget || isDeleting) return;
+  const handleDelete = async (target) => {
+    target = target || deleteTarget;
+    if (!user?.token || !target || isDeleting) return;
     setIsDeleting(true);
     setActionError('');
     try {
-      const res = await fetch(`${API_URL}/api/admin/users/${deleteTarget.id}`, {
+      const res = await fetch(`${API_URL}/api/admin/users/${target.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${user.token}` },
       });
       if (res.ok) {
-        setUsers(prev => prev.filter(u => u.id !== deleteTarget.id));
+        setUsers(prev => prev.filter(u => u.id !== target.id));
         setDeleteTarget(null);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -148,20 +149,6 @@ export default function AdminTab({ user }) {
         </div>
       )}
 
-      {deleteTarget && (
-        <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-          <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#dc2626' }}>
-            "{deleteTarget.name}" 계정을 정말 탈퇴(삭제)시키겠습니까? 이 작업은 되돌릴 수 없습니다.
-          </p>
-          <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-            <button onClick={() => setDeleteTarget(null)} style={{ padding: '0.3rem 0.75rem', background: 'rgba(158,141,122,0.15)', border: '1px solid rgba(158,141,122,0.4)', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>취소</button>
-            <button onClick={handleDelete} disabled={isDeleting} style={{ padding: '0.3rem 0.75rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '9999px', fontSize: '11px', fontWeight: 900, color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              {isDeleting ? <Loader2 size={11} className="animate-spin" /> : '삭제 확인'}
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="premium-card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
@@ -213,14 +200,30 @@ export default function AdminTab({ user }) {
                     </button>
                   </td>
                   <td style={{ padding: '0.625rem 1rem', color: '#9E8D7A', whiteSpace: 'nowrap' }}>{new Date(u.created_at).toLocaleDateString('ko-KR')}</td>
-                  <td style={{ padding: '0.625rem 1rem' }}>
+                  <td style={{ padding: '0.625rem 1rem', position: 'relative' }}>
                     <button
-                      onClick={() => setDeleteTarget({ id: u.id, name: u.name })}
+                      onClick={() => setDeleteTarget(deleteTarget?.id === u.id ? null : { id: u.id, name: u.name })}
                       disabled={isSelf}
                       title={isSelf ? '본인 계정은 삭제할 수 없습니다' : '탈퇴(삭제)'}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', cursor: isSelf ? 'default' : 'pointer', opacity: isSelf ? 0.4 : 1 }}>
                       <Trash2 size={11} />
                     </button>
+                    {deleteTarget?.id === u.id && (
+                      <div
+                        onClick={e => e.stopPropagation()}
+                        style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: '0.25rem', background: '#FEFCF9', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.75rem', padding: '0.625rem', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', width: '180px', whiteSpace: 'normal' }}
+                      >
+                        <p style={{ fontSize: '11px', fontWeight: 800, color: '#dc2626', marginBottom: '0.5rem', lineHeight: 1.4 }}>
+                          "{deleteTarget.name}"님을 탈퇴시킬까요?
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.375rem' }}>
+                          <button onClick={() => setDeleteTarget(null)} style={{ flex: 1, padding: '4px 0', background: 'rgba(158,141,122,0.15)', border: '1px solid rgba(158,141,122,0.4)', borderRadius: '9999px', fontSize: '10px', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>취소</button>
+                          <button onClick={() => handleDelete()} disabled={isDeleting} style={{ flex: 1, padding: '4px 0', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '9999px', fontSize: '10px', fontWeight: 900, color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                            {isDeleting ? <Loader2 size={10} className="animate-spin" /> : '확인'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </td>
                 </tr>
                 );

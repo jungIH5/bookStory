@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Search } from 'lucide-react';
+import { BookOpen, Search, Loader2 } from 'lucide-react';
 import { stripHtml } from '../../utils';
 import { hexColors } from '../../constants';
 
-export default function SearchTab({ searchResults, searchQuery, isSearching, onBookClick }) {
+export default function SearchTab({ searchResults, searchQuery, isSearching, onBookClick, hasMore, isFetchingMore, onLoadMore }) {
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) onLoadMore?.();
+    }, { rootMargin: '400px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, onLoadMore]);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ width: '100%', marginTop: '0.5rem' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 160px)', gap: '1.75rem 1rem', width: '100%', justifyContent: 'center' }}>
@@ -45,6 +58,11 @@ export default function SearchTab({ searchResults, searchQuery, isSearching, onB
           </motion.div>
         ))}
       </div>
+      {searchResults.length > 0 && (
+        <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+          {isFetchingMore && <Loader2 size={20} className="animate-spin" style={{ color: '#8C6B42' }} />}
+        </div>
+      )}
       {searchResults.length === 0 && searchQuery && !isSearching && (
         <div style={{ textAlign: 'center', padding: '5rem 2rem', borderRadius: '2rem', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', marginTop: '1rem' }}>
           <Search size={36} style={{ margin: '0 auto 1rem', color: '#BDB0A0' }} />

@@ -73,6 +73,7 @@ body {
   background: radial-gradient(circle at top right, rgba(196, 148, 86, 0.06), transparent 60%);
   opacity: 0;
   transition: opacity 0.4s ease;
+  pointer-events: none;
 }
 
 .premium-card:hover::after { opacity: 1; }
