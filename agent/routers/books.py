@@ -45,7 +45,7 @@ async def search_books(query: str):
     async with httpx.AsyncClient(timeout=8.0) as client:
         naver_task = client.get(
             "https://openapi.naver.com/v1/search/book.json",
-            params={"query": query, "display": 10},
+            params={"query": query, "display": 30},
             headers={
                 "X-Naver-Client-Id": NAVER_CLIENT_ID,
                 "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
@@ -53,7 +53,7 @@ async def search_books(query: str):
         )
         ol_task = client.get(
             "https://openlibrary.org/search.json",
-            params={"q": query, "limit": 10, "fields": "title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median"},
+            params={"q": query, "limit": 30, "fields": "title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median"},
         )
         naver_resp, ol_resp = await asyncio.gather(naver_task, ol_task, return_exceptions=True)
 
