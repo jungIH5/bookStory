@@ -185,7 +185,7 @@ function App() {
   useEffect(() => {
     if (!user?.token) return;
     fetchFriendRequests();
-    const iv = setInterval(fetchFriendRequests, 60000);
+    const iv = setInterval(fetchFriendRequests, 15000);
     return () => clearInterval(iv);
   }, [user?.token]);
 

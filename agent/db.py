@@ -35,6 +35,10 @@ async def get_db():
         yield conn
 
 
+def get_pool() -> asyncpg.Pool:
+    return _pool
+
+
 async def _init_db():
     async with _pool.acquire() as conn:
         async with conn.transaction():

@@ -26,7 +26,6 @@ const PHASE_MAP = {
 const PHASE_TOAST = {
   reading:    { text: '📖 독서 시간이 시작되었습니다!', color: '#C49456' },
   discussion: { text: '💬 토론 시간이 시작되었습니다!', color: '#22c55e' },
-  overtime:   { text: '⏰ 예정된 시간이 종료되었습니다.', color: '#BDB0A0' },
 };
 
 function fmtRemaining(ms) {
@@ -78,6 +77,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const [openMenuFor, setOpenMenuFor] = useState(null); // user_id | null
   const [kickTarget, setKickTarget] = useState(null); // { user_id, name } | null
   const [isKicking, setIsKicking] = useState(false);
+  const [showOvertimeNotice, setShowOvertimeNotice] = useState(false);
   const prevPhaseRef = useRef(null);
   const msgEndRef = useRef(null);
   const modalRef = useRef(null);
@@ -93,11 +93,15 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const badge = PHASE_MAP[computedPhase] || PHASE_MAP.waiting;
   const remainingLabel = fmtRemaining(phaseRemaining);
 
-  // 페이즈 전환 감지 → 토스트
+  // 페이즈 전환 감지 → 토스트 / 종료 팝업
   useEffect(() => {
     if (prevPhaseRef.current !== null && prevPhaseRef.current !== computedPhase) {
-      const t = PHASE_TOAST[computedPhase];
-      if (t) setToast(t);
+      if (computedPhase === 'overtime') {
+        setShowOvertimeNotice(true);
+      } else {
+        const t = PHASE_TOAST[computedPhase];
+        if (t) setToast(t);
+      }
     }
     prevPhaseRef.current = computedPhase;
   }, [computedPhase]);
@@ -184,7 +188,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   };
 
   const fetchMessages = async () => {
-    if (!user?.token) return;
+    if (!user?.token || !isParticipant) return;
     setIsLoadingMsgs(true);
     try {
       const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/messages`, {
@@ -205,8 +209,40 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
   useEffect(() => {
     fetchRoom();
-    fetchMessages();
   }, []);
+
+  // 참가자일 때만 채팅 기록을 불러오고, 웹소켓으로 새 메시지를 실시간으로 수신한다.
+  useEffect(() => {
+    if (!isParticipant || !user?.token) return;
+    fetchMessages();
+
+    let ws;
+    let closedByCleanup = false;
+    let reconnectTimer;
+
+    const connect = () => {
+      const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const base = API_URL ? API_URL.replace(/^http/, 'ws') : `${proto}://${window.location.host}`;
+      ws = new WebSocket(`${base}/api/dive/rooms/${room.id}/ws?token=${encodeURIComponent(user.token)}`);
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'room_update') { fetchRoom(); return; }
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+        } catch {}
+      };
+      ws.onclose = () => {
+        if (!closedByCleanup) reconnectTimer = setTimeout(connect, 3000);
+      };
+    };
+    connect();
+
+    return () => {
+      closedByCleanup = true;
+      clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }, [isParticipant, room.id]);
 
   useEffect(() => {
     msgEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -225,8 +261,11 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           book_title: selectedJoinBook.title, book_image: selectedJoinBook.image, book_isbn: selectedJoinBook.isbn,
         } : {}),
       });
-      if (res.ok) { await fetchRoom(); onJoin?.(); }
-      else { const err = await res.json(); setJoinError(err.detail || '참가에 실패했습니다.'); }
+      if (res.ok) {
+        await fetchRoom();
+        onJoin?.();
+        setToast({ text: '🎉 모임에 참가했어요!', color: '#22c55e' });
+      } else { const err = await res.json(); setJoinError(err.detail || '참가에 실패했습니다.'); }
     } finally { setIsJoining(false); }
   };
 
@@ -254,6 +293,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     });
     await fetchRoom();
     onLeave?.();
+    setToast({ text: '모임에서 나갔어요.', color: '#9E8D7A' });
   };
 
   const handleToggleMyStatus = async () => {
@@ -473,6 +513,161 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             <Maximize2 size={12} />
           </button>
         </motion.div>
+      </>
+    );
+  }
+
+  // ── 입장 전 안내 화면 (참가자가 아니면 방 정보 + 책 선택만 보여준다) ──
+  if (!isParticipant) {
+    return (
+      <>
+        {ToastEl}
+        <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 32 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 32 }}
+            onClick={e => e.stopPropagation()}
+            className="modal-content relative my-auto"
+            style={{ width: Math.min(modalW, 520), maxWidth: '95vw', maxHeight: '85vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            {/* 헤더 */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139,107,66,0.1)', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: '#1C140E' }}>{room.title}</h2>
+                    <span style={{
+                      fontSize: '9px', fontWeight: 900,
+                      color: room.book_title ? '#8C6B42' : '#16a34a',
+                      background: room.book_title ? 'rgba(140,107,66,0.1)' : 'rgba(34,197,94,0.1)',
+                      border: `1px solid ${room.book_title ? 'rgba(140,107,66,0.25)' : 'rgba(34,197,94,0.25)'}`,
+                      padding: '2px 8px', borderRadius: '9999px',
+                    }}>
+                      {room.book_title ? '📌 지정도서' : '📖 자유도서'}
+                    </span>
+                  </div>
+                  {room.book_title && <p style={{ fontSize: '12px', color: '#8C6B42', fontWeight: 700 }}>📚 {room.book_title}</p>}
+                  <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginTop: '0.2rem' }}>방장: {room.host_name}</p>
+                </div>
+                <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A', flexShrink: 0 }}>
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              {/* 방 정보 */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                {[
+                  { icon: <Calendar size={11} />, label: fmtTime(room.scheduled_at) },
+                  { icon: <Clock size={11} />, label: `독서 ${room.reading_minutes}분 + 토론 ${room.discussion_minutes}분` },
+                  { icon: <Users size={11} />, label: `${room.participant_count || 0}/${room.max_participants}명` },
+                  ...(room.late_join_cutoff_minutes > 0 ? [{ icon: <Lock size={11} />, label: `${room.late_join_cutoff_minutes}분 전 마감` }] : []),
+                ].map((item, i) => (
+                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: '#9E8D7A', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', padding: '3px 8px', borderRadius: '9999px' }}>
+                    {item.icon}{item.label}
+                  </span>
+                ))}
+              </div>
+
+              {/* 공지 */}
+              {room.notice && (
+                <div style={{ marginBottom: '1rem', padding: '0.625rem 0.875rem', background: 'rgba(196,148,86,0.06)', border: '1px solid rgba(196,148,86,0.2)', borderRadius: '0.75rem' }}>
+                  <p style={{ fontSize: '0.8125rem', color: '#7B6B55', lineHeight: 1.6 }}>📌 {room.notice}</p>
+                </div>
+              )}
+
+              {/* 참여인원 */}
+              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+                참가자 ({room.participants?.length || 0}명)
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '1.25rem' }}>
+                {(room.participants?.length || 0) === 0
+                  ? <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
+                  : room.participants.map(p => {
+                    const bookTitle = p.book_title || room.book_title;
+                    const bookImage = p.book_image || room.book_image;
+                    const statusInfo = p.status === 'paused' ? { label: '일시정지', color: '#9E8D7A' } : p.status === 'ended' ? { label: '종료', color: '#BDB0A0' } : { label: '독서 중', color: '#22c55e' };
+                    return (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: 'rgba(140,107,66,0.05)', border: '1px solid rgba(140,107,66,0.1)', borderRadius: '0.625rem' }}>
+                        <div style={{ width: '18px', height: '25px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {bookImage ? <img src={bookImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BookOpen size={9} style={{ color: '#BDB0A0' }} />}
+                        </div>
+                        <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                          {p.profile_image ? <img src={p.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || '?')[0]}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                            {room.host_id === p.user_id && <span style={{ fontSize: '10px' }}>👑</span>}
+                          </div>
+                          {bookTitle && <div style={{ fontSize: '9px', color: '#9E8D7A', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bookTitle}</div>}
+                        </div>
+                        <span style={{ fontSize: '9px', fontWeight: 800, color: statusInfo.color, flexShrink: 0 }}>{statusInfo.label}</span>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* 책 선택 (자유도서인 경우 참가 전에 필수) */}
+              {user && !isFull && (
+                <div>
+                  {needsBookChoice && !selectedJoinBook && (
+                    <div style={{ marginBottom: '0.625rem', padding: '0.75rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.25)', borderRadius: '0.875rem' }}>
+                      <p style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42', marginBottom: '0.25rem' }}>📚 지정된 도서가 없는 모임이에요</p>
+                      <p style={{ fontSize: '11px', fontWeight: 600, color: '#9E8D7A', marginBottom: '0.5rem' }}>아래에서 읽으실 책을 검색해 선택해야 참가할 수 있어요.</p>
+                      <div style={{ display: 'flex', gap: '0.375rem' }}>
+                        <input
+                          value={joinBookQuery}
+                          onChange={e => setJoinBookQuery(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && handleJoinBookSearch()}
+                          placeholder="책 제목 검색..."
+                          className="form-input"
+                          style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#1C140E' }}
+                        />
+                        <button onClick={handleJoinBookSearch} disabled={isSearchingJoinBook} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8C6B42', flexShrink: 0 }}>
+                          {isSearchingJoinBook ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                        </button>
+                      </div>
+                      {joinBookResults.length > 0 && (
+                        <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '160px', overflowY: 'auto' }}>
+                          {joinBookResults.map((b, i) => (
+                            <div key={i} onClick={() => selectJoinBook(b)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.5rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                              <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2' }}>
+                                {b.image && <img src={b.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                              </div>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(b.title || '').replace(/<\/?[^>]+>/g, '')}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {needsBookChoice && selectedJoinBook && (
+                    <div style={{ marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.75rem' }}>
+                      <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2' }}>
+                        {selectedJoinBook.image && <img src={selectedJoinBook.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      </div>
+                      <span style={{ flex: 1, fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedJoinBook.title}</span>
+                      <button onClick={() => setSelectedJoinBook(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A' }}><X size={13} /></button>
+                    </div>
+                  )}
+                  <button onClick={handleJoin} disabled={isJoining || (needsBookChoice && !selectedJoinBook)} className="premium-button" style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (needsBookChoice && !selectedJoinBook) ? 0.5 : 1 }}>
+                    {isJoining ? <Loader2 className="animate-spin" size={16} /> : <Waves size={16} />}
+                    {needsBookChoice && !selectedJoinBook ? '책을 먼저 선택해주세요' : '모임 참가하기'}
+                  </button>
+                  {joinError && (
+                    <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700, textAlign: 'center', marginTop: '0.375rem' }}>{joinError}</p>
+                  )}
+                </div>
+              )}
+              {isFull && (
+                <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#9E8D7A', textAlign: 'center', padding: '0.75rem' }}>인원이 가득 찼습니다</p>
+              )}
+            </div>
+          </motion.div>
+        </div>
       </>
     );
   }
@@ -700,7 +895,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               </div>
 
               <div style={{ height: chatHeight, overflowY: 'auto', border: `1px solid ${chatBorder}`, borderRadius: '0.875rem', padding: '0.75rem', background: chatBg, display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: chatLocked ? 0.65 : 1, transition: 'opacity 0.2s' }}>
-                {isLoadingMsgs
+                {!isParticipant
+                  ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.375rem' }}>
+                      <Lock size={16} style={{ color: '#BDB0A0' }} />
+                      <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>참가 후 채팅을 볼 수 있어요</p>
+                    </div>
+                  : isLoadingMsgs
                   ? <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Loader2 className="animate-spin" size={18} style={{ color: '#8C6B42' }} /></div>
                   : messages.length === 0
                     ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.375rem' }}>
@@ -791,18 +991,6 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           </div>
           )}
 
-          {kickTarget && (
-            <div style={{ margin: '0.75rem 1.5rem 0', padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#dc2626' }}>{kickTarget.name}님을 추방하시겠습니까?</p>
-              <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                <button onClick={() => setKickTarget(null)} style={ctrlBtnStyle('#9E8D7A')}>취소</button>
-                <button onClick={handleKickParticipant} disabled={isKicking} style={{ ...ctrlBtnStyle('#ef4444'), background: 'rgba(239,68,68,0.12)', fontWeight: 900 }}>
-                  {isKicking ? <Loader2 size={11} className="animate-spin" /> : '추방 확인'}
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* 하단 */}
           <div style={{ padding: '0.875rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.625rem', flexShrink: 0 }}>
             {isHost && !isEnded && (
@@ -849,63 +1037,10 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               </button>
             )}
 
-            {user && !isEnded && (
-              isParticipant
-                ? (!isHost && (
-                  <button onClick={handleLeave} style={{ width: '100%', padding: '0.625rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.875rem', fontSize: '0.875rem', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}>
-                    모임에서 나가기
-                  </button>
-                ))
-                : (
-                  <div>
-                    {needsBookChoice && !selectedJoinBook && (
-                      <div style={{ marginBottom: '0.625rem', padding: '0.75rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.15)', borderRadius: '0.875rem' }}>
-                        <p style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42', marginBottom: '0.5rem' }}>📚 이 모임은 지정된 도서가 없어요. 읽으실 책을 선택해주세요.</p>
-                        <div style={{ display: 'flex', gap: '0.375rem' }}>
-                          <input
-                            value={joinBookQuery}
-                            onChange={e => setJoinBookQuery(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleJoinBookSearch()}
-                            placeholder="책 제목 검색..."
-                            className="form-input"
-                            style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#1C140E' }}
-                          />
-                          <button onClick={handleJoinBookSearch} disabled={isSearchingJoinBook} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8C6B42', flexShrink: 0 }}>
-                            {isSearchingJoinBook ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-                          </button>
-                        </div>
-                        {joinBookResults.length > 0 && (
-                          <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '160px', overflowY: 'auto' }}>
-                            {joinBookResults.map((b, i) => (
-                              <div key={i} onClick={() => selectJoinBook(b)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.5rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                                <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2' }}>
-                                  {b.image && <img src={b.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                                </div>
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(b.title || '').replace(/<\/?[^>]+>/g, '')}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {needsBookChoice && selectedJoinBook && (
-                      <div style={{ marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.75rem' }}>
-                        <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#EDE8E2' }}>
-                          {selectedJoinBook.image && <img src={selectedJoinBook.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                        </div>
-                        <span style={{ flex: 1, fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedJoinBook.title}</span>
-                        <button onClick={() => setSelectedJoinBook(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A' }}><X size={13} /></button>
-                      </div>
-                    )}
-                    <button onClick={handleJoin} disabled={isFull || isJoining || (needsBookChoice && !selectedJoinBook)} className="premium-button" style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (isFull || (needsBookChoice && !selectedJoinBook)) ? 0.5 : 1 }}>
-                      {isJoining ? <Loader2 className="animate-spin" size={16} /> : <Waves size={16} />}
-                      {isFull ? '인원이 가득 찼습니다' : '모임 참가하기'}
-                    </button>
-                    {joinError && (
-                      <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700, textAlign: 'center', marginTop: '0.375rem' }}>{joinError}</p>
-                    )}
-                  </div>
-                )
+            {user && !isEnded && !isHost && (
+              <button onClick={handleLeave} style={{ width: '100%', padding: '0.625rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.875rem', fontSize: '0.875rem', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}>
+                모임에서 나가기
+              </button>
             )}
           </div>
 
@@ -925,6 +1060,54 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           </div>
         </motion.div>
       </div>
+
+      {kickTarget && (
+        <div className="modal-backdrop" style={{ zIndex: 300 }} onClick={() => !isKicking && setKickTarget(null)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 16 }}
+            onClick={e => e.stopPropagation()}
+            className="modal-content relative my-auto"
+            style={{ maxWidth: '360px', padding: '1.5rem' }}
+          >
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', marginBottom: '0.5rem' }}>참가자 추방</p>
+            <p style={{ fontSize: '0.875rem', color: '#7B6B55', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              <strong style={{ color: '#dc2626' }}>{kickTarget.name}</strong>님을 이 모임에서 추방하시겠습니까?
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => setKickTarget(null)} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>취소</button>
+              <button onClick={handleKickParticipant} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+                {isKicking ? <Loader2 size={13} className="animate-spin" /> : '추방하기'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showOvertimeNotice && (
+        <div className="modal-backdrop" style={{ zIndex: 300 }} onClick={() => setShowOvertimeNotice(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 16 }}
+            onClick={e => e.stopPropagation()}
+            className="modal-content relative my-auto"
+            style={{ maxWidth: '380px', padding: '1.5rem' }}
+          >
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', marginBottom: '0.5rem' }}>⏰ 예정된 시간이 종료되었습니다</p>
+            <p style={{ fontSize: '0.875rem', color: '#7B6B55', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              독서·토론 시간이 모두 끝났어요. 방은 자동으로 닫히지 않으니, 조금 더 읽거나 이야기를 나누셔도 됩니다. 준비가 되면 방장이 세션을 종료해주세요.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => setShowOvertimeNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>확인</button>
+              {isHost && (
+                <button onClick={async () => { setShowOvertimeNotice(false); await handleEndSession(); }} style={{ flex: 1, padding: '0.625rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8C6B42', cursor: 'pointer' }}>지금 종료하기</button>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </>
   );
 }
@@ -946,9 +1129,12 @@ function ParticipantRow({ p, room, currentUserId, isHost, whisperTarget, menuOpe
   const bookTitle = p.book_title || room.book_title;
   const bookImage = p.book_image || room.book_image;
   const isWhisperTarget = whisperTarget?.id === p.user_id;
+  const roomPhase = computePhaseInfo(room).phase;
+  const isDiscussing = roomPhase === 'discussion' || roomPhase === 'overtime';
   const statusInfo =
     p.status === 'paused' ? { label: '일시정지', color: '#9E8D7A', icon: <Pause size={9} /> }
     : p.status === 'ended' ? { label: '종료', color: '#BDB0A0', icon: null }
+    : isDiscussing ? { label: '토론 중', color: '#22c55e', icon: <MessageSquare size={9} /> }
     : { label: '독서 중', color: '#22c55e', icon: <BookOpen size={9} /> };
 
   return (

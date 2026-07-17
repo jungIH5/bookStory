@@ -1,11 +1,87 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
-from db import get_db
-from auth import get_current_user_id
+from db import get_db, get_pool
+from auth import get_current_user_id, decode_token
 
 router = APIRouter(prefix="/api/dive", tags=["dive"])
+
+
+class _DiveChatManager:
+    """방별 웹소켓 연결을 관리하고 새 메시지를 실시간으로 push한다."""
+
+    def __init__(self):
+        self.rooms: dict[int, dict[int, set]] = {}
+
+    def connect(self, room_id: int, user_id: int, ws: WebSocket):
+        self.rooms.setdefault(room_id, {}).setdefault(user_id, set()).add(ws)
+
+    def disconnect(self, room_id: int, user_id: int, ws: WebSocket):
+        conns = self.rooms.get(room_id, {}).get(user_id)
+        if not conns:
+            return
+        conns.discard(ws)
+        if not conns:
+            self.rooms[room_id].pop(user_id, None)
+        if room_id in self.rooms and not self.rooms[room_id]:
+            self.rooms.pop(room_id, None)
+
+    async def broadcast(self, room_id: int, message: dict):
+        room = self.rooms.get(room_id)
+        if not room:
+            return
+        to_user_id = message.get("to_user_id")
+        sender_id = message.get("user_id")
+        target_ids = room.keys() if not to_user_id else {to_user_id, sender_id}
+        payload = jsonable_encoder({**message, "type": "chat"})
+        for uid in list(target_ids):
+            for ws in list(room.get(uid, [])):
+                try:
+                    await ws.send_json(payload)
+                except Exception:
+                    pass
+
+    async def broadcast_event(self, room_id: int, event: dict):
+        """참가자 입/퇴장, 상태 변경 등 방 정보가 바뀌었음을 모든 연결에 알린다(재조회 트리거용)."""
+        room = self.rooms.get(room_id)
+        if not room:
+            return
+        payload = jsonable_encoder(event)
+        for uid, conns in list(room.items()):
+            for ws in list(conns):
+                try:
+                    await ws.send_json(payload)
+                except Exception:
+                    pass
+
+
+chat_manager = _DiveChatManager()
+
+
+@router.websocket("/rooms/{room_id}/ws")
+async def dive_chat_ws(websocket: WebSocket, room_id: int, token: str = Query(...)):
+    user_id = decode_token(token)
+    if not user_id:
+        await websocket.close(code=4401)
+        return
+    pool = get_pool()
+    is_participant = await pool.fetchval(
+        "SELECT 1 FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
+    )
+    if not is_participant:
+        await websocket.close(code=4403)
+        return
+    await websocket.accept()
+    chat_manager.connect(room_id, user_id, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        chat_manager.disconnect(room_id, user_id, websocket)
 
 
 def _naive(dt):
@@ -314,6 +390,7 @@ async def join_room(
            VALUES ($1,$2,$3,$4,$5) RETURNING *""",
         room_id, user_id, book_title, book_image, book_isbn,
     )
+    await chat_manager.broadcast_event(room_id, {"type": "room_update"})
     return dict(row)
 
 
@@ -329,6 +406,7 @@ async def leave_room(
     )
     if room and participant:
         await _finalize_participant(conn, room, participant, mark_ended=False)
+        await chat_manager.broadcast_event(room_id, {"type": "room_update"})
     return {"left": True}
 
 
@@ -350,6 +428,7 @@ async def kick_participant(
     if not participant:
         raise HTTPException(404, "참가자를 찾을 수 없습니다.")
     await _finalize_participant(conn, room, participant, mark_ended=False)
+    await chat_manager.broadcast_event(room_id, {"type": "room_update"})
     return {"kicked": True}
 
 
@@ -381,6 +460,7 @@ async def update_my_status(
         "UPDATE dive_participants SET status=$1, reading_seconds=$2, status_changed_at=CURRENT_TIMESTAMP WHERE id=$3 RETURNING *",
         body.status, seconds, participant["id"],
     )
+    await chat_manager.broadcast_event(room_id, {"type": "room_update"})
     return dict(row)
 
 
@@ -390,6 +470,11 @@ async def get_messages(
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
+    participant = await conn.fetchrow(
+        "SELECT 1 FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
+    )
+    if not participant:
+        raise HTTPException(403, "참가자만 채팅을 볼 수 있습니다.")
     rows = await conn.fetch("""
         SELECT dm.id, dm.room_id, dm.user_id, dm.to_user_id, dm.content, dm.is_ai, dm.created_at,
                COALESCE(u.name, dm.user_name) AS user_name,
@@ -418,6 +503,11 @@ async def send_message(
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
+    sender = await conn.fetchrow(
+        "SELECT 1 FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
+    )
+    if not sender:
+        raise HTTPException(403, "참가자만 채팅을 보낼 수 있습니다.")
     if body.to_user_id:
         if body.to_user_id == user_id:
             raise HTTPException(400, "자기 자신에게 귓속말을 보낼 수 없습니다.")
@@ -448,6 +538,7 @@ async def send_message(
     """, room_id, user_id, user['name'] if user else '', body.content, body.is_ai, body.to_user_id)
     result = dict(row)
     result["user_image"] = user["profile_image"] if user else None
+    await chat_manager.broadcast(room_id, result)
     return result
 
 
@@ -472,6 +563,7 @@ async def update_room_status(
     row = await conn.fetchrow(
         "UPDATE dive_rooms SET status=$1 WHERE id=$2 RETURNING *", status, room_id,
     )
+    await chat_manager.broadcast_event(room_id, {"type": "room_update"})
     return dict(row)
 
 

@@ -13,13 +13,14 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
   const [stats, setStats] = useState(null);
   const [friendStatus, setFriendStatus] = useState(null);
   const [friendLoading, setFriendLoading] = useState(false);
-  const [relation, setRelation] = useState({ is_following: false, is_blocked: false });
+  const [relation, setRelation] = useState({ is_blocked: false });
   const [relationLoading, setRelationLoading] = useState(false);
+  const [confirmFriendAction, setConfirmFriendAction] = useState(false);
+  const [confirmBlockAction, setConfirmBlockAction] = useState(false);
   const [hostedRooms, setHostedRooms] = useState([]);
   const [joinedRooms, setJoinedRooms] = useState([]);
-  const [following, setFollowing] = useState([]);
-  const [followers, setFollowers] = useState([]);
-  const [followsLoading, setFollowsLoading] = useState(false);
+  const [friendsList, setFriendsList] = useState([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
   const [expandedRoom, setExpandedRoom] = useState(null);
   const [roomMessages, setRoomMessages] = useState({});
   const [loadingMsgs, setLoadingMsgs] = useState(null);
@@ -31,11 +32,11 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
     ? [
         { id: 'books', label: '독서', icon: <BookOpen size={12} /> },
         { id: 'rooms', label: '모임', icon: <Waves size={12} /> },
-        { id: 'follows', label: '팔로우', icon: <Users size={12} /> },
+        { id: 'friends', label: '친구', icon: <Users size={12} /> },
       ]
     : [
         { id: 'books', label: '독서', icon: <BookOpen size={12} /> },
-        { id: 'follows', label: '관계', icon: <Users size={12} /> },
+        { id: 'relation', label: '관계', icon: <Users size={12} /> },
       ];
 
   const fetchFriendStatus = useCallback(async () => {
@@ -58,20 +59,23 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
     } catch {}
   }, [userId, token, isMe]);
 
-  const fetchFollows = useCallback(async () => {
-    if (!isMe) return;
-    setFollowsLoading(true);
+  const fetchFriendsList = useCallback(async () => {
+    if (!isMe || !token) return;
+    setFriendsLoading(true);
     try {
-      const [fwRes, frRes] = await Promise.all([
-        fetch(`${API_URL}/api/users/${userId}/following`),
-        fetch(`${API_URL}/api/users/${userId}/followers`),
-      ]);
-      if (fwRes.ok) setFollowing(await fwRes.json());
-      if (frRes.ok) setFollowers(await frRes.json());
-    } catch {} finally { setFollowsLoading(false); }
-  }, [userId, isMe]);
+      const res = await fetch(`${API_URL}/api/friends`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setFriendsList(Array.isArray(data) ? data.map(f => ({
+          id: f.friend_id, friendshipId: f.id, name: f.friend_name, profile_image: f.friend_image,
+        })) : []);
+      }
+    } catch {} finally { setFriendsLoading(false); }
+  }, [userId, isMe, token]);
 
   useEffect(() => {
+    setConfirmFriendAction(false);
+    setConfirmBlockAction(false);
     (async () => {
       setLoading(true);
       try {
@@ -94,9 +98,9 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
         .then(r => r.ok ? r.json() : []).then(d => setHostedRooms(Array.isArray(d) ? d : [])).catch(() => {});
       fetch(`${API_URL}/api/dive/rooms/joined`, { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : []).then(d => setJoinedRooms(Array.isArray(d) ? d : [])).catch(() => {});
-      fetchFollows();
+      fetchFriendsList();
     }
-  }, [userId, fetchFriendStatus, fetchRelation, fetchFollows]);
+  }, [userId, fetchFriendStatus, fetchRelation, fetchFriendsList]);
 
   const handleFriendAction = async () => {
     if (!token || friendLoading) return;
@@ -119,20 +123,6 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
     } finally { setFriendLoading(false); }
   };
 
-  const handleFollowAction = async () => {
-    if (!token || relationLoading) return;
-    setRelationLoading(true);
-    try {
-      if (relation.is_following) {
-        await fetch(`${API_URL}/api/users/${userId}/follow`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-        setRelation(r => ({ ...r, is_following: false }));
-      } else {
-        await fetch(`${API_URL}/api/users/${userId}/follow`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-        setRelation(r => ({ ...r, is_following: true }));
-      }
-    } finally { setRelationLoading(false); }
-  };
-
   const handleBlockAction = async () => {
     if (!token || relationLoading) return;
     setRelationLoading(true);
@@ -142,15 +132,15 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
         setRelation(r => ({ ...r, is_blocked: false }));
       } else {
         await fetch(`${API_URL}/api/users/${userId}/block`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-        setRelation(r => ({ ...r, is_blocked: true, is_following: false }));
+        setRelation(r => ({ ...r, is_blocked: true }));
       }
     } finally { setRelationLoading(false); }
   };
 
-  const handleUnfollowUser = async (targetId) => {
+  const handleRemoveFriend = async (friendshipId) => {
     if (!token) return;
-    await fetch(`${API_URL}/api/users/${targetId}/follow`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-    setFollowing(prev => prev.filter(u => u.id !== targetId));
+    await fetch(`${API_URL}/api/friends/${friendshipId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    setFriendsList(prev => prev.filter(f => f.friendshipId !== friendshipId));
   };
 
   const handleToggleRoom = async (roomId) => {
@@ -198,9 +188,35 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
     if (friendStatus.status === 'pending' && !friendStatus.is_requester) return { ...base, background: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.3)', color: '#2563eb' };
     return { ...base, background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)', color: '#dc2626' };
   };
+  const friendConfirmText = () => {
+    if (!friendStatus || friendStatus.status === 'none') return '친구 요청을 보내시겠습니까?';
+    if (friendStatus.status === 'accepted') return '친구를 끊으시겠습니까?';
+    if (friendStatus.status === 'pending' && !friendStatus.is_requester) return '친구 요청을 수락하시겠습니까?';
+    return '보낸 친구 요청을 취소하시겠습니까?';
+  };
+  const blockConfirmText = () => relation.is_blocked
+    ? '차단을 해제하시겠습니까?'
+    : '이 사용자를 차단하시겠습니까? 차단 시 서로 귓속말·친구 요청을 보낼 수 없습니다.';
+
+  const relationBadges = () => {
+    const badges = [];
+    if (!friendStatus || friendStatus.status === 'none') {
+      badges.push({ label: '친구 아님', icon: null, bg: 'rgba(158,141,122,0.08)', border: 'rgba(158,141,122,0.25)', color: '#9E8D7A' });
+    } else if (friendStatus.status === 'accepted') {
+      badges.push({ label: '친구', icon: <UserCheck size={10} />, bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)', color: '#16a34a' });
+    } else if (friendStatus.status === 'pending' && !friendStatus.is_requester) {
+      badges.push({ label: '친구 요청 받음', icon: <UserCheck size={10} />, bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.3)', color: '#2563eb' });
+    } else {
+      badges.push({ label: '친구 요청 보냄', icon: <UserPlus size={10} />, bg: 'rgba(196,148,86,0.1)', border: 'rgba(196,148,86,0.3)', color: '#C49456' });
+    }
+    if (relation.is_blocked) {
+      badges.push({ label: '차단됨', icon: <Shield size={10} />, bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.25)', color: '#dc2626' });
+    }
+    return badges;
+  };
 
   return (
-    <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
+    <div className="modal-backdrop overflow-y-auto" style={{ zIndex: 150 }} onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.93, y: 32 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -218,6 +234,15 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
               </div>
               <div>
                 <p style={{ fontWeight: 900, fontSize: '1.0625rem', color: '#1C140E' }}>{isMe ? '내 서재' : `${userName}님의 서재`}</p>
+                {!isMe && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '4px' }}>
+                    {relationBadges().map((b, i) => (
+                      <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 800, padding: '2px 7px', borderRadius: '9999px', background: b.bg, border: `1px solid ${b.border}`, color: b.color }}>
+                        {b.icon}{b.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginTop: '2px' }}>
                   읽는 중 {reading.length}권 · 완독 {finished.length}권
                 </p>
@@ -341,24 +366,21 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
             </>
           )}
 
-          {/* ── 팔로우 탭 (본인) ── */}
-          {activeTab === 'follows' && isMe && (
-            followsLoading
+          {/* ── 친구 탭 (본인) ── */}
+          {activeTab === 'friends' && isMe && (
+            friendsLoading
               ? <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}><Loader2 className="animate-spin" size={24} style={{ color: '#8C6B42' }} /></div>
-              : <>
-                  <FollowSection title="팔로잉" accentColor="#C49456" users={following} emptyText="팔로우한 사람이 없습니다.">
-                    {(u) => (
-                      <button onClick={() => handleUnfollowUser(u.id)} style={smallBtnStyle('#9E8D7A')}>
-                        <UserMinus size={10} /> 언팔로우
-                      </button>
-                    )}
-                  </FollowSection>
-                  <FollowSection title="팔로워" accentColor="#8C6B42" users={followers} emptyText="팔로워가 없습니다." />
-                </>
+              : <FollowSection title="친구" accentColor="#8C6B42" users={friendsList} emptyText="아직 친구가 없습니다.">
+                  {(u) => (
+                    <button onClick={() => handleRemoveFriend(u.friendshipId)} style={smallBtnStyle('#9E8D7A')}>
+                      <UserMinus size={10} /> 친구 끊기
+                    </button>
+                  )}
+                </FollowSection>
           )}
 
           {/* ── 관계 탭 (타인) ── */}
-          {activeTab === 'follows' && !isMe && (
+          {activeTab === 'relation' && !isMe && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               <p style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 {userName}님과의 관계
@@ -368,25 +390,22 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
               <div style={relationCardStyle}>
                 <div>
                   <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#1C140E', marginBottom: '2px' }}>친구</p>
-                  <p style={{ fontSize: '11px', color: '#9E8D7A' }}>친구 요청을 보내거나 수락합니다.</p>
+                  <p style={{ fontSize: '11px', color: '#9E8D7A' }}>친구가 되면 서로의 독서 활동을 확인할 수 있습니다.</p>
                 </div>
-                <button onClick={handleFriendAction} disabled={friendLoading} style={friendBtnStyle()}>
+                <button onClick={() => setConfirmFriendAction(true)} disabled={friendLoading} style={friendBtnStyle()}>
                   {friendLoading ? <Loader2 size={11} className="animate-spin" /> : friendBtnIcon()}
                   {friendBtnLabel()}
                 </button>
               </div>
-
-              {/* 팔로우 */}
-              <div style={relationCardStyle}>
-                <div>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#1C140E', marginBottom: '2px' }}>팔로우</p>
-                  <p style={{ fontSize: '11px', color: '#9E8D7A' }}>이 사람의 독서 활동을 팔로우합니다.</p>
+              {confirmFriendAction && (
+                <div style={{ padding: '0.75rem 1rem', marginTop: '-0.5rem', background: 'rgba(196,148,86,0.06)', border: '1px solid rgba(196,148,86,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#8C6B42' }}>{friendConfirmText()}</p>
+                  <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                    <button onClick={() => setConfirmFriendAction(false)} style={smallBtnStyle('#9E8D7A')}>취소</button>
+                    <button onClick={async () => { setConfirmFriendAction(false); await handleFriendAction(); }} disabled={friendLoading} style={smallBtnStyle('#8C6B42')}>확인</button>
+                  </div>
                 </div>
-                <button onClick={handleFollowAction} disabled={relationLoading} style={smallBtnStyle(relation.is_following ? '#22c55e' : '#8C6B42')}>
-                  {relationLoading ? <Loader2 size={10} className="animate-spin" /> : relation.is_following ? <UserCheck size={10} /> : <UserPlus size={10} />}
-                  {relation.is_following ? '팔로잉' : '팔로우'}
-                </button>
-              </div>
+              )}
 
               {/* 차단 */}
               <div style={{ ...relationCardStyle, borderColor: relation.is_blocked ? 'rgba(239,68,68,0.3)' : 'rgba(139,107,66,0.12)', background: relation.is_blocked ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
@@ -394,11 +413,20 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                   <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#1C140E', marginBottom: '2px' }}>차단</p>
                   <p style={{ fontSize: '11px', color: '#9E8D7A' }}>차단 시 귓속말·친구 요청이 차단됩니다.</p>
                 </div>
-                <button onClick={handleBlockAction} disabled={relationLoading} style={smallBtnStyle(relation.is_blocked ? '#dc2626' : '#9E8D7A')}>
+                <button onClick={() => setConfirmBlockAction(true)} disabled={relationLoading} style={smallBtnStyle(relation.is_blocked ? '#dc2626' : '#9E8D7A')}>
                   {relationLoading ? <Loader2 size={10} className="animate-spin" /> : relation.is_blocked ? <ShieldOff size={10} /> : <Shield size={10} />}
                   {relation.is_blocked ? '차단됨' : '차단'}
                 </button>
               </div>
+              {confirmBlockAction && (
+                <div style={{ padding: '0.75rem 1rem', marginTop: '-0.5rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#dc2626' }}>{blockConfirmText()}</p>
+                  <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                    <button onClick={() => setConfirmBlockAction(false)} style={smallBtnStyle('#9E8D7A')}>취소</button>
+                    <button onClick={async () => { setConfirmBlockAction(false); await handleBlockAction(); }} disabled={relationLoading} style={{ ...smallBtnStyle('#dc2626'), background: 'rgba(239,68,68,0.12)', fontWeight: 900 }}>확인</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -259,67 +259,11 @@ async def get_relation(
     conn=Depends(db.get_db),
     current_user_id: int = Depends(get_current_user_id),
 ):
-    is_following = await conn.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM user_follows WHERE follower_id=$1 AND following_id=$2)",
-        current_user_id, user_id,
-    )
     is_blocked = await conn.fetchval(
         "SELECT EXISTS(SELECT 1 FROM user_blocks WHERE blocker_id=$1 AND blocked_id=$2)",
         current_user_id, user_id,
     )
-    return {"is_following": is_following, "is_blocked": is_blocked}
-
-
-@router.post("/{user_id}/follow")
-async def follow_user(
-    user_id: int,
-    conn=Depends(db.get_db),
-    current_user_id: int = Depends(get_current_user_id),
-):
-    if current_user_id == user_id:
-        raise HTTPException(400, "자기 자신을 팔로우할 수 없습니다.")
-    await conn.execute(
-        "INSERT INTO user_follows (follower_id, following_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
-        current_user_id, user_id,
-    )
-    return {"following": True}
-
-
-@router.delete("/{user_id}/follow")
-async def unfollow_user(
-    user_id: int,
-    conn=Depends(db.get_db),
-    current_user_id: int = Depends(get_current_user_id),
-):
-    await conn.execute(
-        "DELETE FROM user_follows WHERE follower_id=$1 AND following_id=$2",
-        current_user_id, user_id,
-    )
-    return {"following": False}
-
-
-@router.get("/{user_id}/following")
-async def get_following(user_id: int, conn=Depends(db.get_db)):
-    rows = await conn.fetch("""
-        SELECT u.id, u.name, u.location, u.profile_image
-        FROM user_follows uf
-        JOIN users u ON u.id = uf.following_id
-        WHERE uf.follower_id = $1
-        ORDER BY uf.created_at DESC
-    """, user_id)
-    return [dict(r) for r in rows]
-
-
-@router.get("/{user_id}/followers")
-async def get_followers(user_id: int, conn=Depends(db.get_db)):
-    rows = await conn.fetch("""
-        SELECT u.id, u.name, u.location, u.profile_image
-        FROM user_follows uf
-        JOIN users u ON u.id = uf.follower_id
-        WHERE uf.following_id = $1
-        ORDER BY uf.created_at DESC
-    """, user_id)
-    return [dict(r) for r in rows]
+    return {"is_blocked": is_blocked}
 
 
 @router.post("/{user_id}/block")
@@ -332,11 +276,6 @@ async def block_user(
         raise HTTPException(400, "자기 자신을 차단할 수 없습니다.")
     await conn.execute(
         "INSERT INTO user_blocks (blocker_id, blocked_id) VALUES ($1,$2) ON CONFLICT DO NOTHING",
-        current_user_id, user_id,
-    )
-    # 차단 시 팔로우도 해제
-    await conn.execute(
-        "DELETE FROM user_follows WHERE follower_id=$1 AND following_id=$2",
         current_user_id, user_id,
     )
     return {"blocked": True}

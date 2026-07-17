@@ -34,20 +34,24 @@ def create_token(user_id: int) -> str:
     return token_bytes.decode() if isinstance(token_bytes, bytes) else token_bytes
 
 
+def decode_token(token: str) -> int | None:
+    try:
+        payload_bytes = jwe.decrypt(token, _get_key())
+        payload = json.loads(payload_bytes)
+        return int(payload.get("userId", 0)) or None
+    except Exception:
+        return None
+
+
 def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> int:
     if not credentials:
         raise HTTPException(status_code=401, detail="인증이 필요합니다.")
-    try:
-        payload_bytes = jwe.decrypt(credentials.credentials, _get_key())
-        payload = json.loads(payload_bytes)
-        user_id = payload.get("userId")
-        if not user_id:
-            raise ValueError("userId missing")
-        return int(user_id)
-    except Exception:
+    user_id = decode_token(credentials.credentials)
+    if not user_id:
         raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
+    return user_id
 
 
 def optional_user_id(
@@ -55,12 +59,7 @@ def optional_user_id(
 ) -> int | None:
     if not credentials:
         return None
-    try:
-        payload_bytes = jwe.decrypt(credentials.credentials, _get_key())
-        payload = json.loads(payload_bytes)
-        return int(payload.get("userId", 0)) or None
-    except Exception:
-        return None
+    return decode_token(credentials.credentials)
 
 
 async def get_current_admin_id(
