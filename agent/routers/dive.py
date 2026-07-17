@@ -89,17 +89,26 @@ def _naive(dt):
 
 
 def _elapsed_reading_seconds(participant, room) -> int:
-    """참가자의 누적 독서 시간(초). 방의 실제 '독서' 구간(scheduled_at ~ scheduled_at+reading_minutes)과
-    겹치는 시간만 계산한다 — 대기/토론/시간종료 구간에 머문 시간은 제외한다."""
+    """참가자의 누적 독서 시간(초). 방의 예정된 '독서' 구간(scheduled_at ~ +reading_minutes)과,
+    토론 시간이 끝난 이후 계속 읽은 '연장 독서' 구간만 합산한다 — 대기/토론 구간에 머문 시간은 제외한다."""
     total = participant["reading_seconds"] or 0
     if participant["status"] != "reading":
         return total
+    now = datetime.now()
+    since = participant["status_changed_at"]
     reading_start = _naive(room["scheduled_at"])
     reading_end = reading_start + timedelta(minutes=room["reading_minutes"] or 0)
-    overlap_start = max(participant["status_changed_at"], reading_start)
-    overlap_end = min(datetime.now(), reading_end)
+    discussion_end = reading_end + timedelta(minutes=room["discussion_minutes"] or 0)
+
+    overlap_start = max(since, reading_start)
+    overlap_end = min(now, reading_end)
     if overlap_end > overlap_start:
         total += int((overlap_end - overlap_start).total_seconds())
+
+    extra_start = max(since, discussion_end)
+    if now > extra_start:
+        total += int((now - extra_start).total_seconds())
+
     return total
 
 
