@@ -166,6 +166,11 @@ function App() {
   }, [user?.id]);
 
   useEffect(() => {
+    const iv = setInterval(fetchDiveRooms, 20000);
+    return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
     if (!user?.token) { setActiveDiveRoom(null); return; }
     fetchActiveDiveRoom();
     const iv = setInterval(fetchActiveDiveRoom, 30000);
