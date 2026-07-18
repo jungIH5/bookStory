@@ -1,11 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from db import get_db
+from db import get_db, get_pool
 from auth import get_current_user_id, optional_user_id
+from nodes.infer_book_from_post import infer_book_title_from_post, resolve_book_by_title
 
 router = APIRouter(prefix="/api/community")
+
+
+async def _infer_and_tag_post(post_id: int, title: str, content: str):
+    """책을 명시적으로 고르지 않고 쓴 글에서 AI가 책을 추정해 태그를 단다(미확인 상태)."""
+    try:
+        guess = await infer_book_title_from_post(title, content)
+        if not guess:
+            return
+        book = await resolve_book_by_title(guess)
+        if not book:
+            return
+        pool = get_pool()
+        await pool.execute(
+            """UPDATE posts SET book_title=$1, book_isbn=$2, book_image=$3,
+                   book_tag_source='ai', book_tag_confirmed=false
+               WHERE id=$4 AND book_isbn=''""",
+            book["title"], book["isbn"], book["image"], post_id,
+        )
+    except Exception:
+        pass
 
 
 @router.get("/posts")
@@ -42,20 +63,28 @@ class PostIn(BaseModel):
     title: str
     content: str
     book_title: str = ""
+    book_isbn: str = ""
+    book_image: str = ""
 
 
 @router.post("/posts")
 async def create_post(
     body: PostIn,
+    background_tasks: BackgroundTasks,
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
     if not body.title or not body.content:
         raise HTTPException(400, "제목과 내용을 입력해주세요.")
+    manually_tagged = bool(body.book_isbn)
     row = await conn.fetchrow(
-        "INSERT INTO posts (user_id, title, content, book_title) VALUES ($1,$2,$3,$4) RETURNING *",
+        """INSERT INTO posts (user_id, title, content, book_title, book_isbn, book_image, book_tag_source, book_tag_confirmed)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE) RETURNING *""",
         user_id, body.title, body.content, body.book_title or None,
+        body.book_isbn or '', body.book_image or '', 'manual' if manually_tagged else '',
     )
+    if not manually_tagged:
+        background_tasks.add_task(_infer_and_tag_post, row["id"], body.title, body.content)
     return dict(row)
 
 
@@ -72,6 +101,49 @@ async def delete_post(
         raise HTTPException(403, "삭제 권한이 없습니다.")
     await conn.execute("DELETE FROM posts WHERE id = $1", post_id)
     return {"deleted": True, "id": post_id}
+
+
+class BookTagAction(BaseModel):
+    action: str  # 'confirm' | 'dismiss' | 'edit'
+    book_title: Optional[str] = None
+    book_isbn: Optional[str] = None
+    book_image: Optional[str] = None
+
+
+@router.patch("/posts/{post_id}/book-tag")
+async def update_book_tag(
+    post_id: int,
+    body: BookTagAction,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    row = await conn.fetchrow("SELECT user_id FROM posts WHERE id = $1", post_id)
+    if not row:
+        raise HTTPException(404, "게시물을 찾을 수 없습니다.")
+    if row["user_id"] != user_id:
+        raise HTTPException(403, "권한이 없습니다.")
+
+    if body.action == "confirm":
+        updated = await conn.fetchrow(
+            "UPDATE posts SET book_tag_confirmed=TRUE WHERE id=$1 RETURNING *", post_id,
+        )
+    elif body.action == "dismiss":
+        updated = await conn.fetchrow(
+            """UPDATE posts SET book_title=NULL, book_isbn='', book_image='',
+                   book_tag_source='', book_tag_confirmed=TRUE WHERE id=$1 RETURNING *""",
+            post_id,
+        )
+    elif body.action == "edit":
+        if not body.book_title:
+            raise HTTPException(400, "책 제목이 필요합니다.")
+        updated = await conn.fetchrow(
+            """UPDATE posts SET book_title=$1, book_isbn=$2, book_image=$3,
+                   book_tag_source='manual', book_tag_confirmed=TRUE WHERE id=$4 RETURNING *""",
+            body.book_title, body.book_isbn or '', body.book_image or '', post_id,
+        )
+    else:
+        raise HTTPException(400, "잘못된 action입니다.")
+    return dict(updated)
 
 
 @router.get("/posts/{post_id}")

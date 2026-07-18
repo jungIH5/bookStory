@@ -33,7 +33,7 @@ export default function WritePostModal({ postForm, setPostForm, isSubmitting, on
   };
 
   const handleSubmit = () => {
-    onSubmit(postSelectedBook ? stripHtml(postSelectedBook.title) : postForm.book_title);
+    onSubmit(postSelectedBook ? { ...postSelectedBook, title: stripHtml(postSelectedBook.title) } : null);
     setPostSelectedBook(null);
     setPostBookResults([]);
     setPostBookSearch('');
@@ -65,6 +65,11 @@ export default function WritePostModal({ postForm, setPostForm, isSubmitting, on
 
           <div>
             <label className="form-label">관련 책 검색 (선택)</label>
+            {!postSelectedBook && (
+              <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 600, marginBottom: '0.5rem' }}>
+                직접 고르지 않아도 괜찮아요 — 등록 후 AI가 내용을 보고 책을 추정해드려요.
+              </p>
+            )}
             {postSelectedBook ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'linear-gradient(135deg, rgba(140,107,66,0.08), rgba(196,148,86,0.06))', border: '1px solid rgba(140,107,66,0.25)', borderRadius: '0.875rem' }}>
                 {postSelectedBook.image && <img src={postSelectedBook.image} alt="" style={{ width: '2.75rem', height: '3.75rem', objectFit: 'cover', borderRadius: '4px', flexShrink: 0, boxShadow: '0 4px 8px rgba(0,0,0,0.2)' }} />}

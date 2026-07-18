@@ -638,7 +638,7 @@ function App() {
     } catch (error) { console.error('Like error:', error); }
   };
 
-  const handleWritePost = async (bookTitle) => {
+  const handleWritePost = async (selectedBook) => {
     const contentText = postForm.content.replace(/<[^>]+>/g, '').trim();
     if (!postForm.title.trim() || !contentText) return alert('제목과 내용을 입력해주세요.');
     setIsSubmittingPost(true);
@@ -651,7 +651,9 @@ function App() {
           user_id: getValidUserId(user),
           title: postForm.title,
           content: postForm.content,
-          book_title: bookTitle || postForm.book_title,
+          book_title: selectedBook ? selectedBook.title : postForm.book_title,
+          book_isbn: selectedBook?.isbn || '',
+          book_image: selectedBook?.image || '',
         })
       });
       if (response.ok) {
@@ -662,6 +664,24 @@ function App() {
       }
     } catch (error) { alert('글 작성 중 오류가 발생했습니다.'); }
     finally { setIsSubmittingPost(false); }
+  };
+
+  const handleBookTagAction = async (action, book) => {
+    if (!user?.token || !selectedPost) return;
+    try {
+      const res = await fetch(`${API_URL}/api/community/posts/${selectedPost.id}/book-tag`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify(action === 'edit'
+          ? { action, book_title: stripHtml(book.title), book_isbn: book.isbn || '', book_image: book.image || '' }
+          : { action }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSelectedPost(prev => prev ? { ...prev, ...updated } : prev);
+        setCommunityPosts(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
+      }
+    } catch {}
   };
 
   const handleSubmitComment = async () => {
@@ -1345,6 +1365,7 @@ function App() {
             onDeletePost={() => handleDeletePost(selectedPost.id)}
             onDeleteComment={handleDeleteComment}
             onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
+            onBookTagAction={handleBookTagAction}
           />
         )}
       </AnimatePresence>

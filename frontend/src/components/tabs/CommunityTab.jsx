@@ -102,6 +102,9 @@ export default function CommunityTab({ user, communityPosts, hasMore, isFetching
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '2px 8px 2px 6px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.15)', borderRadius: '6px', flexShrink: 0 }}>
                           <BookOpen size={9} style={{ color: '#8C6B42' }} />
                           <span style={{ fontSize: '10px', fontWeight: 700, color: '#8C6B42', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.book_title}</span>
+                          {post.book_tag_source === 'ai' && !post.book_tag_confirmed && (
+                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#C49456' }}>AI 추정</span>
+                          )}
                         </span>
                       )}
                     </div>

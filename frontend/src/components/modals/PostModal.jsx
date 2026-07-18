@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, BookOpen, Heart, Loader2, Send, CornerDownRight, Trash2, Pencil } from 'lucide-react';
-import { renderMarkdown } from '../../utils';
+import { X, BookOpen, Heart, Loader2, Send, CornerDownRight, Trash2, Pencil, Search } from 'lucide-react';
+import { renderMarkdown, stripHtml } from '../../utils';
+import { API_URL } from '../../api';
+
+const chipBtnStyle = (color) => ({
+  padding: '0.3rem 0.75rem', background: `${color}15`, border: `1px solid ${color}40`,
+  borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color, cursor: 'pointer',
+});
 
 export default function PostModal({
   post, comments, user,
@@ -10,8 +16,29 @@ export default function PostModal({
   replyInput, setReplyInput,
   replyingToMention, setReplyingToMention,
   isSubmittingComment,
-  onClose, onLike, onSubmitComment, onSubmitReply, onDeletePost, onDeleteComment, onOpenUserLibrary,
+  onClose, onLike, onSubmitComment, onSubmitReply, onDeletePost, onDeleteComment, onOpenUserLibrary, onBookTagAction,
 }) {
+  const [showBookEdit, setShowBookEdit] = useState(false);
+  const [bookEditQuery, setBookEditQuery] = useState('');
+  const [bookEditResults, setBookEditResults] = useState([]);
+  const [isSearchingBookEdit, setIsSearchingBookEdit] = useState(false);
+  const bookEditTimer = useRef(null);
+
+  const isAuthor = user && post.user_id && Number(post.user_id) === Number(user.id);
+  const needsBookTagReview = post.book_tag_source === 'ai' && !post.book_tag_confirmed;
+
+  const searchBookEdit = (query) => {
+    if (bookEditTimer.current) clearTimeout(bookEditTimer.current);
+    if (!query.trim()) { setBookEditResults([]); return; }
+    bookEditTimer.current = setTimeout(async () => {
+      setIsSearchingBookEdit(true);
+      try {
+        const res = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setBookEditResults((data.items || []).slice(0, 5));
+      } catch {} finally { setIsSearchingBookEdit(false); }
+    }, 320);
+  };
   return (
     <div className="modal-backdrop overflow-y-auto" onClick={() => { setReplyingTo(null); onClose(); }}>
       <motion.div
@@ -28,6 +55,54 @@ export default function PostModal({
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.625rem', padding: '4px 10px 4px 8px', background: 'linear-gradient(135deg, rgba(140,107,66,0.1), rgba(196,148,86,0.08))', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '8px' }}>
                 <BookOpen size={11} style={{ color: '#8C6B42', flexShrink: 0 }} />
                 <span style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42' }}>{post.book_title}</span>
+                {needsBookTagReview && (
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#C49456' }}>· AI 추정</span>
+                )}
+              </div>
+            )}
+            {needsBookTagReview && isAuthor && onBookTagAction && (
+              <div style={{ marginBottom: '0.75rem', padding: '0.625rem 0.875rem', background: 'rgba(196,148,86,0.06)', border: '1px solid rgba(196,148,86,0.25)', borderRadius: '0.75rem' }}>
+                {!showBookEdit ? (
+                  <>
+                    <p style={{ fontSize: '11px', fontWeight: 700, color: '#8C6B42', marginBottom: '0.5rem' }}>
+                      🤖 AI가 이 글을 위 책에 대한 이야기로 추정했어요. 맞나요?
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                      <button onClick={() => onBookTagAction('confirm')} style={chipBtnStyle('#16a34a')}>맞아요</button>
+                      <button onClick={() => setShowBookEdit(true)} style={chipBtnStyle('#8C6B42')}>다른 책이에요</button>
+                      <button onClick={() => onBookTagAction('dismiss')} style={chipBtnStyle('#9E8D7A')}>책 얘기 아니에요</button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={13} />
+                      <input
+                        value={bookEditQuery}
+                        onChange={e => { setBookEditQuery(e.target.value); searchBookEdit(e.target.value); }}
+                        placeholder="책 제목 검색..."
+                        className="form-input"
+                        style={{ height: '2.25rem', fontSize: '0.8125rem', color: '#1C140E', paddingLeft: '2.25rem' }}
+                        autoFocus
+                      />
+                      {isSearchingBookEdit && <Loader2 size={13} className="animate-spin" style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} />}
+                    </div>
+                    {bookEditResults.length > 0 && (
+                      <div style={{ marginTop: '0.375rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '160px', overflowY: 'auto' }}>
+                        {bookEditResults.map((b, i) => (
+                          <div key={i}
+                            onClick={() => { onBookTagAction('edit', b); setShowBookEdit(false); setBookEditQuery(''); setBookEditResults([]); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.5rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(139,107,66,0.1)', borderRadius: '0.5rem', cursor: 'pointer' }}
+                          >
+                            {b.image && <img src={b.image} alt="" style={{ width: '20px', height: '28px', objectFit: 'cover', borderRadius: '3px', flexShrink: 0 }} />}
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(b.title)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button onClick={() => { setShowBookEdit(false); setBookEditQuery(''); setBookEditResults([]); }} style={{ ...chipBtnStyle('#9E8D7A'), marginTop: '0.375rem' }}>취소</button>
+                  </div>
+                )}
               </div>
             )}
             <h2 style={{ fontSize: '1.25rem', fontWeight: 900, lineHeight: 1.3, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>{post.title}</h2>
