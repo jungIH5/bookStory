@@ -446,6 +446,12 @@ async def _init_db():
                 )
             """)
 
+            # 게시글-도서 연결 (수동 선택 또는 AI 추정)
+            await conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS book_isbn VARCHAR(50) DEFAULT ''")
+            await conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS book_image TEXT DEFAULT ''")
+            await conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS book_tag_source VARCHAR(10) DEFAULT ''")
+            await conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS book_tag_confirmed BOOLEAN DEFAULT TRUE")
+
             # post_likes user_id FK 추가
             try:
                 async with conn.transaction():

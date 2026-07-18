@@ -1130,7 +1130,8 @@ function ParticipantRow({ p, room, currentUserId, isHost, whisperTarget, menuOpe
   const bookImage = p.book_image || room.book_image;
   const isWhisperTarget = whisperTarget?.id === p.user_id;
   const roomPhase = computePhaseInfo(room).phase;
-  const isDiscussing = roomPhase === 'discussion' || roomPhase === 'overtime';
+  // 토론 구간만 "토론 중"으로 표시한다 — 토론이 끝난 뒤(overtime) 계속 읽는 시간은 독서시간으로 집계되므로 "독서 중"으로 유지.
+  const isDiscussing = roomPhase === 'discussion';
   const statusInfo =
     p.status === 'paused' ? { label: '일시정지', color: '#9E8D7A', icon: <Pause size={9} /> }
     : p.status === 'ended' ? { label: '종료', color: '#BDB0A0', icon: null }
