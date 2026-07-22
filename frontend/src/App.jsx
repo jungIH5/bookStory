@@ -1021,7 +1021,6 @@ function App() {
 
   const navTabs = [
     { id: 'stack', label: '책쌓기', icon: <BookOpen size={15} /> },
-    { id: 'clubs', label: '모임찾기', icon: <Users size={15} /> },
     { id: 'board', label: '게시판', icon: <MessageSquare size={15} /> },
     { id: 'community', label: '독서모임', icon: <Waves size={15} /> },
     { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
