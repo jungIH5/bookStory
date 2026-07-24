@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, Timer, UserPlus, Waves, ShieldCheck } from 'lucide-react';
+import { Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, Timer, UserPlus, Waves, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
