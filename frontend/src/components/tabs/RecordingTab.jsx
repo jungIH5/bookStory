@@ -1,11 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Square, Upload, FileAudio, Sparkles, Loader2, History, ChevronDown, ChevronUp, MessageSquare, BookOpen } from 'lucide-react';
+import { Mic, Square, Upload, FileAudio, Sparkles, Loader2, History, ChevronDown, ChevronUp, MessageSquare, BookOpen, Check } from 'lucide-react';
 import { API_URL } from '../../api';
 import { formatDuration } from '../../utils';
 
+// 원화 준비된 5종 + 아직 미완성인 3종(플레이스홀더) — 이미지 도착하는 대로 image만 채우면 됨
+const PERSONAS = [
+  { id: 'child', name: '호기심 많은 어린이', image: '/characters/1_curious_child.png' },
+  { id: 'youth', name: '경제에 관심 많은 청년', image: '/characters/2_economy_youth.png' },
+  { id: 'philosopher', name: '철학적 사색가 중년', image: '/characters/3_philosopher_middle_aged.png' },
+  { id: 'teen', name: '사춘기 청소년', image: '/characters/4_puberty_teenager.png' },
+  { id: 'retiree', name: '인생 2막 은퇴자', image: '/characters/5_retiree_elderly.png' },
+  { id: 'challenger', name: '도전하는 실행가', image: null },
+  { id: 'critical', name: '비판적 사고 훈련형', image: null },
+  { id: 'otter', name: '관계 치유형', image: null },
+];
+
 export default function RecordingTab({ user }) {
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState(PERSONAS[0].id);
   const [recordingFile, setRecordingFile] = useState(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [recordingResult, setRecordingResult] = useState(null);
