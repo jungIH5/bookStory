@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 from db import get_db, get_pool
 from auth import get_current_user_id, decode_token
+from nodes.persona_chat import get_persona_reply, DEFAULT_PERSONA
 
 router = APIRouter(prefix="/api/dive", tags=["dive"])
 
@@ -113,7 +114,8 @@ def _elapsed_reading_seconds(participant, room) -> int:
 
 
 async def _log_reading_time(conn, user_id: int, book_title, book_isbn, seconds: int):
-    """독서 시간을 개인 reading_logs에 기록. 본인 서재에 일치하는 책이 있으면 연결한다."""
+    """독서 시간을 개인 reading_logs에 누적 기록한다. 본인 서재에 일치하는 책이 있으면 연결하고,
+    연결할 책 정보가 아예 없으면 이미 기록이 남아있는 책 중 하나에 합쳐준다."""
     if seconds <= 0:
         return
     read_book_id = None
@@ -125,8 +127,24 @@ async def _log_reading_time(conn, user_id: int, book_title, book_isbn, seconds: 
         read_book_id = await conn.fetchval(
             "SELECT id FROM read_books WHERE user_id=$1 AND title=$2 LIMIT 1", user_id, book_title,
         )
+    # TODO(임시 폴백 — 제거 검토 대상): 방장/참가자 모두 책 선택이 필수가 된 지금은
+    # book_title/book_isbn이 아예 비어있는 경우는 없어야 한다. 그런데도 여기 도달한다면
+    # "책은 선택했지만 아직 내 서재(read_books)에 등록 안 된 책"인 경우뿐이다.
+    # 나중에 미연결(read_book_id IS NULL) reading_logs가 더 이상 쌓이지 않는 게 확인되면
+    # 이 폴백 블록은 지워도 된다. (선택한 책을 자동으로 read_books에 등록하는 방식으로
+    # 바꾸면 이 폴백 자체가 필요 없어진다.)
+    if not read_book_id:
+        read_book_id = await conn.fetchval(
+            """SELECT read_book_id FROM reading_logs
+               WHERE user_id=$1 AND read_book_id IS NOT NULL
+               ORDER BY id ASC LIMIT 1""",
+            user_id,
+        )
     await conn.execute(
-        "INSERT INTO reading_logs (user_id, read_book_id, duration_seconds) VALUES ($1,$2,$3)",
+        """INSERT INTO reading_logs (user_id, read_book_id, duration_seconds)
+           VALUES ($1,$2,$3)
+           ON CONFLICT (user_id, read_book_id) DO UPDATE
+           SET duration_seconds = reading_logs.duration_seconds + EXCLUDED.duration_seconds""",
         user_id, read_book_id, seconds,
     )
 
@@ -159,6 +177,10 @@ class DiveRoomIn(BaseModel):
     late_join_cutoff_minutes: int = 10
     notice: Optional[str] = ""
     host_name: Optional[str] = ""
+    # 지정 도서가 없는(자유도서) 모임일 때, 방장 본인이 읽을 책
+    host_book_title: Optional[str] = ""
+    host_book_image: Optional[str] = ""
+    host_book_isbn: Optional[str] = ""
 
 
 @router.get("/rooms")
@@ -183,6 +205,9 @@ async def create_room(
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
+    if not body.book_title and not body.host_book_title:
+        raise HTTPException(400, "지정 도서가 없는 모임은 방장도 읽으실 책을 선택해야 합니다.")
+
     scheduled_dt = datetime.fromisoformat(body.scheduled_at.replace('Z', '+00:00'))
     row = await conn.fetchrow("""
         INSERT INTO dive_rooms
@@ -199,10 +224,16 @@ async def create_room(
         body.max_participants, body.late_join_cutoff_minutes,
         body.notice or '',
     )
-    # 방장을 자동으로 참가자로 등록
+    # 방장을 자동으로 참가자로 등록 — 지정 도서가 없으면 방장 본인의 책 선택을 참가 기록에 남긴다
+    host_book_title = host_book_image = host_book_isbn = ''
+    if not body.book_title:
+        host_book_title, host_book_image, host_book_isbn = (
+            body.host_book_title, body.host_book_image or '', body.host_book_isbn or '',
+        )
     await conn.execute(
-        "INSERT INTO dive_participants (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        row['id'], user_id,
+        """INSERT INTO dive_participants (room_id, user_id, book_title, book_image, book_isbn)
+           VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING""",
+        row['id'], user_id, host_book_title, host_book_image, host_book_isbn,
     )
     return dict(row)
 
@@ -365,6 +396,11 @@ async def join_room(
         raise HTTPException(404, "방을 찾을 수 없습니다.")
     if room['status'] == 'ended':
         raise HTTPException(400, "이미 종료된 방입니다.")
+
+    if room['late_join_cutoff_minutes'] and room['late_join_cutoff_minutes'] > 0:
+        cutoff_time = _naive(room['scheduled_at']) - timedelta(minutes=room['late_join_cutoff_minutes'])
+        if datetime.now() >= cutoff_time:
+            raise HTTPException(400, f"참가 마감 시간이 지났습니다. (독서 시작 {room['late_join_cutoff_minutes']}분 전까지만 참가 가능)")
 
     count = await conn.fetchval(
         "SELECT COUNT(*) FROM dive_participants WHERE room_id=$1", room_id
@@ -587,3 +623,33 @@ async def delete_room(
         raise HTTPException(403, "방장만 방을 삭제할 수 있습니다.")
     await conn.execute("DELETE FROM dive_rooms WHERE id=$1", room_id)
     return {"deleted": True}
+
+
+class AiChatIn(BaseModel):
+    message: str
+    history: list = []  # [{role: 'user'|'assistant', content: str}, ...]
+
+
+@router.post("/rooms/{room_id}/ai-chat")
+async def ai_chat(
+    room_id: int,
+    body: AiChatIn,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """토론 준비/진행 중 개인적으로 이용하는 AI 대화. 방 채팅과 별개로, 본인에게만 보인다."""
+    participant = await conn.fetchrow(
+        "SELECT * FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
+    )
+    if not participant:
+        raise HTTPException(403, "참가자만 이용할 수 있습니다.")
+    room = await conn.fetchrow("SELECT * FROM dive_rooms WHERE id=$1", room_id)
+    if not room:
+        raise HTTPException(404, "방을 찾을 수 없습니다.")
+
+    user_row = await conn.fetchrow("SELECT ai_persona FROM users WHERE id=$1", user_id)
+    persona_id = (user_row["ai_persona"] if user_row else "") or DEFAULT_PERSONA
+    book_title = participant["book_title"] or room["book_title"] or ""
+
+    reply = await get_persona_reply(persona_id, book_title, body.history, body.message)
+    return {"reply": reply, "persona_id": persona_id}

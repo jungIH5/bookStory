@@ -19,10 +19,14 @@ async def save_reading_log(
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
+    # 같은 책을 이어서 읽으면 새 행을 쌓지 않고 기존 누적 기록에 더한다
     row = await conn.fetchrow(
         """INSERT INTO reading_logs
                (user_id, read_book_id, duration_seconds, started_reading_at)
            VALUES ($1,$2,$3,$4::date)
+           ON CONFLICT (user_id, read_book_id) DO UPDATE
+           SET duration_seconds = reading_logs.duration_seconds + EXCLUDED.duration_seconds,
+               started_reading_at = COALESCE(reading_logs.started_reading_at, EXCLUDED.started_reading_at)
            RETURNING id, user_id, read_book_id, duration_seconds, started_reading_at, logged_at""",
         user_id, body.read_book_id, body.duration_seconds, body.started_reading_at,
     )
@@ -41,6 +45,34 @@ async def get_user_stats(user_id: int, conn=Depends(get_db)):
         WHERE u.id = $1
     """, user_id)
     return dict(row) if row else {"books_count": 0, "total_seconds": 0}
+
+
+@router.get("/book-readers")
+async def get_book_readers(isbn: str = "", title: str = "", conn=Depends(get_db)):
+    """특정 책을 읽은 다른 유저들의 목록(이름/프로필/누적 시간). stats_public인 유저만 노출."""
+    if isbn:
+        rows = await conn.fetch("""
+            SELECT u.id AS user_id, u.name, u.profile_image, rl.duration_seconds AS seconds
+            FROM reading_logs rl
+            JOIN read_books rb ON rb.id = rl.read_book_id
+            JOIN users u ON u.id = rl.user_id
+            WHERE u.stats_public = TRUE AND rb.isbn = $1
+            ORDER BY rl.duration_seconds DESC
+            LIMIT 50
+        """, isbn)
+    elif title:
+        rows = await conn.fetch("""
+            SELECT u.id AS user_id, u.name, u.profile_image, rl.duration_seconds AS seconds
+            FROM reading_logs rl
+            JOIN read_books rb ON rb.id = rl.read_book_id
+            JOIN users u ON u.id = rl.user_id
+            WHERE u.stats_public = TRUE AND rb.title = $1
+            ORDER BY rl.duration_seconds DESC
+            LIMIT 50
+        """, title)
+    else:
+        return []
+    return [dict(r) for r in rows]
 
 
 @router.get("/leaderboard")

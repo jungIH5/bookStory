@@ -35,10 +35,16 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
     late_join_cutoff_minutes: 10,
     notice: '',
     chat_enabled: true,
+    host_book_title: '',
+    host_book_image: '',
+    host_book_isbn: '',
   });
   const [bookQuery, setBookQuery] = useState('');
   const [bookResults, setBookResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hostBookQuery, setHostBookQuery] = useState('');
+  const [hostBookResults, setHostBookResults] = useState([]);
+  const [isSearchingHostBook, setIsSearchingHostBook] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [albumImages, setAlbumImages] = useState([]);
@@ -61,8 +67,27 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
     setBookQuery('');
   };
 
+  const handleHostBookSearch = async () => {
+    if (!hostBookQuery.trim()) return;
+    setIsSearchingHostBook(true);
+    try {
+      const res = await fetch(`${API_URL}/api/books/search?query=${encodeURIComponent(hostBookQuery)}`);
+      const data = await res.json();
+      setHostBookResults((data.items || []).slice(0, 5));
+    } catch {} finally { setIsSearchingHostBook(false); }
+  };
+
+  const selectHostBook = (book) => {
+    setForm(f => ({ ...f, host_book_title: book.title?.replace(/<\/?[^>]+>/g, '') || '', host_book_image: book.image || '', host_book_isbn: book.isbn || '' }));
+    setHostBookResults([]);
+    setHostBookQuery('');
+  };
+
+  const needsHostBook = !form.book_title;
+  const canSubmit = form.title.trim() && form.scheduled_at && (!needsHostBook || form.host_book_title);
+
   const handleSubmit = async () => {
-    if (!form.title.trim() || !form.scheduled_at) return;
+    if (!canSubmit) return;
     setIsSaving(true);
     try {
       const scheduledIso = new Date(form.scheduled_at).toISOString();
@@ -285,6 +310,57 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
             )}
           </div>
 
+          {/* 방장 본인이 읽을 책 — 지정 도서가 없는(자유도서) 모임일 때만 필요 */}
+          {needsHostBook && (
+            <div>
+              <label className="form-label">내가 읽을 책 *</label>
+              <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600, marginBottom: '0.375rem' }}>
+                지정 도서가 없는 모임이라, 방장도 읽으실 책을 선택해야 참가 기록이 남습니다.
+              </p>
+              {form.host_book_title ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem' }}>
+                  {form.host_book_image && <img src={form.host_book_image} alt="" style={{ width: '32px', height: '46px', objectFit: 'cover', borderRadius: '4px' }} />}
+                  <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, color: '#1C140E' }}>{form.host_book_title}</span>
+                  <button onClick={() => set('host_book_title', '')} style={{ width: '1.5rem', height: '1.5rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}>
+                    <X size={11} />
+                  </button>
+                </div>
+              ) : (
+                <div style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <Search style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={14} />
+                      <input
+                        className="form-input"
+                        value={hostBookQuery}
+                        onChange={e => setHostBookQuery(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleHostBookSearch()}
+                        placeholder="책 제목으로 검색"
+                        style={{ paddingLeft: '2.5rem', color: '#1C140E' }}
+                      />
+                    </div>
+                    <button onClick={handleHostBookSearch} disabled={isSearchingHostBook} style={{ padding: '0 1rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8C6B42', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {isSearchingHostBook ? <Loader2 size={14} className="animate-spin" /> : '검색'}
+                    </button>
+                  </div>
+                  {hostBookResults.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: '0.375rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
+                      {hostBookResults.map((b, i) => (
+                        <div key={i} onClick={() => selectHostBook(b)} style={{ display: 'flex', gap: '0.625rem', padding: '0.625rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.06)' }}>
+                          {b.image && <img src={b.image} alt="" style={{ width: '28px', height: '40px', objectFit: 'cover', borderRadius: '3px', flexShrink: 0 }} />}
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title?.replace(/<\/?[^>]+>/g, '')}</p>
+                            <p style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 600 }}>{b.author}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 시작 일시 */}
           <div>
             <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Calendar size={12} />시작 일시 *</label>
@@ -391,9 +467,9 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={!form.title.trim() || isSaving}
+              disabled={!canSubmit || isSaving}
               className="premium-button"
-              style={{ flex: 2, padding: '0.875rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: !form.title.trim() || isSaving ? 0.6 : 1 }}
+              style={{ flex: 2, padding: '0.875rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: !canSubmit || isSaving ? 0.6 : 1 }}
             >
               {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Waves size={16} />}
               방 개설하기

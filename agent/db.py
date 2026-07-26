@@ -446,6 +446,70 @@ async def _init_db():
                 )
             """)
 
+            await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_persona VARCHAR(20) DEFAULT ''")
+
+            # 독서 로그를 세션별 개별 기록에서 (유저,책) 단위 누적 기록으로 전환
+            # 1) 기존에 쌓인 (user_id, read_book_id) 중복 행을 하나로 합친다
+            await conn.execute("""
+                WITH merged AS (
+                    SELECT user_id, read_book_id,
+                           SUM(duration_seconds) AS total_seconds,
+                           MIN(started_reading_at) AS first_started,
+                           MIN(id) AS keep_id
+                    FROM reading_logs
+                    WHERE read_book_id IS NOT NULL
+                    GROUP BY user_id, read_book_id
+                    HAVING COUNT(*) > 1
+                )
+                UPDATE reading_logs rl
+                SET duration_seconds = merged.total_seconds,
+                    started_reading_at = merged.first_started
+                FROM merged
+                WHERE rl.id = merged.keep_id
+            """)
+            await conn.execute("""
+                DELETE FROM reading_logs rl
+                WHERE rl.read_book_id IS NOT NULL
+                  AND rl.id NOT IN (
+                      SELECT MIN(id) FROM reading_logs
+                      WHERE read_book_id IS NOT NULL
+                      GROUP BY user_id, read_book_id
+                  )
+            """)
+            # 2) 책과 연결되지 않은(고아) 기록은, 이미 기록이 있는 책 중 하나에 합쳐준다
+            await conn.execute("""
+                WITH target AS (
+                    SELECT DISTINCT ON (user_id) user_id, id AS target_id
+                    FROM reading_logs
+                    WHERE read_book_id IS NOT NULL
+                    ORDER BY user_id, id
+                ),
+                orphan AS (
+                    SELECT user_id, SUM(duration_seconds) AS orphan_seconds
+                    FROM reading_logs
+                    WHERE read_book_id IS NULL
+                    GROUP BY user_id
+                )
+                UPDATE reading_logs rl
+                SET duration_seconds = rl.duration_seconds + orphan.orphan_seconds
+                FROM target, orphan
+                WHERE rl.id = target.target_id AND target.user_id = orphan.user_id
+            """)
+            await conn.execute("""
+                DELETE FROM reading_logs
+                WHERE read_book_id IS NULL
+                  AND user_id IN (SELECT user_id FROM reading_logs WHERE read_book_id IS NOT NULL)
+            """)
+            # 3) 이후로는 (유저, 책) 단위로 누적되도록 유니크 제약 추가
+            try:
+                async with conn.transaction():
+                    await conn.execute("""
+                        ALTER TABLE reading_logs
+                        ADD CONSTRAINT reading_logs_user_book_unique UNIQUE (user_id, read_book_id)
+                    """)
+            except Exception:
+                pass  # 이미 존재하는 경우
+
             # 게시글-도서 연결 (수동 선택 또는 AI 추정)
             await conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS book_isbn VARCHAR(50) DEFAULT ''")
             await conn.execute("ALTER TABLE posts ADD COLUMN IF NOT EXISTS book_image TEXT DEFAULT ''")

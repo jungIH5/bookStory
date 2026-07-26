@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Waves, Users, Clock, Calendar, Lock, Loader2, Send, RefreshCw, Trash2, MessageSquare, MessageSquareDashed, Pencil, Check, Camera, Minimize2, Maximize2, BookOpen, Pause, Play, Search, UserX } from 'lucide-react';
+import { X, Waves, Users, Clock, Calendar, Lock, Loader2, Send, RefreshCw, Trash2, MessageSquare, MessageSquareDashed, Pencil, Check, Camera, Minimize2, Maximize2, BookOpen, Pause, Play, Search, UserX, Sparkles } from 'lucide-react';
 import { API_URL } from '../../api';
+import { getPersona } from '../../personas';
+
+const AI_CHAT_OPENING_LINE = '책은 다 읽으셨나요? 오늘 토론에서 다뤄볼 만한 주제가 필요하시거나, 생각을 좀 정리해보고 싶은 게 있으면 편하게 이야기해주세요.';
 
 const ALBUM_LIMIT = 5;
 
@@ -78,6 +81,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const [kickTarget, setKickTarget] = useState(null); // { user_id, name } | null
   const [isKicking, setIsKicking] = useState(false);
   const [showOvertimeNotice, setShowOvertimeNotice] = useState(false);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [aiChatMessages, setAiChatMessages] = useState([]);
+  const [aiChatInput, setAiChatInput] = useState('');
+  const [isAiChatSending, setIsAiChatSending] = useState(false);
+  const aiChatAutoOpenedRef = useRef(false);
+  const aiChatEndRef = useRef(null);
   const prevPhaseRef = useRef(null);
   const msgEndRef = useRef(null);
   const modalRef = useRef(null);
@@ -171,6 +180,43 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   // 독서 종료 5분 전 경고
   const showReadingWarning = computedPhase === 'reading' && phaseRemaining > 0 && phaseRemaining < 5 * 60 * 1000;
   const readingWarningPct = showReadingWarning ? Math.round((phaseRemaining / (5 * 60 * 1000)) * 100) : 100;
+
+  // 토론 시작 10분 전 — 참가자에게 AI 대화창 자동으로 열기 (세션당 1회)
+  useEffect(() => {
+    if (aiChatAutoOpenedRef.current || !isParticipant) return;
+    if (computedPhase === 'reading' && phaseRemaining > 0 && phaseRemaining <= 10 * 60 * 1000) {
+      aiChatAutoOpenedRef.current = true;
+      setAiChatOpen(true);
+      setAiChatMessages([{ role: 'assistant', content: AI_CHAT_OPENING_LINE }]);
+    }
+  }, [isParticipant, computedPhase, phaseRemaining]);
+
+  useEffect(() => {
+    aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [aiChatMessages]);
+
+  const myPersonaId = user?.ai_persona;
+  const myPersona = getPersona(myPersonaId);
+
+  const handleSendAiChat = async () => {
+    if (!aiChatInput.trim() || !user?.token || isAiChatSending) return;
+    const userMsg = { role: 'user', content: aiChatInput.trim() };
+    const historyForApi = aiChatMessages;
+    setAiChatMessages(prev => [...prev, userMsg]);
+    setAiChatInput('');
+    setIsAiChatSending(true);
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/ai-chat`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg.content, history: historyForApi }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      }
+    } catch {} finally { setIsAiChatSending(false); }
+  };
 
   const fmtTime = (dt) => {
     const d = new Date(dt);
@@ -333,7 +379,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
       });
       if (res.ok) {
         const msg = await res.json();
-        setMessages(prev => [...prev, msg]);
+        setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         setMsgInput('');
       } else {
         const err = await res.json().catch(() => ({}));
@@ -672,6 +718,155 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     );
   }
 
+  // ── 대기 화면 (독서 시작 전엔 정보 + 참가 예정 명단만 간단히 보여준다) ──
+  if (computedPhase === 'waiting') {
+    return (
+      <>
+        {ToastEl}
+        <div className="modal-backdrop overflow-y-auto" onClick={handleCloseOrMinimize}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 32 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 32 }}
+            onClick={e => e.stopPropagation()}
+            className="modal-content relative my-auto"
+            style={{ width: Math.min(modalW, 560), maxWidth: '95vw', maxHeight: '85vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            {/* 헤더 */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139,107,66,0.1)', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
+                    <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: '#1C140E' }}>{room.title}</h2>
+                    <span style={{ fontSize: '9px', fontWeight: 900, color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, padding: '2px 8px', borderRadius: '9999px' }}>
+                      {badge.label}{remainingLabel ? ` · ${remainingLabel}` : ''}
+                    </span>
+                  </div>
+                  {room.book_title && <p style={{ fontSize: '12px', color: '#8C6B42', fontWeight: 700 }}>📚 {room.book_title}</p>}
+                  <p style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700, marginTop: '0.2rem' }}>방장: {room.host_name}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                  <button onClick={() => setMinimized(true)} title="최소화" style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}>
+                    <Minimize2 size={13} />
+                  </button>
+                  <button onClick={handleCloseOrMinimize} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}>
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+                {[
+                  { icon: <Calendar size={11} />, label: fmtTime(room.scheduled_at) },
+                  { icon: <Clock size={11} />, label: `독서 ${room.reading_minutes}분 + 토론 ${room.discussion_minutes}분` },
+                  { icon: <Users size={11} />, label: `${room.participant_count || 0}/${room.max_participants}명` },
+                  ...(room.late_join_cutoff_minutes > 0 ? [{ icon: <Lock size={11} />, label: `${room.late_join_cutoff_minutes}분 전 마감` }] : []),
+                ].map((item, i) => (
+                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: '#9E8D7A', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', padding: '3px 8px', borderRadius: '9999px' }}>
+                    {item.icon}{item.label}
+                  </span>
+                ))}
+              </div>
+
+              {/* 공지 */}
+              {isHost ? (
+                <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(196,148,86,0.06)', border: '1px solid rgba(196,148,86,0.2)', borderRadius: '0.75rem' }}>
+                  {editingNotice ? (
+                    <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
+                      <textarea value={noticeInput} onChange={e => setNoticeInput(e.target.value)} rows={2} style={{ flex: 1, fontSize: '0.8125rem', color: '#1C140E', background: 'transparent', border: 'none', outline: 'none', resize: 'none', lineHeight: 1.6 }} autoFocus />
+                      <button onClick={handleSaveNotice} disabled={isSavingNotice} style={{ ...ctrlBtnStyle('#22c55e'), flexShrink: 0 }}>
+                        {isSavingNotice ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                      </button>
+                      <button onClick={() => setEditingNotice(false)} style={{ ...ctrlBtnStyle('#9E8D7A'), flexShrink: 0 }}><X size={11} /></button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                      <p style={{ flex: 1, fontSize: '0.8125rem', color: '#7B6B55', lineHeight: 1.6 }}>📌 {room.notice || <span style={{ color: '#BDB0A0' }}>공지 없음</span>}</p>
+                      <button onClick={() => { setNoticeInput(room.notice || ''); setEditingNotice(true); }} style={{ ...ctrlBtnStyle('#8C6B42'), flexShrink: 0 }}><Pencil size={11} /></button>
+                    </div>
+                  )}
+                </div>
+              ) : room.notice ? (
+                <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(196,148,86,0.06)', border: '1px solid rgba(196,148,86,0.2)', borderRadius: '0.75rem' }}>
+                  <p style={{ fontSize: '0.8125rem', color: '#7B6B55', lineHeight: 1.6 }}>📌 {room.notice}</p>
+                </div>
+              ) : null}
+            </div>
+
+            {/* 본문: 참가 예정 명단 */}
+            <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                참가 예정 ({room.participants?.length || 0}명)
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                {(room.participants?.length || 0) === 0
+                  ? <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
+                  : room.participants.map(p => (
+                    <ParticipantRow
+                      key={p.id} p={p} room={room} currentUserId={user?.id} isHost={isHost}
+                      whisperTarget={whisperTarget}
+                      menuOpen={openMenuFor === p.user_id}
+                      onToggleMenu={(uid) => setOpenMenuFor(prev => prev === uid ? null : uid)}
+                      onWhisper={(target) => { setWhisperTarget(whisperTarget?.id === target.user_id ? null : { id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
+                      onOpenProfile={(uid, name) => { onOpenUserLibrary?.(uid, name); setOpenMenuFor(null); }}
+                      onKick={(target) => { setKickTarget({ user_id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
+                    />
+                  ))}
+              </div>
+            </div>
+
+            {/* 하단 */}
+            <div style={{ padding: '0.875rem 1.5rem', borderTop: '1px solid rgba(139,107,66,0.08)', flexShrink: 0 }}>
+              {isHost ? (
+                confirmDelete ? (
+                  <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#dc2626' }}>방을 삭제하시겠습니까?</p>
+                    <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                      <button onClick={() => setConfirmDelete(false)} style={ctrlBtnStyle('#9E8D7A')}>취소</button>
+                      <button onClick={handleDelete} style={{ ...ctrlBtnStyle('#ef4444'), background: 'rgba(239,68,68,0.12)', fontWeight: 900 }}>삭제 확인</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDelete(true)} style={{ width: '100%', padding: '0.625rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.875rem', fontSize: '0.875rem', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}>
+                    방 삭제
+                  </button>
+                )
+              ) : (
+                <button onClick={handleLeave} style={{ width: '100%', padding: '0.625rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '0.875rem', fontSize: '0.875rem', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}>
+                  모임에서 나가기
+                </button>
+              )}
+            </div>
+          </motion.div>
+        </div>
+
+        {kickTarget && (
+          <div className="modal-backdrop" style={{ zIndex: 300 }} onClick={() => !isKicking && setKickTarget(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              onClick={e => e.stopPropagation()}
+              className="modal-content relative my-auto"
+              style={{ maxWidth: '360px', padding: '1.5rem' }}
+            >
+              <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', marginBottom: '0.5rem' }}>참가자 추방</p>
+              <p style={{ fontSize: '0.875rem', color: '#7B6B55', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                <strong style={{ color: '#dc2626' }}>{kickTarget.name}</strong>님을 이 모임에서 추방하시겠습니까?
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => setKickTarget(null)} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>취소</button>
+                <button onClick={handleKickParticipant} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+                  {isKicking ? <Loader2 size={13} className="animate-spin" /> : '추방하기'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </>
+    );
+  }
+
   // ── 전체 모달 ────────────────────────────────────────────────
   return (
     <>
@@ -857,29 +1052,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             ) : null}
           </div>
 
-          {/* 본문 — 대기 중에는 참가자 목록만, 그 외엔 좌: 채팅 / 우: 참가자 */}
-          {computedPhase === 'waiting' ? (
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139,107,66,0.08)', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
-                참가자 ({room.participants?.length || 0}명)
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem', overflowY: 'auto', flex: 1, alignContent: 'flex-start' }}>
-                {(room.participants?.length || 0) === 0
-                  ? <p style={{ fontSize: '0.8125rem', color: '#BDB0A0', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
-                  : room.participants.map(p => (
-                    <ParticipantRow
-                      key={p.id} p={p} room={room} currentUserId={user?.id} isHost={isHost}
-                      whisperTarget={whisperTarget}
-                      menuOpen={openMenuFor === p.user_id}
-                      onToggleMenu={(uid) => setOpenMenuFor(prev => prev === uid ? null : uid)}
-                      onWhisper={(target) => { setWhisperTarget(whisperTarget?.id === target.user_id ? null : { id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
-                      onOpenProfile={(uid, name) => { onOpenUserLibrary?.(uid, name); setOpenMenuFor(null); }}
-                      onKick={(target) => { setKickTarget({ user_id: target.user_id, name: target.name }); setOpenMenuFor(null); }}
-                    />
-                  ))}
-              </div>
-            </div>
-          ) : (
+          {/* 본문 — 좌: 채팅 / 우: 참가자 (대기 단계는 별도 화면으로 분리됨) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', borderBottom: '1px solid rgba(139,107,66,0.08)', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
             {/* 좌: 채팅 */}
@@ -989,7 +1162,6 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               </div>
             </div>
           </div>
-          )}
 
           {/* 하단 */}
           <div style={{ padding: '0.875rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.625rem', flexShrink: 0 }}>
@@ -1107,6 +1279,69 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             </div>
           </motion.div>
         </div>
+      )}
+
+      {aiChatOpen ? (
+          <div style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, width: '340px', maxWidth: '90vw', height: '480px', maxHeight: '70vh', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid rgba(139,107,66,0.1)', display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '9999px', overflow: 'hidden', background: '#EDE8E2', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {myPersona.image ? <img src={myPersona.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} /> : <Sparkles size={14} style={{ color: '#BDB0A0' }} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '12px', fontWeight: 900, color: '#1C140E' }}>{myPersona.name}</p>
+                <p style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 600 }}>토론 준비 도우미 · 나에게만 보여요</p>
+              </div>
+              <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E8D7A' }}><X size={15} /></button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {aiChatMessages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ maxWidth: '85%', padding: '0.5rem 0.75rem', borderRadius: '0.875rem', fontSize: '0.8125rem', lineHeight: 1.55, background: m.role === 'user' ? 'linear-gradient(135deg,#8C6B42,#C49456)' : 'rgba(140,107,66,0.06)', color: m.role === 'user' ? 'white' : '#3D2D1E', border: m.role === 'user' ? 'none' : '1px solid rgba(139,107,66,0.12)' }}>
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {isAiChatSending && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', borderRadius: '0.875rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(139,107,66,0.12)', overflow: 'hidden' }}>
+                    <span style={{ fontSize: '16px' }}>🤔</span>
+                    <motion.span
+                      style={{ fontSize: '16px', display: 'inline-block' }}
+                      animate={{ x: [-6, 6, -6] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      ☁️
+                    </motion.span>
+                  </div>
+                </div>
+              )}
+              <div ref={aiChatEndRef} />
+            </div>
+            <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(139,107,66,0.1)', display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+              <input
+                value={aiChatInput}
+                onChange={e => setAiChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendAiChat()}
+                placeholder="메시지를 입력하세요..."
+                className="form-input"
+                style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#1C140E' }}
+              />
+              <button onClick={handleSendAiChat} disabled={!aiChatInput.trim() || isAiChatSending} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(140,107,66,0.1)', border: '1px solid rgba(140,107,66,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8C6B42', flexShrink: 0 }}>
+                <Send size={13} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <motion.button
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => { setAiChatOpen(true); if (aiChatMessages.length === 0) setAiChatMessages([{ role: 'assistant', content: AI_CHAT_OPENING_LINE }]); }}
+            title="AI와 토론 준비 대화하기"
+            style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.125rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', border: 'none', boxShadow: '0 4px 16px rgba(140,107,66,0.35)', cursor: 'pointer', color: 'white' }}
+          >
+            <Sparkles size={18} />
+            <span style={{ fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap' }}>AI와 토론 준비 대화하기</span>
+          </motion.button>
       )}
     </>
   );

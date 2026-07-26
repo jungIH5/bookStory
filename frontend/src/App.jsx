@@ -1425,6 +1425,8 @@ function App() {
             onRejectFriend={handleRejectFriend}
             onClose={() => setUserLibrary(null)}
             onEditProfile={userLibrary.userId === user?.id ? () => { setUserLibrary(null); setShowProfile(true); } : undefined}
+            currentAiPersona={user?.ai_persona}
+            onUpdatePersona={(personaId) => handleUpdateProfile({ ai_persona: personaId })}
           />
         )}
       </AnimatePresence>

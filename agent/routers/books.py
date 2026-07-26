@@ -224,9 +224,18 @@ async def delete_read_book(
 @router.get("/read")
 async def get_read_books(user_id: Optional[int] = None, conn=Depends(get_db)):
     if user_id:
-        rows = await conn.fetch(
-            "SELECT * FROM read_books WHERE user_id = $1 ORDER BY read_at DESC", user_id
-        )
+        rows = await conn.fetch("""
+            SELECT rb.*, COALESCE(rl.duration_seconds, 0) AS my_seconds
+            FROM read_books rb
+            LEFT JOIN reading_logs rl ON rl.read_book_id = rb.id
+            WHERE rb.user_id = $1
+            ORDER BY rb.read_at DESC
+        """, user_id)
     else:
-        rows = await conn.fetch("SELECT * FROM read_books ORDER BY read_at DESC")
+        rows = await conn.fetch("""
+            SELECT rb.*, COALESCE(rl.duration_seconds, 0) AS my_seconds
+            FROM read_books rb
+            LEFT JOIN reading_logs rl ON rl.read_book_id = rb.id
+            ORDER BY rb.read_at DESC
+        """)
     return [dict(r) for r in rows]

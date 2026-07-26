@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronUp, Loader2, Library, Clock, BookMarked, UserPlus, UserCheck, UserX, Waves, Users, MessageSquare, UserCog, BookOpen, Shield, ShieldOff, UserMinus } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Loader2, Library, Clock, BookMarked, UserPlus, UserCheck, UserX, Waves, Users, MessageSquare, UserCog, BookOpen, Shield, ShieldOff, UserMinus, Sparkles } from 'lucide-react';
 import { stripHtml, formatReadingTime } from '../../utils';
 import { API_URL } from '../../api';
 import { hexColors } from '../../constants';
+import { PERSONAS } from '../../personas';
 
-export default function UserLibraryModal({ userId, userName, currentUserId, token, friendRequests = [], onAcceptFriend, onRejectFriend, onClose, onEditProfile }) {
+export default function UserLibraryModal({ userId, userName, currentUserId, token, friendRequests = [], onAcceptFriend, onRejectFriend, onClose, onEditProfile, currentAiPersona, onUpdatePersona }) {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState('');
@@ -276,6 +277,35 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
             </div>
           </div>
 
+          {isMe && (
+            <div style={{ marginTop: '0.875rem' }}>
+              <p style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+                독서모임 AI 페르소나
+              </p>
+              <div className="custom-scroll" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+                {PERSONAS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => onUpdatePersona?.(p.id)}
+                    disabled={!p.image}
+                    title={p.image ? p.name : `${p.name} (준비 중)`}
+                    style={{
+                      flexShrink: 0, width: '46px', height: '46px', borderRadius: '9999px', overflow: 'hidden',
+                      background: '#EDE8E2', cursor: p.image ? 'pointer' : 'not-allowed', padding: 0,
+                      border: `2px solid ${currentAiPersona === p.id ? '#C49456' : 'transparent'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      opacity: p.image ? 1 : 0.4,
+                    }}
+                  >
+                    {p.image
+                      ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                      : <Sparkles size={14} style={{ color: '#BDB0A0' }} />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 탭 바 */}
           <div style={{ display: 'flex', gap: '0.25rem', marginTop: '1rem', background: 'rgba(139,107,66,0.06)', borderRadius: '0.75rem', padding: '0.25rem' }}>
             {tabs.map(tab => (
@@ -332,10 +362,10 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                   </div>
                 : <>
                     {reading.length > 0 && (
-                      <Section title="읽는 중" books={reading} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} accentColor="#C49456" />
+                      <Section title="읽는 중" books={reading} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} userId={userId} accentColor="#C49456" />
                     )}
                     {finished.length > 0 && (
-                      <Section title="완독" books={finished} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} accentColor="#8C6B42" />
+                      <Section title="완독" books={finished} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} userId={userId} accentColor="#8C6B42" />
                     )}
                   </>
           )}
@@ -556,7 +586,7 @@ function RoomSection({ title, accentColor, rooms, expandedRoom, roomMessages, lo
 }
 
 // ── 책 섹션 ──────────────────────────────────────────────────
-function Section({ title, books, expandedId, onToggle, isMe, accentColor }) {
+function Section({ title, books, expandedId, onToggle, isMe, userId, accentColor }) {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
@@ -566,21 +596,32 @@ function Section({ title, books, expandedId, onToggle, isMe, accentColor }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {books.map((book, idx) => (
-          <BookCard key={book.id} book={book} idx={idx} isExpanded={expandedId === book.id} onToggle={() => onToggle(expandedId === book.id ? null : book.id)} isMe={isMe} />
+          <BookCard key={book.id} book={book} idx={idx} isExpanded={expandedId === book.id} onToggle={() => onToggle(expandedId === book.id ? null : book.id)} isMe={isMe} userId={userId} />
         ))}
       </div>
     </div>
   );
 }
 
-function BookCard({ book, idx, isExpanded, onToggle, isMe }) {
+function BookCard({ book, idx, isExpanded, onToggle, isMe, userId }) {
   const title = stripHtml(book.title);
   const hasImpression = book.impression && (book.is_public || isMe);
+  const [otherReaders, setOtherReaders] = useState(null);
+
+  useEffect(() => {
+    if (!isExpanded || otherReaders !== null) return;
+    const params = book.isbn ? `isbn=${encodeURIComponent(book.isbn)}` : `title=${encodeURIComponent(title)}`;
+    fetch(`${API_URL}/api/reading/book-readers?${params}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setOtherReaders(Array.isArray(data) ? data.filter(r => parseInt(r.user_id) !== parseInt(userId)) : []))
+      .catch(() => setOtherReaders([]));
+  }, [isExpanded]);
+
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
       style={{ borderRadius: '0.875rem', border: `1px solid ${isExpanded ? 'rgba(140,107,66,0.25)' : 'rgba(139,107,66,0.1)'}`, background: isExpanded ? 'rgba(140,107,66,0.04)' : 'transparent', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}
     >
-      <div onClick={hasImpression ? onToggle : undefined} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', cursor: hasImpression ? 'pointer' : 'default' }}>
+      <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', cursor: 'pointer' }}>
         <div style={{ width: '42px', minWidth: '42px', height: '60px', borderRadius: '5px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', background: '#EDE8E2', flexShrink: 0 }}>
           {book.image
             ? <img src={book.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -599,15 +640,49 @@ function BookCard({ book, idx, isExpanded, onToggle, isMe }) {
             {book.impression && book.is_public && <span style={{ fontSize: '9px', fontWeight: 700, color: '#9E8D7A' }}>감상 있음</span>}
           </div>
         </div>
-        {hasImpression && <div style={{ flexShrink: 0, color: '#9E8D7A' }}>{isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</div>}
+        <div style={{ flexShrink: 0, color: '#9E8D7A' }}>{isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</div>
       </div>
       <AnimatePresence>
-        {isExpanded && hasImpression && (
+        {isExpanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} style={{ overflow: 'hidden' }}>
-            <div style={{ padding: '0 1rem 1rem 1rem' }}>
-              <div style={{ padding: '0.875rem 1rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.12)', borderRadius: '0.75rem' }}>
-                <p style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>감상</p>
-                <p style={{ fontSize: '0.8125rem', color: '#3D2410', lineHeight: 1.7, fontWeight: 500, whiteSpace: 'pre-wrap' }}>{book.impression}</p>
+            <div style={{ padding: '0 1rem 1rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              {hasImpression && (
+                <div style={{ padding: '0.875rem 1rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.12)', borderRadius: '0.75rem' }}>
+                  <p style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>감상</p>
+                  <p style={{ fontSize: '0.8125rem', color: '#3D2410', lineHeight: 1.7, fontWeight: 500, whiteSpace: 'pre-wrap' }}>{book.impression}</p>
+                </div>
+              )}
+
+              <div style={{ padding: '0.625rem 0.75rem', background: 'rgba(196,148,86,0.06)', border: '1px solid rgba(196,148,86,0.15)', borderRadius: '0.625rem' }}>
+                <p style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.375rem' }}>
+                  {isMe ? '내가 읽은 시간' : '이 책을 읽은 시간'}
+                </p>
+                <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#1C140E' }}>
+                  {book.my_seconds ? formatReadingTime(book.my_seconds) : '기록 없음'}
+                </p>
+              </div>
+
+              <div>
+                <p style={{ fontSize: '9px', fontWeight: 900, color: '#8C6B42', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+                  다른 사람들은 얼마나 읽었을까요
+                </p>
+                {otherReaders === null
+                  ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}><Loader2 size={14} className="animate-spin" style={{ color: '#8C6B42' }} /></div>
+                  : otherReaders.length === 0
+                    ? <p style={{ fontSize: '11px', color: '#BDB0A0', fontWeight: 600 }}>아직 다른 사람의 기록이 없습니다.</p>
+                    : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                        {otherReaders.map(r => (
+                          <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                              {r.profile_image ? <img src={r.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (r.name || '?')[0]}
+                            </div>
+                            <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: '#3D2D1E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#8C6B42' }}>{formatReadingTime(r.seconds)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
               </div>
             </div>
           </motion.div>

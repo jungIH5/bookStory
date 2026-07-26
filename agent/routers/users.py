@@ -54,6 +54,7 @@ class UserUpdate(BaseModel):
     stats_public: Optional[bool] = None
     allow_whisper: Optional[bool] = None
     profile_image: Optional[str] = None  # base64 데이터 URL, 빈 문자열이면 제거
+    ai_persona: Optional[str] = None  # 독서모임 AI 대화에 쓸 페르소나 id
 
 
 @router.post("")
