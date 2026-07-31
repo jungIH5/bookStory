@@ -50,6 +50,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
   const [albumImages, setAlbumImages] = useState([]);
   const [isLoadingAlbum, setIsLoadingAlbum] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const handleBookSearch = async () => {
     if (!bookQuery.trim()) return;

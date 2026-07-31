@@ -19,6 +19,14 @@ function computePhaseInfo(room) {
   return { phase: 'overtime', remaining: 0 };
 }
 
+// 토론 종료 후 자동 종료까지 남은 유예시간(연장 횟수만큼 1시간씩 늘어남)
+function computeAutoCloseRemaining(room) {
+  const start = new Date(room.scheduled_at).getTime();
+  const discEnd = start + ((room.reading_minutes || 0) + (room.discussion_minutes || 0)) * 60000;
+  const graceMs = (1 + (room.extension_count || 0)) * 60 * 60000;
+  return (discEnd + graceMs) - Date.now();
+}
+
 const PHASE_MAP = {
   waiting:    { label: '대기 중',   color: '#9E8D7A', bg: 'rgba(158,141,122,0.08)', border: 'rgba(158,141,122,0.2)' },
   reading:    { label: '독서 중',   color: '#C49456', bg: 'rgba(196,148,86,0.1)',   border: 'rgba(196,148,86,0.3)' },
@@ -81,6 +89,9 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const [kickTarget, setKickTarget] = useState(null); // { user_id, name } | null
   const [isKicking, setIsKicking] = useState(false);
   const [showOvertimeNotice, setShowOvertimeNotice] = useState(false);
+  const [showExtendNotice, setShowExtendNotice] = useState(false);
+  const [isExtending, setIsExtending] = useState(false);
+  const extendWarningShownForRef = useRef(null); // 이 extension_count 값에 대해 이미 경고를 띄웠는지
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatMessages, setAiChatMessages] = useState([]);
   const [aiChatInput, setAiChatInput] = useState('');
@@ -121,6 +132,41 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     const t = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  const autoCloseRemaining = computeAutoCloseRemaining(room);
+
+  // 자동 종료 10분 전 — 연장 여부를 묻는 경고 (연장할 때마다 다시 뜰 수 있도록 extension_count 기준으로 관리)
+  useEffect(() => {
+    if (computedPhase !== 'overtime') return;
+    const key = room.extension_count || 0;
+    if (extendWarningShownForRef.current === key) return;
+    if (autoCloseRemaining > 0 && autoCloseRemaining <= 10 * 60 * 1000) {
+      extendWarningShownForRef.current = key;
+      setShowExtendNotice(true);
+    }
+  }, [computedPhase, autoCloseRemaining, room.extension_count]);
+
+  // 시간 종료(overtime) 상태에선 다른 참가자의 연장 요청이나 서버 자동 종료를 감지하기 위해 주기적으로 재조회
+  useEffect(() => {
+    if (computedPhase !== 'overtime') return;
+    const iv = setInterval(fetchRoom, 60000);
+    return () => clearInterval(iv);
+  }, [computedPhase]);
+
+  const handleExtendRoom = async () => {
+    if (!user?.token || isExtending) return;
+    setIsExtending(true);
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms/${room.id}/extend`, {
+        method: 'POST', headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (res.ok) {
+        await fetchRoom();
+        setShowExtendNotice(false);
+        setToast({ text: '⏰ 1시간 연장됐어요.', color: '#22c55e' });
+      }
+    } finally { setIsExtending(false); }
+  };
 
   // 모달 높이가 줄어들면 chatHeight도 자동 클램프
   useEffect(() => {
@@ -1269,13 +1315,37 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           >
             <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', marginBottom: '0.5rem' }}>⏰ 예정된 시간이 종료되었습니다</p>
             <p style={{ fontSize: '0.875rem', color: '#7B6B55', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-              독서·토론 시간이 모두 끝났어요. 방은 자동으로 닫히지 않으니, 조금 더 읽거나 이야기를 나누셔도 됩니다. 준비가 되면 방장이 세션을 종료해주세요.
+              독서·토론 시간이 모두 끝났어요. 바로 닫히진 않으니 조금 더 읽거나 이야기를 나누셔도 되고(1시간 후 자동 종료, 필요하면 연장 가능), 준비가 되면 방장이 바로 종료해도 됩니다.
             </p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => setShowOvertimeNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>확인</button>
               {isHost && (
                 <button onClick={async () => { setShowOvertimeNotice(false); await handleEndSession(); }} style={{ flex: 1, padding: '0.625rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8C6B42', cursor: 'pointer' }}>지금 종료하기</button>
               )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showExtendNotice && (
+        <div className="modal-backdrop" style={{ zIndex: 300 }} onClick={() => setShowExtendNotice(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 16 }}
+            onClick={e => e.stopPropagation()}
+            className="modal-content relative my-auto"
+            style={{ maxWidth: '380px', padding: '1.5rem' }}
+          >
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', marginBottom: '0.5rem' }}>⏳ 곧 방이 자동으로 종료됩니다</p>
+            <p style={{ fontSize: '0.875rem', color: '#7B6B55', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              10분 후 방이 자동으로 종료돼요. 아직 대화 중이시라면 1시간 더 연장할 수 있습니다.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => setShowExtendNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>괜찮아요</button>
+              <button onClick={handleExtendRoom} disabled={isExtending} style={{ flex: 1, padding: '0.625rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8C6B42', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+                {isExtending ? <Loader2 size={13} className="animate-spin" /> : '1시간 연장하기'}
+              </button>
             </div>
           </motion.div>
         </div>

@@ -448,6 +448,9 @@ async def _init_db():
 
             await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_persona VARCHAR(20) DEFAULT ''")
 
+            # 토론까지 끝난 뒤 방을 무기한 방치하지 않도록 — 유예시간(연장 포함) 지나면 자동 종료
+            await conn.execute("ALTER TABLE dive_rooms ADD COLUMN IF NOT EXISTS extension_count INTEGER DEFAULT 0")
+
             # 독서 로그를 세션별 개별 기록에서 (유저,책) 단위 누적 기록으로 전환
             # 1) 기존에 쌓인 (user_id, read_book_id) 중복 행을 하나로 합친다
             await conn.execute("""

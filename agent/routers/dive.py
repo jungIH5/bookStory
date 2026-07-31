@@ -164,6 +164,30 @@ async def _finalize_participant(conn, room, participant, mark_ended: bool):
         await conn.execute("DELETE FROM dive_participants WHERE id=$1", participant["id"])
 
 
+AUTO_CLOSE_GRACE_HOURS = 1  # 토론 종료 후 기본 유예시간. 참가자가 연장하면 이 시간만큼씩 더 늘어난다.
+
+
+async def _auto_close_stale_rooms(conn):
+    """토론 종료 시각 + 유예시간(연장 포함)이 지난 방을 자동으로 종료 처리한다.
+    강제로 끊지는 않되(연장 가능), 무기한 방치되지도 않도록 하기 위함."""
+    stale_rooms = await conn.fetch("""
+        SELECT * FROM dive_rooms
+        WHERE status != 'ended'
+          AND scheduled_at
+              + (reading_minutes + discussion_minutes) * INTERVAL '1 minute'
+              + (1 + extension_count) * INTERVAL '1 hour'
+              <= NOW()
+    """)
+    for room in stale_rooms:
+        participants = await conn.fetch(
+            "SELECT * FROM dive_participants WHERE room_id=$1 AND status != 'ended'", room["id"],
+        )
+        for p in participants:
+            await _finalize_participant(conn, room, p, mark_ended=True)
+        await conn.execute("UPDATE dive_rooms SET status='ended' WHERE id=$1", room["id"])
+        await chat_manager.broadcast_event(room["id"], {"type": "room_update"})
+
+
 class DiveRoomIn(BaseModel):
     title: str
     book_title: Optional[str] = ""
@@ -185,6 +209,7 @@ class DiveRoomIn(BaseModel):
 
 @router.get("/rooms")
 async def get_rooms(conn=Depends(get_db)):
+    await _auto_close_stale_rooms(conn)
     rows = await conn.fetch("""
         SELECT r.*, COALESCE(u.name, r.host_name) AS host_name,
                u.profile_image AS host_image,
@@ -268,6 +293,7 @@ async def get_joined_rooms(conn=Depends(get_db), user_id: int = Depends(get_curr
 @router.get("/rooms/active")
 async def get_active_room(conn=Depends(get_db), user_id: int = Depends(get_current_user_id)):
     """현재 활성 상태로 참여 중인 방(나가지도, 방이 종료되지도 않은)을 반환한다. 없으면 null."""
+    await _auto_close_stale_rooms(conn)
     row = await conn.fetchrow("""
         SELECT r.*, COALESCE(u.name, r.host_name) AS host_name,
                u.profile_image AS host_image,
@@ -353,6 +379,7 @@ async def toggle_chat(
 
 @router.get("/rooms/{room_id}")
 async def get_room(room_id: int, conn=Depends(get_db)):
+    await _auto_close_stale_rooms(conn)
     row = await conn.fetchrow("""
         SELECT r.*, COALESCE(u.name, r.host_name) AS host_name,
                u.profile_image AS host_image,
@@ -607,6 +634,29 @@ async def update_room_status(
 
     row = await conn.fetchrow(
         "UPDATE dive_rooms SET status=$1 WHERE id=$2 RETURNING *", status, room_id,
+    )
+    await chat_manager.broadcast_event(room_id, {"type": "room_update"})
+    return dict(row)
+
+
+@router.post("/rooms/{room_id}/extend")
+async def extend_room(
+    room_id: int,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """토론 종료 후 자동 종료 유예시간을 1시간 연장한다. 남아있는 참가자 누구나 요청 가능."""
+    participant = await conn.fetchrow(
+        "SELECT 1 FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
+    )
+    if not participant:
+        raise HTTPException(403, "참가자만 연장할 수 있습니다.")
+    room = await conn.fetchrow("SELECT * FROM dive_rooms WHERE id=$1", room_id)
+    if not room or room["status"] == "ended":
+        raise HTTPException(400, "이미 종료된 방입니다.")
+    row = await conn.fetchrow(
+        "UPDATE dive_rooms SET extension_count = extension_count + 1 WHERE id=$1 RETURNING *",
+        room_id,
     )
     await chat_manager.broadcast_event(room_id, {"type": "room_update"})
     return dict(row)

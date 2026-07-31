@@ -12,7 +12,11 @@ load_dotenv()
 load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
 
 import db
-from routers import books, clubs, community, users, sessions, recordings, tendency, recommendations, reading, oauth, friends, highlights, dive, admin
+from routers import books, clubs, community, users, sessions, tendency, recommendations, reading, oauth, friends, highlights, dive, admin
+# recordings 라우터는 이미지 용량 절감을 위해 미탑재 상태 (torch/pyannote 의존성 제거).
+# 코드는 agent/routers/recordings.py, agent/graphs/recording_analysis.py, agent/nodes/ 에 그대로 남아있음 —
+# 다시 켜려면 requirements.txt에 pyannote.audio/scipy/soundfile/pydub 복원 + Dockerfile에 torch 설치 복원 후,
+# 아래 import와 app.include_router(recordings.router)만 되살리면 됨.
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/15minutes"])
 
@@ -44,7 +48,6 @@ app.include_router(clubs.router)
 app.include_router(community.router)
 app.include_router(users.router)
 app.include_router(sessions.router)
-app.include_router(recordings.router)
 app.include_router(tendency.router)
 app.include_router(recommendations.router)
 app.include_router(reading.router)
