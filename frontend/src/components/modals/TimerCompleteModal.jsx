@@ -1,19 +1,33 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, CheckCircle2, Clock } from 'lucide-react';
+import { BookOpen, CheckCircle2, Clock, X } from 'lucide-react';
 import { formatReadingTime } from '../../utils';
 
-export default function TimerCompleteModal({ book, seconds, onFinished, onStillReading }) {
+export default function TimerCompleteModal({ book, seconds, onFinished, onStillReading, onCancel }) {
   if (!book) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}>
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+      onClick={onCancel}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.92, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 16 }}
-        style={{ width: '100%', maxWidth: '380px', background: '#FEFCF9', borderRadius: '1.5rem', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.4)', border: '1px solid rgba(139,107,66,0.15)' }}
+        onClick={e => e.stopPropagation()}
+        style={{ width: '100%', maxWidth: '380px', background: '#FEFCF9', borderRadius: '1.5rem', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.4)', border: '1px solid rgba(139,107,66,0.15)', position: 'relative' }}
       >
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            title="닫기 (일시정지 상태로 돌아가서 이어서 읽을 수 있어요)"
+            style={{ position: 'absolute', top: '0.875rem', right: '0.875rem', zIndex: 1, width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}
+          >
+            <X size={13} />
+          </button>
+        )}
+
         {/* 헤더 */}
         <div style={{ background: 'linear-gradient(135deg, rgba(28,20,14,0.97), rgba(44,26,16,0.97))', padding: '1.75rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ width: '56px', minWidth: '56px', height: '80px', borderRadius: '6px', overflow: 'hidden', background: 'rgba(140,107,66,0.2)', border: '1px solid rgba(139,107,66,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }}>

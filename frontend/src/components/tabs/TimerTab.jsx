@@ -4,7 +4,7 @@ import { Timer, Play, Pause, Square, BookOpen, Search, Loader2, X } from 'lucide
 import { formatTimer, stripHtml } from '../../utils';
 import { API_URL } from '../../api';
 
-export default function TimerTab({ user, readBooks, timerBook, timerSeconds, timerRunning, onStart, onPause, onResume, onStop }) {
+export default function TimerTab({ user, readBooks, timerBook, timerSeconds, timerRunning, onStart, onPause, onResume, onStop, widgetHidden, onToggleWidget }) {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -154,6 +154,19 @@ export default function TimerTab({ user, readBooks, timerBook, timerSeconds, tim
               독서 종료
             </button>
           </div>
+
+          {onToggleWidget && (
+            <button
+              onClick={onToggleWidget}
+              style={{
+                width: '100%', marginTop: '0.75rem', padding: '0.5rem', borderRadius: '0.75rem',
+                fontWeight: 700, fontSize: '11px', background: 'transparent', border: '1px dashed rgba(139,107,66,0.3)',
+                color: '#7B6B55', cursor: 'pointer', transition: 'all 0.2s ease',
+              }}
+            >
+              {widgetHidden ? '떠있는 위젯 다시 보기' : '떠있는 위젯 숨김 (다른 탭에서 안 보임)'}
+            </button>
+          )}
         </motion.div>
       ) : (
         /* ── 타이머 시작 설정 ── */

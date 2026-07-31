@@ -100,15 +100,20 @@ def _elapsed_reading_seconds(participant, room) -> int:
     reading_start = _naive(room["scheduled_at"])
     reading_end = reading_start + timedelta(minutes=room["reading_minutes"] or 0)
     discussion_end = reading_end + timedelta(minutes=room["discussion_minutes"] or 0)
+    # 방이 'overtime' 상태로 며칠씩 방치됐다가 뒤늦게 sweep(_auto_close_stale_rooms)으로
+    # 정리될 수 있으므로, "연장 독서" 구간은 자동 종료 유예시간 경계까지만 인정한다.
+    # (그렇지 않으면 now와의 차이를 그대로 크레딧해 비정상적으로 큰 시간이 쌓인다.)
+    grace_deadline = discussion_end + (1 + (room["extension_count"] or 0)) * timedelta(hours=AUTO_CLOSE_GRACE_HOURS)
+    capped_now = min(now, grace_deadline)
 
     overlap_start = max(since, reading_start)
-    overlap_end = min(now, reading_end)
+    overlap_end = min(capped_now, reading_end)
     if overlap_end > overlap_start:
         total += int((overlap_end - overlap_start).total_seconds())
 
     extra_start = max(since, discussion_end)
-    if now > extra_start:
-        total += int((now - extra_start).total_seconds())
+    if capped_now > extra_start:
+        total += int((capped_now - extra_start).total_seconds())
 
     return total
 
@@ -150,15 +155,20 @@ async def _log_reading_time(conn, user_id: int, book_title, book_isbn, seconds: 
 
 
 async def _finalize_participant(conn, room, participant, mark_ended: bool):
-    """참가자의 독서 시간을 확정 기록하고, 세션 종료면 상태만 고정하고 추방/퇴장이면 행을 삭제한다."""
+    """참가자의 독서 시간을 확정 기록하고, 세션 종료면 상태만 고정하고 추방/퇴장이면 행을 삭제한다.
+    본인이 직접 나가거나(leave) 방장이 실시간으로 추방한 경우는 그 자리에서 바로 기록하지만,
+    'reading' 상태 그대로 남의 손(자동 종료 sweep, 방장의 전체 종료)에 의해 정리되는 경우는
+    자리를 비웠을 가능성이 있으므로 바로 기록하지 않고 본인 확인을 거치도록 미확인 상태로 남긴다."""
     seconds = _elapsed_reading_seconds(participant, room)
-    book_title = participant["book_title"] or room["book_title"] or None
-    book_isbn = participant["book_isbn"] or room["book_isbn"] or None
-    await _log_reading_time(conn, participant["user_id"], book_title, book_isbn, seconds)
+    needs_confirmation = mark_ended and participant["status"] == "reading"
+    if not needs_confirmation:
+        book_title = participant["book_title"] or room["book_title"] or None
+        book_isbn = participant["book_isbn"] or room["book_isbn"] or None
+        await _log_reading_time(conn, participant["user_id"], book_title, book_isbn, seconds)
     if mark_ended:
         await conn.execute(
-            "UPDATE dive_participants SET status='ended', reading_seconds=$1, status_changed_at=CURRENT_TIMESTAMP WHERE id=$2",
-            seconds, participant["id"],
+            "UPDATE dive_participants SET status='ended', reading_seconds=$1, status_changed_at=CURRENT_TIMESTAMP, time_confirmed=$2 WHERE id=$3",
+            seconds, not needs_confirmation, participant["id"],
         )
     else:
         await conn.execute("DELETE FROM dive_participants WHERE id=$1", participant["id"])
@@ -504,6 +514,56 @@ async def kick_participant(
     return {"kicked": True}
 
 
+@router.get("/pending-confirmations")
+async def get_pending_confirmations(conn=Depends(get_db), user_id: int = Depends(get_current_user_id)):
+    """방치된 채로 자동 종료돼 독서시간이 아직 미확인 상태인 세션 목록.
+    reading_seconds에는 자동 계산된(유예시간 상한이 적용된) 추정치가 들어있어 프론트에서 기본값으로 보여줄 수 있다."""
+    rows = await conn.fetch(
+        """SELECT p.id AS participant_id, p.room_id, p.reading_seconds AS estimated_seconds,
+                  COALESCE(p.book_title, r.book_title) AS book_title,
+                  COALESCE(p.book_image, r.book_image) AS book_image,
+                  r.title AS room_title, r.scheduled_at
+           FROM dive_participants p
+           JOIN dive_rooms r ON r.id = p.room_id
+           WHERE p.user_id=$1 AND p.time_confirmed=FALSE
+           ORDER BY r.scheduled_at DESC""",
+        user_id,
+    )
+    return [dict(r) for r in rows]
+
+
+class ConfirmTimeIn(BaseModel):
+    seconds: int
+
+
+@router.post("/rooms/{room_id}/confirm-time")
+async def confirm_time(
+    room_id: int,
+    body: ConfirmTimeIn,
+    conn=Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """미확인 상태로 남은 세션의 실제 독서시간을 본인이 확인/수정해서 확정한다."""
+    if body.seconds < 0:
+        raise HTTPException(400, "잘못된 시간 값입니다.")
+    room = await conn.fetchrow("SELECT * FROM dive_rooms WHERE id=$1", room_id)
+    participant = await conn.fetchrow(
+        "SELECT * FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
+    )
+    if not room or not participant:
+        raise HTTPException(404, "세션을 찾을 수 없습니다.")
+    if participant["time_confirmed"]:
+        raise HTTPException(400, "이미 확인된 세션입니다.")
+    book_title = participant["book_title"] or room["book_title"] or None
+    book_isbn = participant["book_isbn"] or room["book_isbn"] or None
+    await _log_reading_time(conn, user_id, book_title, book_isbn, body.seconds)
+    await conn.execute(
+        "UPDATE dive_participants SET reading_seconds=$1, time_confirmed=TRUE WHERE id=$2",
+        body.seconds, participant["id"],
+    )
+    return {"confirmed": True, "seconds": body.seconds}
+
+
 class MyStatusIn(BaseModel):
     status: str  # 'reading' | 'paused'
 
@@ -671,6 +731,7 @@ async def delete_room(
     room = await conn.fetchrow("SELECT host_id FROM dive_rooms WHERE id=$1", room_id)
     if not room or room['host_id'] != user_id:
         raise HTTPException(403, "방장만 방을 삭제할 수 있습니다.")
+    await chat_manager.broadcast_event(room_id, {"type": "room_deleted"})
     await conn.execute("DELETE FROM dive_rooms WHERE id=$1", room_id)
     return {"deleted": True}
 

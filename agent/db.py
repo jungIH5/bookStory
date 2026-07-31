@@ -1,3 +1,4 @@
+import asyncio
 import asyncpg
 import json
 import os
@@ -450,6 +451,10 @@ async def _init_db():
 
             # 토론까지 끝난 뒤 방을 무기한 방치하지 않도록 — 유예시간(연장 포함) 지나면 자동 종료
             await conn.execute("ALTER TABLE dive_rooms ADD COLUMN IF NOT EXISTS extension_count INTEGER DEFAULT 0")
+
+            # 독서중 상태로 남아있던 참가자가 방치된 채로 자동 종료됐을 때는, 계산된 시간을
+            # 바로 확정하지 않고 본인이 확인/수정할 때까지 미확인 상태로 남겨둔다
+            await conn.execute("ALTER TABLE dive_participants ADD COLUMN IF NOT EXISTS time_confirmed BOOLEAN NOT NULL DEFAULT TRUE")
 
             # 독서 로그를 세션별 개별 기록에서 (유저,책) 단위 누적 기록으로 전환
             # 1) 기존에 쌓인 (user_id, read_book_id) 중복 행을 하나로 합친다

@@ -1,0 +1,4 @@
+(11, '내가읽을 책', 'scheduled', 14, datetime.datetime(2026, 7, 31, 4, 15, tzinfo=datetime.timezone.utc), 30, 30, 0, [14])
+---users---
+(22, '테스터')
+(27, '731테스터')

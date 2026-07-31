@@ -1,0 +1,4 @@
+(6, None, None, 413265, Decimal('114.7958333333333333'), None, datetime.datetime(2026, 7, 31, 2, 47, 45, 651456))
+(5, None, None, 1800, Decimal('0.50000000000000000000'), None, datetime.datetime(2026, 7, 17, 9, 25, 28, 227045))
+(3, None, None, 113, Decimal('0.03138888888888888889'), None, datetime.datetime(2026, 7, 12, 8, 41, 21, 940388))
+TOTAL SECONDS: 415178 = 115.32722222222222 hours

@@ -16,7 +16,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, setUser, loadUser } = useUserStore();
 
-  const [form, setForm] = useState({ name: '', gender: '남성', age: '25', location: '' });
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [form, setForm] = useState({ name: '', password: '', gender: '남성', age: '25', location: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [tendency, setTendency] = useState<Tendency | null>(null);
   const [isFetchingTendency, setIsFetchingTendency] = useState(false);
@@ -24,9 +25,32 @@ export default function ProfileScreen() {
 
   useEffect(() => { loadUser(); }, []);
 
+  const handleLogin = async () => {
+    if (!form.name.trim() || !form.password) {
+      Alert.alert('입력 오류', '이름과 비밀번호를 입력해주세요.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const loggedInUser = await usersApi.login(form.name.trim(), form.password);
+      setUser(loggedInUser);
+    } catch (e: any) {
+      const msg = e?.message === 'unauthorized'
+        ? '이름 또는 비밀번호가 일치하지 않습니다.'
+        : '로그인에 실패했습니다.';
+      Alert.alert('오류', msg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleRegister = async () => {
     if (!form.name.trim() || !form.location.trim()) {
       Alert.alert('입력 오류', '이름과 지역을 입력해주세요.');
+      return;
+    }
+    if (form.password.length < 4) {
+      Alert.alert('입력 오류', '비밀번호는 4자 이상 입력해주세요.');
       return;
     }
     const age = parseInt(form.age);
@@ -40,7 +64,7 @@ export default function ProfileScreen() {
       setUser(newUser);
       Alert.alert('등록 완료', '환영합니다!');
     } catch {
-      Alert.alert('오류', '등록 중 오류가 발생했습니다.');
+      Alert.alert('오류', '이미 사용 중인 이름이거나 등록 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -68,7 +92,9 @@ export default function ProfileScreen() {
   };
 
   if (!user) {
-    return <RegisterForm form={form} setForm={setForm} isSaving={isSaving} onSubmit={handleRegister} />;
+    return mode === 'login'
+      ? <LoginForm form={form} setForm={setForm} isSaving={isSaving} onSubmit={handleLogin} onSwitchMode={() => setMode('register')} />
+      : <RegisterForm form={form} setForm={setForm} isSaving={isSaving} onSubmit={handleRegister} onSwitchMode={() => setMode('login')} />;
   }
 
   return (
@@ -175,11 +201,74 @@ function TendencyResult({ tendency }: { tendency: Tendency }) {
   );
 }
 
-function RegisterForm({ form, setForm, isSaving, onSubmit }: {
-  form: { name: string; gender: string; age: string; location: string };
+function LoginForm({ form, setForm, isSaving, onSubmit, onSwitchMode }: {
+  form: { name: string; password: string; gender: string; age: string; location: string };
   setForm: (f: any) => void;
   isSaving: boolean;
   onSubmit: () => void;
+  onSwitchMode: () => void;
+}) {
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <View style={styles.registerHeader}>
+        <View style={styles.registerIcon}>
+          <User size={32} color={Colors.primary} />
+        </View>
+        <Text style={styles.registerTitle}>로그인</Text>
+        <Text style={styles.registerSub}>이름과 비밀번호로 로그인해주세요.</Text>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.fieldLabel}>이름</Text>
+        <TextInput
+          style={styles.fieldInput}
+          placeholder="이름을 입력하세요"
+          placeholderTextColor={Colors.textMuted}
+          value={form.name}
+          onChangeText={(v) => setForm({ ...form, name: v })}
+          maxLength={20}
+          autoCapitalize="none"
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.fieldLabel}>비밀번호</Text>
+        <TextInput
+          style={styles.fieldInput}
+          placeholder="비밀번호를 입력하세요"
+          placeholderTextColor={Colors.textMuted}
+          value={form.password}
+          onChangeText={(v) => setForm({ ...form, password: v })}
+          secureTextEntry
+          autoCapitalize="none"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.submitBtn, isSaving && { opacity: 0.5 }]}
+        onPress={onSubmit}
+        disabled={isSaving}
+      >
+        {isSaving
+          ? <ActivityIndicator color="white" />
+          : <Text style={styles.submitBtnText}>로그인</Text>}
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={onSwitchMode} style={styles.switchModeBtn}>
+        <Text style={styles.switchModeText}>계정이 없으신가요? 회원가입</Text>
+      </TouchableOpacity>
+    </ScrollView>
+    </TouchableWithoutFeedback>
+  );
+}
+
+function RegisterForm({ form, setForm, isSaving, onSubmit, onSwitchMode }: {
+  form: { name: string; password: string; gender: string; age: string; location: string };
+  setForm: (f: any) => void;
+  isSaving: boolean;
+  onSubmit: () => void;
+  onSwitchMode: () => void;
 }) {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -201,6 +290,20 @@ function RegisterForm({ form, setForm, isSaving, onSubmit }: {
           value={form.name}
           onChangeText={(v) => setForm({ ...form, name: v })}
           maxLength={20}
+          autoCapitalize="none"
+        />
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.fieldLabel}>비밀번호</Text>
+        <TextInput
+          style={styles.fieldInput}
+          placeholder="4자 이상 입력하세요"
+          placeholderTextColor={Colors.textMuted}
+          value={form.password}
+          onChangeText={(v) => setForm({ ...form, password: v })}
+          secureTextEntry
+          autoCapitalize="none"
         />
       </View>
 
@@ -252,6 +355,10 @@ function RegisterForm({ form, setForm, isSaving, onSubmit }: {
         {isSaving
           ? <ActivityIndicator color="white" />
           : <Text style={styles.submitBtnText}>등록하기</Text>}
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={onSwitchMode} style={styles.switchModeBtn}>
+        <Text style={styles.switchModeText}>이미 계정이 있으신가요? 로그인</Text>
       </TouchableOpacity>
     </ScrollView>
     </TouchableWithoutFeedback>
@@ -356,4 +463,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md, alignItems: 'center', ...Shadow.md, marginTop: Spacing.sm,
   },
   submitBtnText: { color: 'white', fontWeight: '800', fontSize: FontSize.md },
+
+  switchModeBtn: { alignItems: 'center', padding: Spacing.sm },
+  switchModeText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.primary },
 });

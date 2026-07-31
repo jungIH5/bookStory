@@ -37,6 +37,9 @@ export const booksApi = {
 
   saveReadBook: (book: Partial<ReadBook>) =>
     request<ReadBook>('/api/books/read', { method: 'POST', body: JSON.stringify(book) }),
+
+  updateStatus: (bookId: number, status: 'reading' | 'finished') =>
+    request<ReadBook>(`/api/books/read/${bookId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };
 
 // Users
@@ -50,13 +53,26 @@ export const usersApi = {
     return result.user;
   },
 
-  refreshToken: async (userId: number): Promise<void> => {
-    const result = await request<{ token: string }>('/api/auth/token', {
+  login: async (name: string, password: string): Promise<User> => {
+    const result = await request<{ user: User; token: string }>('/api/users/login', {
       method: 'POST',
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ name, password }),
     });
     await useUserStore.getState().setToken(result.token);
+    return result.user;
   },
+
+  setInitialPassword: async (name: string, password: string): Promise<User> => {
+    const result = await request<{ user: User; token: string }>('/api/users/set-initial-password', {
+      method: 'POST',
+      body: JSON.stringify({ name, password }),
+    });
+    await useUserStore.getState().setToken(result.token);
+    return result.user;
+  },
+
+  update: (userId: number, updates: Partial<UserForm> & { ai_persona?: string }) =>
+    request<User>(`/api/users/${userId}`, { method: 'PATCH', body: JSON.stringify(updates) }),
 
   uploadVoiceSample: async (userId: number, uri: string) => {
     const token = useUserStore.getState().token;
@@ -156,6 +172,70 @@ export const tendencyApi = {
     request<{ recommendations: BookRecommendation[] }>(`/api/recommendations/${userId}`),
 };
 
+// Album (다이브룸/방 이미지 선택용 사진첩)
+export const albumApi = {
+  get: (userId: number) => request<AlbumImage[]>(`/api/users/${userId}/album`),
+  add: (userId: number, imageData: string) =>
+    request<AlbumImage>(`/api/users/${userId}/album`, {
+      method: 'POST', body: JSON.stringify({ image_data: imageData }),
+    }),
+  remove: (userId: number, imageId: number) =>
+    request(`/api/users/${userId}/album/${imageId}`, { method: 'DELETE' }),
+};
+
+// Reading (개인 독서 기록)
+export const readingApi = {
+  log: (readBookId: number, durationSeconds: number, startedReadingAt?: string | null) =>
+    request(`/api/reading/log`, {
+      method: 'POST',
+      body: JSON.stringify({ read_book_id: readBookId, duration_seconds: durationSeconds, started_reading_at: startedReadingAt ?? null }),
+    }),
+  bookReaders: (params: { isbn?: string; title?: string }) => {
+    const qs = params.isbn ? `isbn=${encodeURIComponent(params.isbn)}` : `title=${encodeURIComponent(params.title || '')}`;
+    return request<BookReader[]>(`/api/reading/book-readers?${qs}`);
+  },
+  leaderboard: () => request<LeaderboardEntry[]>('/api/reading/leaderboard'),
+};
+
+// Dive rooms (독서모임 — 실시간 동기 독서 세션)
+export const diveApi = {
+  getRooms: () => request<DiveRoom[]>('/api/dive/rooms'),
+  getHostedRooms: () => request<DiveRoom[]>('/api/dive/rooms/hosted'),
+  getJoinedRooms: () => request<DiveRoom[]>('/api/dive/rooms/joined'),
+  getActiveRoom: () => request<DiveRoom | null>('/api/dive/rooms/active'),
+  getRoom: (roomId: number) => request<DiveRoom>(`/api/dive/rooms/${roomId}`),
+  createRoom: (data: Partial<DiveRoom>) =>
+    request<DiveRoom>('/api/dive/rooms', { method: 'POST', body: JSON.stringify(data) }),
+  joinRoom: (roomId: number, book?: { book_title: string; book_image?: string; book_isbn?: string }) =>
+    request(`/api/dive/rooms/${roomId}/join`, { method: 'POST', body: JSON.stringify(book || {}) }),
+  leaveRoom: (roomId: number) => request(`/api/dive/rooms/${roomId}/leave`, { method: 'DELETE' }),
+  kickParticipant: (roomId: number, targetUserId: number) =>
+    request(`/api/dive/rooms/${roomId}/participants/${targetUserId}`, { method: 'DELETE' }),
+  updateMyStatus: (roomId: number, status: 'reading' | 'paused') =>
+    request(`/api/dive/rooms/${roomId}/my-status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  getMessages: (roomId: number) => request<DiveMessage[]>(`/api/dive/rooms/${roomId}/messages`),
+  sendMessage: (roomId: number, content: string, toUserId?: number | null) =>
+    request<DiveMessage>(`/api/dive/rooms/${roomId}/messages`, {
+      method: 'POST', body: JSON.stringify({ content, to_user_id: toUserId ?? null }),
+    }),
+  toggleChat: (roomId: number) => request<DiveRoom>(`/api/dive/rooms/${roomId}/chat`, { method: 'PATCH' }),
+  updateNotice: (roomId: number, notice: string) =>
+    request(`/api/dive/rooms/${roomId}/notice`, { method: 'PATCH', body: JSON.stringify({ notice }) }),
+  updateImage: (roomId: number, roomImage: string) =>
+    request(`/api/dive/rooms/${roomId}/image`, { method: 'PATCH', body: JSON.stringify({ room_image: roomImage }) }),
+  updateStatus: (roomId: number, status: string) =>
+    request(`/api/dive/rooms/${roomId}/status?status=${encodeURIComponent(status)}`, { method: 'PATCH' }),
+  extendRoom: (roomId: number) => request<DiveRoom>(`/api/dive/rooms/${roomId}/extend`, { method: 'POST' }),
+  deleteRoom: (roomId: number) => request(`/api/dive/rooms/${roomId}`, { method: 'DELETE' }),
+  aiChat: (roomId: number, message: string, history: { role: string; content: string }[]) =>
+    request<{ reply: string }>(`/api/dive/rooms/${roomId}/ai-chat`, {
+      method: 'POST', body: JSON.stringify({ message, history }),
+    }),
+  getPendingConfirmations: () => request<PendingConfirmation[]>('/api/dive/pending-confirmations'),
+  confirmTime: (roomId: number, seconds: number) =>
+    request(`/api/dive/rooms/${roomId}/confirm-time`, { method: 'POST', body: JSON.stringify({ seconds }) }),
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Book {
@@ -175,6 +255,8 @@ export interface ReadBook extends Book {
   id: number;
   pages?: number;
   saved_at?: string;
+  status?: 'reading' | 'finished';
+  my_seconds?: number;
 }
 
 export interface BookAnalysis {
@@ -194,10 +276,13 @@ export interface User {
   location: string;
   lat?: number;
   lng?: number;
+  profile_image?: string;
+  ai_persona?: string;
 }
 
 export interface UserForm {
   name: string;
+  password: string;
   gender: string;
   age: number;
   location: string;
@@ -258,4 +343,85 @@ export interface Tendency {
   reading_lenses: string[];
   strong_areas: string[];
   growth_areas: string[];
+}
+
+export interface AlbumImage {
+  id: number;
+  image_data: string;
+}
+
+export interface BookReader {
+  user_id: number;
+  name: string;
+  profile_image?: string;
+  seconds: number;
+}
+
+export interface LeaderboardEntry {
+  id: number;
+  name: string;
+  books_count: number;
+  total_seconds: number;
+  rank: number;
+}
+
+export interface DiveParticipant {
+  id: number;
+  user_id: number;
+  name: string;
+  profile_image?: string;
+  book_title?: string;
+  book_image?: string;
+  book_isbn?: string;
+  status: 'reading' | 'paused' | 'ended';
+  reading_seconds: number;
+}
+
+export interface DiveRoom {
+  id: number;
+  title: string;
+  book_title?: string;
+  book_image?: string;
+  book_isbn?: string;
+  room_image?: string;
+  host_id: number;
+  host_name?: string;
+  host_image?: string;
+  scheduled_at: string;
+  reading_minutes: number;
+  discussion_minutes: number;
+  max_participants: number;
+  late_join_cutoff_minutes: number;
+  notice?: string;
+  chat_enabled: boolean;
+  status: 'scheduled' | 'reading' | 'discussion' | 'ended';
+  extension_count: number;
+  participant_count: number;
+  participants?: DiveParticipant[];
+  host_book_title?: string;
+  host_book_image?: string;
+  host_book_isbn?: string;
+}
+
+export interface DiveMessage {
+  id: number;
+  room_id: number;
+  user_id: number;
+  to_user_id?: number | null;
+  content: string;
+  is_ai: boolean;
+  created_at: string;
+  user_name?: string;
+  user_image?: string;
+  to_user_name?: string;
+}
+
+export interface PendingConfirmation {
+  participant_id: number;
+  room_id: number;
+  estimated_seconds: number;
+  book_title?: string;
+  book_image?: string;
+  room_title: string;
+  scheduled_at: string;
 }

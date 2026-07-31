@@ -56,7 +56,7 @@ const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file);
 });
 
-export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin, onLeave, onDelete, onStatusChange, onOpenUserLibrary, startMinimized }) {
+export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin, onLeave, onDelete, onStatusChange, onOpenUserLibrary, onSwitchToPersonal, startMinimized }) {
   const [room, setRoom] = useState(initialRoom);
   const [messages, setMessages] = useState([]);
   const [msgInput, setMsgInput] = useState('');
@@ -92,6 +92,9 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const [showExtendNotice, setShowExtendNotice] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
   const extendWarningShownForRef = useRef(null); // 이 extension_count 값에 대해 이미 경고를 띄웠는지
+  const [showSoloPrompt, setShowSoloPrompt] = useState(false);
+  const [isSwitchingToPersonal, setIsSwitchingToPersonal] = useState(false);
+  const soloPromptShownRef = useRef(false);
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatMessages, setAiChatMessages] = useState([]);
   const [aiChatInput, setAiChatInput] = useState('');
@@ -210,6 +213,8 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const isFull = (room.participant_count || 0) >= room.max_participants;
   const isEnded = room.status === 'ended';
   const needsBookChoice = !room.book_title;
+  const joinCutoffPassed = room.late_join_cutoff_minutes > 0 &&
+    Date.now() >= new Date(room.scheduled_at).getTime() - room.late_join_cutoff_minutes * 60000;
 
   const chatDisabled = room.chat_enabled === false;
   const chatLocked = computedPhase === 'waiting' || (computedPhase === 'reading' && chatDisabled);
@@ -226,6 +231,36 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   // 독서 종료 5분 전 경고
   const showReadingWarning = computedPhase === 'reading' && phaseRemaining > 0 && phaseRemaining < 5 * 60 * 1000;
   const readingWarningPct = showReadingWarning ? Math.round((phaseRemaining / (5 * 60 * 1000)) * 100) : 100;
+
+  // 독서 시작 시점에 방장 혼자뿐이면 — 개인 독서로 전환할지 물어보기 (세션당 1회)
+  useEffect(() => {
+    if (soloPromptShownRef.current || !isHost) return;
+    if (computedPhase === 'reading' && (room.participant_count || 0) <= 1) {
+      soloPromptShownRef.current = true;
+      setShowSoloPrompt(true);
+    }
+  }, [isHost, computedPhase, room.participant_count]);
+
+  const handleSwitchToPersonal = async () => {
+    if (isSwitchingToPersonal) return;
+    setIsSwitchingToPersonal(true);
+    try {
+      const book = {
+        title: myParticipant?.book_title || room.book_title,
+        image: myParticipant?.book_image || room.book_image,
+        isbn: myParticipant?.book_isbn || room.book_isbn,
+      };
+      if (user?.token) {
+        await fetch(`${API_URL}/api/dive/rooms/${room.id}`, {
+          method: 'DELETE', headers: { Authorization: `Bearer ${user.token}` },
+        });
+      }
+      setShowSoloPrompt(false);
+      onSwitchToPersonal?.(book);
+      onDelete?.();
+      onClose();
+    } finally { setIsSwitchingToPersonal(false); }
+  };
 
   // 토론 시작 10분 전 — 참가자에게 AI 대화창 자동으로 열기 (세션당 1회)
   useEffect(() => {
@@ -320,6 +355,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'room_update') { fetchRoom(); return; }
+          if (msg.type === 'room_deleted') {
+            setToast({ text: '방장이 이 모임을 삭제했어요.', color: '#ef4444' });
+            onDelete?.();
+            setTimeout(() => onClose(), 1800);
+            return;
+          }
           setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
         } catch {}
       };
@@ -655,9 +696,13 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                   { icon: <Calendar size={11} />, label: fmtTime(room.scheduled_at) },
                   { icon: <Clock size={11} />, label: `독서 ${room.reading_minutes}분 + 토론 ${room.discussion_minutes}분` },
                   { icon: <Users size={11} />, label: `${room.participant_count || 0}/${room.max_participants}명` },
-                  ...(room.late_join_cutoff_minutes > 0 ? [{ icon: <Lock size={11} />, label: `${room.late_join_cutoff_minutes}분 전 마감` }] : []),
+                  ...(room.late_join_cutoff_minutes > 0 ? [{
+                    icon: <Lock size={11} />,
+                    label: joinCutoffPassed ? '참가 마감됨' : `${room.late_join_cutoff_minutes}분 전 마감`,
+                    warn: joinCutoffPassed,
+                  }] : []),
                 ].map((item, i) => (
-                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: '#9E8D7A', background: 'rgba(139,107,66,0.04)', border: '1px solid rgba(139,107,66,0.1)', padding: '3px 8px', borderRadius: '9999px' }}>
+                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: item.warn ? '#dc2626' : '#9E8D7A', background: item.warn ? 'rgba(239,68,68,0.06)' : 'rgba(139,107,66,0.04)', border: `1px solid ${item.warn ? 'rgba(239,68,68,0.25)' : 'rgba(139,107,66,0.1)'}`, padding: '3px 8px', borderRadius: '9999px' }}>
                     {item.icon}{item.label}
                   </span>
                 ))}
@@ -703,7 +748,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               </div>
 
               {/* 책 선택 (자유도서인 경우 참가 전에 필수) */}
-              {user && !isFull && (
+              {user && !isFull && !joinCutoffPassed && (
                 <div>
                   {needsBookChoice && !selectedJoinBook && (
                     <div style={{ marginBottom: '0.625rem', padding: '0.75rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.25)', borderRadius: '0.875rem' }}>
@@ -756,6 +801,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               )}
               {isFull && (
                 <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#9E8D7A', textAlign: 'center', padding: '0.75rem' }}>인원이 가득 찼습니다</p>
+              )}
+              {!isFull && joinCutoffPassed && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', padding: '0.75rem', background: 'rgba(158,141,122,0.06)', border: '1px solid rgba(158,141,122,0.2)', borderRadius: '0.875rem' }}>
+                  <Lock size={13} style={{ color: '#9E8D7A' }} />
+                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#9E8D7A' }}>참가 신청이 마감됐습니다 (독서 시작 {room.late_join_cutoff_minutes}분 전 마감)</p>
+                </div>
               )}
             </div>
           </motion.div>
@@ -1345,6 +1396,30 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               <button onClick={() => setShowExtendNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>괜찮아요</button>
               <button onClick={handleExtendRoom} disabled={isExtending} style={{ flex: 1, padding: '0.625rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8C6B42', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
                 {isExtending ? <Loader2 size={13} className="animate-spin" /> : '1시간 연장하기'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showSoloPrompt && (
+        <div className="modal-backdrop" style={{ zIndex: 300 }} onClick={() => setShowSoloPrompt(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 16 }}
+            onClick={e => e.stopPropagation()}
+            className="modal-content relative my-auto"
+            style={{ maxWidth: '380px', padding: '1.5rem' }}
+          >
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1C140E', marginBottom: '0.5rem' }}>📖 아직 아무도 참가하지 않았어요</p>
+            <p style={{ fontSize: '0.875rem', color: '#7B6B55', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              혼자서만 독서 시간이 시작됐어요. 이 방은 정리하고 개인 독서 타이머로 넘어가서 이어가시겠어요? 지금까지의 방 설정은 사라지지만, 독서 시간은 그대로 개인 기록으로 이어집니다.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => setShowSoloPrompt(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>그냥 방 유지할게요</button>
+              <button onClick={handleSwitchToPersonal} disabled={isSwitchingToPersonal} style={{ flex: 1, padding: '0.625rem', background: 'rgba(196,148,86,0.12)', border: '1px solid rgba(196,148,86,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8C6B42', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+                {isSwitchingToPersonal ? <Loader2 size={13} className="animate-spin" /> : '개인 독서로 전환'}
               </button>
             </div>
           </motion.div>

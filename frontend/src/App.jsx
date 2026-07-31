@@ -24,6 +24,7 @@ import PostModal from './components/modals/PostModal';
 import ProfileModal from './components/modals/ProfileModal';
 import ReadingTimer from './components/ReadingTimer';
 import TimerCompleteModal from './components/modals/TimerCompleteModal';
+import PendingTimeConfirmModal from './components/modals/PendingTimeConfirmModal';
 import UserLibraryModal from './components/modals/UserLibraryModal';
 import CreateDiveRoomModal from './components/modals/CreateDiveRoomModal';
 import DiveRoomModal from './components/modals/DiveRoomModal';
@@ -77,8 +78,10 @@ function App() {
   const [timerBook, setTimerBook] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [timerWidgetHidden, setTimerWidgetHidden] = useState(false);
   const timerRef = useRef(null);
-  const [timerComplete, setTimerComplete] = useState(null); // { book, seconds }
+  const [showTimerComplete, setShowTimerComplete] = useState(false);
+  const [pendingTimeConfirmations, setPendingTimeConfirmations] = useState([]);
   const [userLibrary, setUserLibrary] = useState(null); // { userId, userName }
   const [friendRequests, setFriendRequests] = useState([]);
   const [diveRooms, setDiveRooms] = useState([]);
@@ -178,6 +181,11 @@ function App() {
   }, [user?.token]);
 
   useEffect(() => {
+    if (!user?.token) { setPendingTimeConfirmations([]); return; }
+    fetchPendingTimeConfirmations();
+  }, [user?.token]);
+
+  useEffect(() => {
     fetchClubs();
     fetchJoinedClubs();
   }, [user]);
@@ -213,6 +221,30 @@ function App() {
       });
       if (res.ok) setActiveDiveRoom(await res.json());
     } catch {}
+  };
+
+  const fetchPendingTimeConfirmations = async () => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/dive/pending-confirmations`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (res.ok) setPendingTimeConfirmations(await res.json());
+    } catch {}
+  };
+
+  const handleConfirmPendingTime = async (roomId, seconds) => {
+    if (!user?.token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/dive/rooms/${roomId}/confirm-time`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seconds }),
+      });
+      if (res.ok) setToast({ show: true, message: '독서 시간이 기록됐어요' });
+    } catch {} finally {
+      setPendingTimeConfirmations(prev => prev.filter(p => p.room_id !== roomId));
+    }
   };
 
   const handleCreateDiveRoom = async (formData) => {
@@ -834,6 +866,7 @@ function App() {
     setTimerBook({ ...book, startedAt: new Date().toISOString().split('T')[0] });
     setTimerSeconds(0);
     setTimerRunning(true);
+    setTimerWidgetHidden(false);
     timerRef.current = setInterval(() => setTimerSeconds(s => s + 1), 1000);
   };
 
@@ -848,20 +881,26 @@ function App() {
   };
 
   const handleStopTimer = () => {
+    // 바로 종료 처리하지 않고 일시정지만 한다 — 완독/읽는중 팝업을 닫거나 취소해도
+    // 시간이 사라지지 않고 그대로 이어서 읽을 수 있도록.
     clearInterval(timerRef.current);
-    const duration = timerSeconds;
-    const book = timerBook;
-    setTimerBook(null);
-    setTimerSeconds(0);
     setTimerRunning(false);
-    if (duration < 10) return;
-    setTimerComplete({ book, seconds: duration });
+    if (timerSeconds >= 10) setShowTimerComplete(true);
+  };
+
+  const handleCancelTimerComplete = () => {
+    // 팝업만 닫고, 타이머는 일시정지 상태 그대로 유지 (시간 보존, 재개 가능)
+    setShowTimerComplete(false);
   };
 
   const handleTimerComplete = async (finished) => {
-    const { book, seconds } = timerComplete;
-    setTimerComplete(null);
-    if (!user?.token) return;
+    const book = timerBook;
+    const seconds = timerSeconds;
+    setShowTimerComplete(false);
+    setTimerBook(null);
+    setTimerSeconds(0);
+    setTimerRunning(false);
+    if (!user?.token || !book) return;
     const authH = { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' };
     try {
       // 서재에서 책 찾기 (제목 매칭)
@@ -1227,6 +1266,8 @@ function App() {
               onPause={handlePauseTimer}
               onResume={handleResumeTimer}
               onStop={handleStopTimer}
+              widgetHidden={timerWidgetHidden}
+              onToggleWidget={() => setTimerWidgetHidden(h => !h)}
             />
           )}
           {activeTab === 'admin' && user?.is_admin && (
@@ -1401,7 +1442,7 @@ function App() {
 
       {/* Reading timer */}
       <AnimatePresence>
-        {timerBook && (
+        {timerBook && !timerWidgetHidden && (
           <ReadingTimer
             book={timerBook}
             seconds={timerSeconds}
@@ -1409,6 +1450,7 @@ function App() {
             onPause={handlePauseTimer}
             onResume={handleResumeTimer}
             onStop={handleStopTimer}
+            onHide={() => setTimerWidgetHidden(true)}
           />
         )}
       </AnimatePresence>
@@ -1434,12 +1476,24 @@ function App() {
 
       {/* Timer complete modal */}
       <AnimatePresence>
-        {timerComplete && (
+        {showTimerComplete && timerBook && (
           <TimerCompleteModal
-            book={timerComplete.book}
-            seconds={timerComplete.seconds}
+            book={timerBook}
+            seconds={timerSeconds}
             onFinished={() => handleTimerComplete(true)}
             onStillReading={() => handleTimerComplete(false)}
+            onCancel={handleCancelTimerComplete}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 방치된 채 자동 종료된 다이브룸 세션의 독서시간 확인 */}
+      <AnimatePresence>
+        {pendingTimeConfirmations.length > 0 && (
+          <PendingTimeConfirmModal
+            item={pendingTimeConfirmations[0]}
+            onConfirm={(seconds) => handleConfirmPendingTime(pendingTimeConfirmations[0].room_id, seconds)}
+            onDismiss={() => setPendingTimeConfirmations(prev => prev.slice(1))}
           />
         )}
       </AnimatePresence>
@@ -1469,6 +1523,7 @@ function App() {
             onDelete={() => { fetchDiveRooms(); fetchActiveDiveRoom(); }}
             onStatusChange={() => { fetchDiveRooms(); fetchActiveDiveRoom(); }}
             onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
+            onSwitchToPersonal={(book) => { handleStartTimer(book); setActiveTab('timer'); }}
           />
         )}
       </AnimatePresence>

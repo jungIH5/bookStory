@@ -88,7 +88,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
   const canSubmit = form.title.trim() && form.scheduled_at && (!needsHostBook || form.host_book_title);
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit) { setAttemptedSubmit(true); return; }
     setIsSaving(true);
     try {
       const scheduledIso = new Date(form.scheduled_at).toISOString();
@@ -260,8 +260,11 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                 value={form.title}
                 onChange={e => set('title', e.target.value)}
                 placeholder="예: 사피엔스 1장 함께 읽기"
-                style={{ color: '#1C140E' }}
+                style={{ color: '#1C140E', ...(attemptedSubmit && !form.title.trim() ? { borderColor: '#ef4444' } : {}) }}
               />
+              {attemptedSubmit && !form.title.trim() && (
+                <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700, marginTop: '0.25rem' }}>방 제목을 입력해주세요.</p>
+              )}
             </div>
           </div>
 
@@ -318,6 +321,9 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
               <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600, marginBottom: '0.375rem' }}>
                 지정 도서가 없는 모임이라, 방장도 읽으실 책을 선택해야 참가 기록이 남습니다.
               </p>
+              {attemptedSubmit && !form.host_book_title && (
+                <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700, marginBottom: '0.375rem' }}>읽으실 책을 선택해주세요.</p>
+              )}
               {form.host_book_title ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem' }}>
                   {form.host_book_image && <img src={form.host_book_image} alt="" style={{ width: '32px', height: '46px', objectFit: 'cover', borderRadius: '4px' }} />}
@@ -460,6 +466,12 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
               style={{ width: '100%', resize: 'none', color: '#1C140E', boxSizing: 'border-box' }}
             />
           </div>
+
+          {attemptedSubmit && !canSubmit && (
+            <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700, textAlign: 'center' }}>
+              필수 항목({!form.title.trim() ? '방 제목' : '읽으실 책'})을 확인해주세요.
+            </p>
+          )}
 
           {/* 하단 버튼 */}
           <div style={{ display: 'flex', gap: '0.625rem', marginTop: '0.5rem' }}>
