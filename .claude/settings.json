@@ -22,7 +22,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "REPO=\"/c/Users/inhon/Documents/GitHub/bookStory\"; LAST=$(git -C \"$REPO\" log -1 --format=%ct 2>/dev/null || echo 0); NOW=$(date +%s); DIFF=$((NOW - LAST)); CHANGES=$(git -C \"$REPO\" status --porcelain -- . ':(exclude)**/__pycache__/**' 2>/dev/null); if [ \"$DIFF\" -gt 10800 ] && [ -n \"$CHANGES\" ]; then MSG=\"auto-commit: 마지막 커밋 후 3시간 경과 스냅샷 ($(date '+%Y-%m-%d %H:%M'))\"; git -C \"$REPO\" add -A -- . ':(exclude)**/__pycache__/**' >/dev/null 2>&1; git -C \"$REPO\" commit -m \"$MSG\" >/dev/null 2>&1; fi; exit 0",
+            "command": "REPO=\"/c/Users/inhon/Documents/GitHub/bookStory\"; LAST=$(git -C \"$REPO\" log -1 --format=%ct 2>/dev/null || echo 0); NOW=$(date +%s); DIFF=$((NOW - LAST)); CHANGES=$(git -C \"$REPO\" status --porcelain -- . ':(exclude)**/__pycache__/**' 2>/dev/null); if [ \"$DIFF\" -gt 10800 ] && [ -n \"$CHANGES\" ]; then FILES=$(echo \"$CHANGES\" | cut -c4- | head -8 | paste -sd, - | sed 's/,/, /g'); COUNT=$(echo \"$CHANGES\" | wc -l); if [ \"$COUNT\" -gt 8 ]; then FILES=\"$FILES 외 $((COUNT-8))개\"; fi; MSG=\"auto-commit ($(date '+%Y-%m-%d %H:%M')): 수정 - $FILES\"; git -C \"$REPO\" add -A -- . ':(exclude)**/__pycache__/**' >/dev/null 2>&1; git -C \"$REPO\" commit -m \"$MSG\" >/dev/null 2>&1; fi; exit 0",
             "timeout": 30,
             "async": true,
             "statusMessage": "마지막 커밋 후 경과 시간 확인 중..."

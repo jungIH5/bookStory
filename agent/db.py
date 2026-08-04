@@ -17,12 +17,24 @@ async def _set_codecs(conn: asyncpg.Connection):
 
 async def init_pool():
     global _pool
-    _pool = await asyncpg.create_pool(
-        dsn=os.getenv("DATABASE_URL"),
-        min_size=1,
-        max_size=10,
-        init=_set_codecs,
-    )
+    # docker-compose의 depends_on은 컨테이너 시작만 보장할 뿐, Postgres가 실제로
+    # 연결을 받을 준비가 됐는지는 보장하지 않는다. 그 사이 타이밍에 걸리면
+    # asyncpg가 CannotConnectNowError로 즉시 실패하고 (uvicorn --reload 특성상)
+    # 파일 변경이 있기 전까지 서버가 죽은 채로 방치되므로, 준비될 때까지 재시도한다.
+    max_attempts = 10
+    for attempt in range(1, max_attempts + 1):
+        try:
+            _pool = await asyncpg.create_pool(
+                dsn=os.getenv("DATABASE_URL"),
+                min_size=1,
+                max_size=10,
+                init=_set_codecs,
+            )
+            break
+        except (asyncpg.exceptions.CannotConnectNowError, ConnectionError, OSError):
+            if attempt == max_attempts:
+                raise
+            await asyncio.sleep(2)
     await _init_db()
 
 
