@@ -1059,23 +1059,24 @@ function App() {
   };
 
   const navTabs = [
-    { id: 'stack', label: '책쌓기', icon: <BookOpen size={15} /> },
-    { id: 'board', label: '게시판', icon: <MessageSquare size={15} /> },
-    { id: 'community', label: '독서모임', icon: <Waves size={15} /> },
+    { id: 'stack', label: '책쌓기', emoji: '📚', icon: <BookOpen size={15} /> },
+    { id: 'board', label: '게시판', emoji: '💌', icon: <MessageSquare size={15} /> },
+    { id: 'community', label: '독서모임', emoji: '🌊', icon: <Waves size={15} /> },
     // 'recording' 탭: 백엔드 녹음 분석 기능이 이미지 용량 절감을 위해 비활성화되어 있어 임시로 숨김.
     // 다시 켤 때 이 줄만 복원하면 됨: { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
-    { id: 'timer', label: '독서 타이머', icon: <Timer size={15} />, dot: !!timerBook },
+    { id: 'timer', label: '독서 타이머', emoji: '⏰', icon: <Timer size={15} />, dot: !!timerBook },
   ];
 
   return (
-    <div className="min-h-screen" style={{ color: '#1C140E' }}>
-      <div className="fixed pointer-events-none -z-10" style={{ top: '10%', left: '-5%', width: '500px', height: '500px', background: 'rgba(140,107,66,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
-      <div className="fixed pointer-events-none -z-10" style={{ bottom: '10%', right: '-5%', width: '500px', height: '500px', background: 'rgba(196,148,86,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+    <div className="min-h-screen" style={{ color: '#241B45' }}>
+      <div className="fixed pointer-events-none -z-10" style={{ top: '10%', left: '-5%', width: '500px', height: '500px', background: 'rgba(108, 92, 231,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+      <div className="fixed pointer-events-none -z-10" style={{ bottom: '10%', right: '-5%', width: '500px', height: '500px', background: 'rgba(167, 139, 250,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
 
       <header className="app-header">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div style={{ width: '2.25rem', height: '2.25rem', background: 'linear-gradient(135deg, #8C6B42, #C49456)', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(140,107,66,0.35)' }}>
+          <div className="flex items-center gap-3" style={{ position: 'relative' }}>
+            <span className="cute-float sparkle-deco" style={{ top: '-10px', left: '-6px', ['--tilt']: '-8deg' }}>✨</span>
+            <div className="cute-wiggle" style={{ width: '2.5rem', height: '2.5rem', background: 'linear-gradient(135deg, #6C5CE7, #A78BFA)', borderRadius: '45% 55% 60% 40% / 55% 45% 55% 45%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '3px 4px 0 rgba(108, 92, 231,0.3)', border: '2px solid rgba(255,255,255,0.5)' }}>
               <BookOpen size={17} color="white" />
             </div>
             <span className="font-black text-xl gradient-text">bookStory</span>
@@ -1083,18 +1084,18 @@ function App() {
 
           {user && (
             <div className="flex items-center gap-2">
-              <label title="목소리 샘플 등록" style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.12)', border: '1px solid rgba(140,107,66,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {voiceSampleUploading ? <Loader2 className="animate-spin" size={13} style={{ color: '#8C6B42' }} /> : <Mic size={13} style={{ color: '#8C6B42' }} />}
+              <label title="목소리 샘플 등록" style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.12)', border: '1px solid rgba(108, 92, 231,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {voiceSampleUploading ? <Loader2 className="animate-spin" size={13} style={{ color: '#6C5CE7' }} /> : <Mic size={13} style={{ color: '#6C5CE7' }} />}
                 <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleUploadVoiceSample} disabled={voiceSampleUploading} />
               </label>
               {friendRequests.length > 0 && (
                 <button
                   onClick={() => setUserLibrary({ userId: user.id, userName: user.name, showFriendRequests: true })}
                   title="친구 요청"
-                  style={{ position: 'relative', cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ position: 'relative', cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
-                  <UserPlus size={13} style={{ color: '#8C6B42' }} />
-                  <span style={{ position: 'absolute', top: '-3px', right: '-3px', width: '14px', height: '14px', borderRadius: '9999px', background: '#C49456', color: 'white', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid white' }}>
+                  <UserPlus size={13} style={{ color: '#6C5CE7' }} />
+                  <span style={{ position: 'absolute', top: '-3px', right: '-3px', width: '14px', height: '14px', borderRadius: '9999px', background: '#A78BFA', color: 'white', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid white' }}>
                     {friendRequests.length}
                   </span>
                 </button>
@@ -1103,33 +1104,33 @@ function App() {
                 <button
                   onClick={() => setActiveTab('admin')}
                   title="관리자 페이지"
-                  style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: activeTab === 'admin' ? 'rgba(140,107,66,0.2)' : 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: activeTab === 'admin' ? 'rgba(108, 92, 231,0.2)' : 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
-                  <ShieldCheck size={13} style={{ color: '#8C6B42' }} />
+                  <ShieldCheck size={13} style={{ color: '#6C5CE7' }} />
                 </button>
               )}
             <div
                 onClick={() => setUserLibrary({ userId: user.id, userName: user.name })}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', cursor: 'pointer', transition: 'background 0.2s' }}
+                style={{ background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', cursor: 'pointer', transition: 'background 0.2s' }}
                 title="내 서재 보기"
               >
-                <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8C6B42, #C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0, overflow: 'hidden' }}>
+                <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6C5CE7, #A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0, overflow: 'hidden' }}>
                   {user.profile_image ? <img src={user.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user.name[0]}
                 </div>
                 <div className="sm:block hidden">
-                  <p style={{ fontSize: '9px', color: '#8C6B42', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
+                  <p style={{ fontSize: '9px', color: '#6C5CE7', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
                   <p style={{ fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1.3, marginTop: '2px' }}>{user.name}</p>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
                 title="로그아웃"
-                style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
+                style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(140,107,66,0.08)'; e.currentTarget.style.borderColor = 'rgba(140,107,66,0.18)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(108, 92, 231,0.08)'; e.currentTarget.style.borderColor = 'rgba(108, 92, 231,0.18)'; }}
               >
-                <LogOut size={13} style={{ color: '#9E8D7A' }} />
+                <LogOut size={13} style={{ color: '#8F87B8' }} />
               </button>
             </div>
           )}
@@ -1146,15 +1147,15 @@ function App() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setActiveTab('search')}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-              className="search-input w-full rounded-2xl font-bold outline-none"
-              style={{ padding: '1.125rem 1rem 1.125rem 3.25rem', fontSize: '1rem', color: '#1C140E' }}
+              className="search-input w-full rounded-3xl font-bold outline-none"
+              style={{ padding: '1.125rem 1rem 1.125rem 3.25rem', fontSize: '1rem', color: '#241B45', border: '2px solid rgba(108, 92, 231, 0.18)' }}
             />
-            <Search style={{ position: 'absolute', left: '1.1rem', top: '50%', transform: 'translateY(-50%)', color: '#9E8D7A' }} size={20} />
+            <Search style={{ position: 'absolute', left: '1.1rem', top: '50%', transform: 'translateY(-50%)', color: '#8F87B8' }} size={20} />
             <div style={{ position: 'absolute', right: '1.1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               {isSearching ? (
-                <Loader2 className="animate-spin" size={18} style={{ color: '#8C6B42' }} />
+                <Loader2 className="animate-spin" size={18} style={{ color: '#6C5CE7' }} />
               ) : (
-                <kbd className="sm:flex hidden items-center gap-1 px-2 py-1 rounded-md" style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 700, background: 'rgba(139,107,66,0.07)', border: '1px solid rgba(139,107,66,0.15)' }}>↵ Enter</kbd>
+                <kbd className="sm:flex hidden items-center gap-1 px-2 py-1 rounded-md" style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 700, background: 'rgba(108, 92, 231,0.07)', border: '1px solid rgba(108, 92, 231,0.15)' }}>↵ Enter</kbd>
               )}
             </div>
           </div>
@@ -1169,19 +1170,19 @@ function App() {
                 className={`nav-pill ${activeTab === tab.id ? 'nav-pill-active' : ''}`}
                 style={{ position: 'relative' }}
               >
-                {tab.icon}
+                <span aria-hidden="true">{tab.emoji}</span>
                 <span>{tab.label}</span>
                 {tab.dot && (
-                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', borderRadius: '9999px', background: '#C49456', boxShadow: '0 0 6px rgba(196,148,86,0.8)' }} />
+                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', borderRadius: '9999px', background: '#A78BFA', boxShadow: '0 0 6px rgba(167, 139, 250,0.8)' }} />
                 )}
               </button>
             ))}
           </div>
 
           {activeTab === 'stack' && (
-            <div className="flex p-1 rounded-xl" style={{ background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)' }}>
-              <button onClick={() => setViewMode('tower')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'tower' ? 'white' : 'transparent', color: viewMode === 'tower' ? '#1C140E' : '#9E8D7A', boxShadow: viewMode === 'tower' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>쌓아보기</button>
-              <button onClick={() => setViewMode('list')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'list' ? 'white' : 'transparent', color: viewMode === 'list' ? '#1C140E' : '#9E8D7A', boxShadow: viewMode === 'list' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>리스트</button>
+            <div className="flex p-1 rounded-xl" style={{ background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)' }}>
+              <button onClick={() => setViewMode('tower')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'tower' ? 'white' : 'transparent', color: viewMode === 'tower' ? '#241B45' : '#8F87B8', boxShadow: viewMode === 'tower' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>쌓아보기</button>
+              <button onClick={() => setViewMode('list')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'list' ? 'white' : 'transparent', color: viewMode === 'list' ? '#241B45' : '#8F87B8', boxShadow: viewMode === 'list' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>리스트</button>
             </div>
           )}
         </div>
@@ -1283,7 +1284,7 @@ function App() {
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'rgba(28,20,14,0.92)', backdropFilter: 'blur(16px)', border: '1px solid rgba(139,107,66,0.3)', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 700, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}
+            style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'rgba(36, 27, 69,0.92)', backdropFilter: 'blur(16px)', border: '1px solid rgba(108, 92, 231,0.3)', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 700, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}
           >
             {toast.message}
           </motion.div>

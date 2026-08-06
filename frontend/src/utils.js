@@ -41,7 +41,7 @@ export const renderMarkdown = (text) => {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^## (.+)$/gm, '<span style="font-size:0.9375rem;font-weight:900;color:#3D2D1E;display:block;margin:6px 0 2px">$1</span>')
+    .replace(/^## (.+)$/gm, '<span style="font-size:0.9375rem;font-weight:900;color:#3A3070;display:block;margin:6px 0 2px">$1</span>')
     .replace(/\n/g, '<br>');
 };
 

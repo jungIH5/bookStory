@@ -162,10 +162,10 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <Waves size={20} style={{ color: '#8C6B42' }} />
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 900, color: '#1C140E' }}>독서 모임 개설</h2>
+            <span className="cute-float" style={{ fontSize: '1.375rem', display: 'inline-block' }}>🌊</span>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 900, color: '#241B45' }}>독서 모임 개설</h2>
           </div>
-          <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139,107,66,0.08)', border: '1px solid rgba(139,107,66,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#9E8D7A' }}>
+          <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8F87B8' }}>
             <X size={14} />
           </button>
         </div>
@@ -178,11 +178,11 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <div
                 onClick={toggleImagePicker}
-                style={{ width: '48px', height: '68px', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', background: 'rgba(140,107,66,0.08)', cursor: 'pointer', position: 'relative' }}
+                style={{ width: '48px', height: '68px', borderRadius: '0.9rem', overflow: 'hidden', boxShadow: '2px 3px 0 rgba(108, 92, 231,0.2)', border: '2px solid rgba(108, 92, 231,0.18)', background: 'rgba(108, 92, 231,0.08)', cursor: 'pointer', position: 'relative' }}
               >
                 {displayImage
                   ? <img src={displayImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#8C6B42,#C49456)', color: 'white', fontSize: '20px', fontWeight: 900 }}>
+                  : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', color: 'white', fontSize: '20px', fontWeight: 900 }}>
                       {(user?.name || '?')[0]}
                     </div>}
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '20px', background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -194,20 +194,20 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
               {showImagePicker && (
                 <div
                   onClick={e => e.stopPropagation()}
-                  style={{ position: 'absolute', top: '100%', left: 0, zIndex: 300, marginTop: '0.375rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', padding: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', width: '220px' }}
+                  style={{ position: 'absolute', top: '100%', left: 0, zIndex: 300, marginTop: '0.375rem', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem', padding: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', width: '220px' }}
                 >
-                  <div style={{ fontSize: '11px', fontWeight: 900, color: '#8C6B42', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', marginBottom: '0.5rem' }}>
                     앨범 ({albumImages.length}/{ALBUM_LIMIT})
                   </div>
                   {isLoadingAlbum
-                    ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#8C6B42' }} /></div>
+                    ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#6C5CE7' }} /></div>
                     : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.375rem', marginBottom: '0.5rem' }}>
                         {/* 기본 아바타 */}
                         <div
                           onClick={() => handlePickImage(null)}
                           title="기본 (아바타)"
-                          style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', background: 'linear-gradient(135deg,#8C6B42,#C49456)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: !form.room_image ? '2px solid #8C6B42' : '2px solid transparent' }}
+                          style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: !form.room_image ? '2px solid #6C5CE7' : '2px solid transparent' }}
                         >
                           <span style={{ color: 'white', fontWeight: 900, fontSize: '14px' }}>{(user?.name || '?')[0]}</span>
                         </div>
@@ -216,14 +216,14 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                           <div
                             onClick={() => handlePickImage(form.book_image)}
                             title="책 표지"
-                            style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: form.room_image === form.book_image ? '2px solid #8C6B42' : '2px solid transparent' }}
+                            style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: form.room_image === form.book_image ? '2px solid #6C5CE7' : '2px solid transparent' }}
                           >
                             <img src={form.book_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         )}
                         {/* 앨범 이미지 */}
                         {albumImages.map(img => (
-                          <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: form.room_image === img.image_data ? '2px solid #8C6B42' : '2px solid transparent' }}
+                          <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: form.room_image === img.image_data ? '2px solid #6C5CE7' : '2px solid transparent' }}
                             onClick={() => handlePickImage(img.image_data)}
                           >
                             <img src={img.image_data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -238,13 +238,13 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                       </div>
                     )}
                   {albumImages.length < ALBUM_LIMIT ? (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer', padding: '0.375rem 0.625rem', background: 'rgba(140,107,66,0.06)', border: '1px dashed rgba(140,107,66,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#8C6B42' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer', padding: '0.375rem 0.625rem', background: 'rgba(108, 92, 231,0.06)', border: '1px dashed rgba(108, 92, 231,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#6C5CE7' }}>
                       {isUploadingImage ? <Loader2 size={11} className="animate-spin" /> : <Camera size={11} />}
                       새 이미지 추가
                       <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={isUploadingImage} />
                     </label>
                   ) : (
-                    <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '10px', color: '#C7C2E0', fontWeight: 600, lineHeight: 1.5 }}>
                       앨범이 가득 찼습니다 (최대 {ALBUM_LIMIT}장)<br />이후 확장 가능 예정
                     </p>
                   )}
@@ -260,7 +260,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                 value={form.title}
                 onChange={e => set('title', e.target.value)}
                 placeholder="예: 사피엔스 1장 함께 읽기"
-                style={{ color: '#1C140E', ...(attemptedSubmit && !form.title.trim() ? { borderColor: '#ef4444' } : {}) }}
+                style={{ color: '#241B45', ...(attemptedSubmit && !form.title.trim() ? { borderColor: '#ef4444' } : {}) }}
               />
               {attemptedSubmit && !form.title.trim() && (
                 <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700, marginTop: '0.25rem' }}>방 제목을 입력해주세요.</p>
@@ -272,9 +272,9 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
           <div>
             <label className="form-label">함께 읽을 책 (선택)</label>
             {form.book_title ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem' }}>
                 {form.book_image && <img src={form.book_image} alt="" style={{ width: '32px', height: '46px', objectFit: 'cover', borderRadius: '4px' }} />}
-                <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, color: '#1C140E' }}>{form.book_title}</span>
+                <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, color: '#241B45' }}>{form.book_title}</span>
                 <button onClick={() => set('book_title', '')} style={{ width: '1.5rem', height: '1.5rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}>
                   <X size={11} />
                 </button>
@@ -283,28 +283,28 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
               <div style={{ position: 'relative' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
-                    <Search style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={14} />
+                    <Search style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={14} />
                     <input
                       className="form-input"
                       value={bookQuery}
                       onChange={e => setBookQuery(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleBookSearch()}
                       placeholder="책 제목으로 검색"
-                      style={{ paddingLeft: '2.5rem', color: '#1C140E' }}
+                      style={{ paddingLeft: '2.5rem', color: '#241B45' }}
                     />
                   </div>
-                  <button onClick={handleBookSearch} disabled={isSearching} style={{ padding: '0 1rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8C6B42', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <button onClick={handleBookSearch} disabled={isSearching} style={{ padding: '0 1rem', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#6C5CE7', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {isSearching ? <Loader2 size={14} className="animate-spin" /> : '검색'}
                   </button>
                 </div>
                 {bookResults.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: '0.375rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: '0.375rem', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
                     {bookResults.map((b, i) => (
-                      <div key={i} onClick={() => selectBook(b)} style={{ display: 'flex', gap: '0.625rem', padding: '0.625rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.06)', transition: 'background 0.15s' }} className="hover:bg-amber-50\/30">
+                      <div key={i} onClick={() => selectBook(b)} style={{ display: 'flex', gap: '0.625rem', padding: '0.625rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid rgba(108, 92, 231,0.06)', transition: 'background 0.15s' }} className="hover:bg-amber-50\/30">
                         {b.image && <img src={b.image} alt="" style={{ width: '28px', height: '40px', objectFit: 'cover', borderRadius: '3px', flexShrink: 0 }} />}
                         <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title?.replace(/<\/?[^>]+>/g, '')}</p>
-                          <p style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 600 }}>{b.author}</p>
+                          <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title?.replace(/<\/?[^>]+>/g, '')}</p>
+                          <p style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 600 }}>{b.author}</p>
                         </div>
                       </div>
                     ))}
@@ -318,16 +318,16 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
           {needsHostBook && (
             <div>
               <label className="form-label">내가 읽을 책 *</label>
-              <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600, marginBottom: '0.375rem' }}>
+              <p style={{ fontSize: '10px', color: '#C7C2E0', fontWeight: 600, marginBottom: '0.375rem' }}>
                 지정 도서가 없는 모임이라, 방장도 읽으실 책을 선택해야 참가 기록이 남습니다.
               </p>
               {attemptedSubmit && !form.host_book_title && (
                 <p style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700, marginBottom: '0.375rem' }}>읽으실 책을 선택해주세요.</p>
               )}
               {form.host_book_title ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', background: 'rgba(140,107,66,0.06)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem' }}>
                   {form.host_book_image && <img src={form.host_book_image} alt="" style={{ width: '32px', height: '46px', objectFit: 'cover', borderRadius: '4px' }} />}
-                  <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, color: '#1C140E' }}>{form.host_book_title}</span>
+                  <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, color: '#241B45' }}>{form.host_book_title}</span>
                   <button onClick={() => set('host_book_title', '')} style={{ width: '1.5rem', height: '1.5rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444', flexShrink: 0 }}>
                     <X size={11} />
                   </button>
@@ -336,28 +336,28 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                 <div style={{ position: 'relative' }}>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
-                      <Search style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#BDB0A0' }} size={14} />
+                      <Search style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={14} />
                       <input
                         className="form-input"
                         value={hostBookQuery}
                         onChange={e => setHostBookQuery(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleHostBookSearch()}
                         placeholder="책 제목으로 검색"
-                        style={{ paddingLeft: '2.5rem', color: '#1C140E' }}
+                        style={{ paddingLeft: '2.5rem', color: '#241B45' }}
                       />
                     </div>
-                    <button onClick={handleHostBookSearch} disabled={isSearchingHostBook} style={{ padding: '0 1rem', background: 'rgba(140,107,66,0.08)', border: '1px solid rgba(140,107,66,0.2)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8C6B42', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <button onClick={handleHostBookSearch} disabled={isSearchingHostBook} style={{ padding: '0 1rem', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#6C5CE7', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       {isSearchingHostBook ? <Loader2 size={14} className="animate-spin" /> : '검색'}
                     </button>
                   </div>
                   {hostBookResults.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: '0.375rem', background: '#FEFCF9', border: '1px solid rgba(139,107,66,0.2)', borderRadius: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, marginTop: '0.375rem', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'hidden' }}>
                       {hostBookResults.map((b, i) => (
-                        <div key={i} onClick={() => selectHostBook(b)} style={{ display: 'flex', gap: '0.625rem', padding: '0.625rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid rgba(139,107,66,0.06)' }}>
+                        <div key={i} onClick={() => selectHostBook(b)} style={{ display: 'flex', gap: '0.625rem', padding: '0.625rem 0.875rem', cursor: 'pointer', borderBottom: '1px solid rgba(108, 92, 231,0.06)' }}>
                           {b.image && <img src={b.image} alt="" style={{ width: '28px', height: '40px', objectFit: 'cover', borderRadius: '3px', flexShrink: 0 }} />}
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1C140E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title?.replace(/<\/?[^>]+>/g, '')}</p>
-                            <p style={{ fontSize: '10px', color: '#9E8D7A', fontWeight: 600 }}>{b.author}</p>
+                            <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title?.replace(/<\/?[^>]+>/g, '')}</p>
+                            <p style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 600 }}>{b.author}</p>
                           </div>
                         </div>
                       ))}
@@ -376,7 +376,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
               className="form-input"
               value={form.scheduled_at}
               onChange={e => set('scheduled_at', e.target.value)}
-              style={{ color: '#1C140E' }}
+              style={{ color: '#241B45' }}
             />
           </div>
 
@@ -390,7 +390,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><Clock size={12} />{label}</label>
                 <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '0.375rem' }}>
                   {TIME_OPTIONS.map(m => (
-                    <button key={m} onClick={() => set(key, m)} style={{ flex: 1, padding: '0.4rem 0', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 800, cursor: 'pointer', background: form[key] === m ? 'rgba(140,107,66,0.15)' : 'transparent', border: `1px solid ${form[key] === m ? 'rgba(140,107,66,0.35)' : 'rgba(139,107,66,0.15)'}`, color: form[key] === m ? '#8C6B42' : '#9E8D7A', transition: 'all 0.15s', textAlign: 'center' }}>
+                    <button key={m} onClick={() => set(key, m)} style={{ flex: 1, padding: '0.4rem 0', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 800, cursor: 'pointer', background: form[key] === m ? 'rgba(108, 92, 231,0.15)' : 'transparent', border: `1px solid ${form[key] === m ? 'rgba(108, 92, 231,0.35)' : 'rgba(108, 92, 231,0.15)'}`, color: form[key] === m ? '#6C5CE7' : '#8F87B8', transition: 'all 0.15s', textAlign: 'center' }}>
                       {fmtMin(m)}
                     </button>
                   ))}
@@ -400,9 +400,9 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                     type="number" min="1" max="300"
                     value={form[key]}
                     onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) set(key, v); }}
-                    style={{ flex: 1, padding: '0.35rem 0.5rem', borderRadius: '0.625rem', border: '1px solid rgba(139,107,66,0.2)', background: 'rgba(140,107,66,0.04)', fontSize: '11px', fontWeight: 800, color: '#1C140E', outline: 'none', textAlign: 'center' }}
+                    style={{ flex: 1, padding: '0.35rem 0.5rem', borderRadius: '0.625rem', border: '1px solid rgba(108, 92, 231,0.2)', background: 'rgba(108, 92, 231,0.04)', fontSize: '11px', fontWeight: 800, color: '#241B45', outline: 'none', textAlign: 'center' }}
                   />
-                  <span style={{ fontSize: '11px', color: '#9E8D7A', fontWeight: 700 }}>분</span>
+                  <span style={{ fontSize: '11px', color: '#8F87B8', fontWeight: 700 }}>분</span>
                 </div>
               </div>
             ))}
@@ -416,9 +416,9 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                 <input
                   type="range" min="2" max="20" value={form.max_participants}
                   onChange={e => set('max_participants', parseInt(e.target.value))}
-                  style={{ flex: 1, accentColor: '#8C6B42' }}
+                  style={{ flex: 1, accentColor: '#6C5CE7' }}
                 />
-                <span style={{ fontSize: '0.875rem', fontWeight: 900, color: '#1C140E', minWidth: '32px', textAlign: 'center' }}>{form.max_participants}명</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 900, color: '#241B45', minWidth: '32px', textAlign: 'center' }}>{form.max_participants}명</span>
               </div>
             </div>
             <div>
@@ -429,26 +429,26 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
                   value={form.late_join_cutoff_minutes}
                   onChange={e => { const v = parseInt(e.target.value); set('late_join_cutoff_minutes', isNaN(v) || v < 0 ? 0 : v); }}
                   className="form-input"
-                  style={{ color: '#1C140E', textAlign: 'center' }}
+                  style={{ color: '#241B45', textAlign: 'center' }}
                 />
-                <span style={{ fontSize: '0.8125rem', color: '#9E8D7A', fontWeight: 700, whiteSpace: 'nowrap' }}>분 전</span>
+                <span style={{ fontSize: '0.8125rem', color: '#8F87B8', fontWeight: 700, whiteSpace: 'nowrap' }}>분 전</span>
               </div>
-              <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600, marginTop: '0.25rem' }}>0 = 제한 없음</p>
+              <p style={{ fontSize: '10px', color: '#C7C2E0', fontWeight: 600, marginTop: '0.25rem' }}>0 = 제한 없음</p>
             </div>
           </div>
 
           {/* 채팅 허용 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'rgba(140,107,66,0.04)', border: '1px solid rgba(140,107,66,0.12)', borderRadius: '0.875rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.875rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {form.chat_enabled ? <MessageSquare size={14} style={{ color: '#8C6B42' }} /> : <MessageSquareDashed size={14} style={{ color: '#BDB0A0' }} />}
+              {form.chat_enabled ? <MessageSquare size={14} style={{ color: '#6C5CE7' }} /> : <MessageSquareDashed size={14} style={{ color: '#C7C2E0' }} />}
               <div>
-                <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: form.chat_enabled ? '#1C140E' : '#9E8D7A' }}>독서 중 채팅</p>
-                <p style={{ fontSize: '10px', color: '#BDB0A0', fontWeight: 600 }}>독서 시간 중 채팅 허용 여부 (토론 중엔 항상 열림)</p>
+                <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: form.chat_enabled ? '#241B45' : '#8F87B8' }}>독서 중 채팅</p>
+                <p style={{ fontSize: '10px', color: '#C7C2E0', fontWeight: 600 }}>독서 시간 중 채팅 허용 여부 (토론 중엔 항상 열림)</p>
               </div>
             </div>
             <button
               onClick={() => set('chat_enabled', !form.chat_enabled)}
-              style={{ padding: '0.35rem 1rem', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', background: form.chat_enabled ? 'rgba(140,107,66,0.12)' : 'rgba(100,100,100,0.07)', border: `1px solid ${form.chat_enabled ? 'rgba(140,107,66,0.3)' : 'rgba(139,107,66,0.12)'}`, color: form.chat_enabled ? '#8C6B42' : '#9E8D7A', flexShrink: 0 }}
+              style={{ padding: '0.35rem 1rem', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', background: form.chat_enabled ? 'rgba(108, 92, 231,0.12)' : 'rgba(100,100,100,0.07)', border: `1px solid ${form.chat_enabled ? 'rgba(108, 92, 231,0.3)' : 'rgba(108, 92, 231,0.12)'}`, color: form.chat_enabled ? '#6C5CE7' : '#8F87B8', flexShrink: 0 }}
             >
               {form.chat_enabled ? '허용' : '비허용'}
             </button>
@@ -463,7 +463,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
               onChange={e => set('notice', e.target.value)}
               placeholder="참가자에게 전달할 내용을 입력하세요"
               rows={2}
-              style={{ width: '100%', resize: 'none', color: '#1C140E', boxSizing: 'border-box' }}
+              style={{ width: '100%', resize: 'none', color: '#241B45', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -475,7 +475,7 @@ export default function CreateDiveRoomModal({ user, onClose, onCreate }) {
 
           {/* 하단 버튼 */}
           <div style={{ display: 'flex', gap: '0.625rem', marginTop: '0.5rem' }}>
-            <button onClick={onClose} style={{ flex: 1, padding: '0.875rem', background: 'rgba(139,107,66,0.06)', border: '1px solid rgba(139,107,66,0.15)', borderRadius: '0.875rem', fontSize: '0.875rem', fontWeight: 800, color: '#9E8D7A', cursor: 'pointer' }}>
+            <button onClick={onClose} className="cute-pill-button" style={{ flex: 1, padding: '0.875rem', background: 'rgba(108, 92, 231,0.06)', fontSize: '0.875rem', fontWeight: 800, color: '#8F87B8', cursor: 'pointer' }}>
               취소
             </button>
             <button

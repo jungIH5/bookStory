@@ -1,4 +1,4 @@
 export const hexColors = [
-  '#8C6B42', '#C49456', '#6B8C6B', '#B85C3A', '#5C7B6B',
-  '#A67C52', '#7B8E5E', '#C4795A', '#8E7B6B', '#5C6B7A',
+  '#6C5CE7', '#A78BFA', '#FF9EB5', '#7ED9C3', '#FFB88C',
+  '#8B9EFF', '#FFD166', '#C792EA', '#6FCF97', '#F783AC',
 ];
