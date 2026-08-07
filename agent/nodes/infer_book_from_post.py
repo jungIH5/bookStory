@@ -1,12 +1,8 @@
 import json
-import os
-import httpx
 from anthropic import AsyncAnthropic
+from kakao_books import search_kakao_books, kakao_doc_to_book
 
 client = AsyncAnthropic()
-
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
 
 
 async def infer_book_title_from_post(title: str, content: str) -> str | None:
@@ -37,22 +33,12 @@ async def infer_book_title_from_post(title: str, content: str) -> str | None:
 
 
 async def resolve_book_by_title(query: str) -> dict | None:
-    """책 제목으로 네이버 도서 검색을 해서 가장 근접한 한 건을 반환한다."""
-    async with httpx.AsyncClient(timeout=8.0) as http_client:
-        resp = await http_client.get(
-            "https://openapi.naver.com/v1/search/book.json",
-            params={"query": query, "display": 1, "sort": "sim"},
-            headers={
-                "X-Naver-Client-Id": NAVER_CLIENT_ID,
-                "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
-            },
-        )
-        items = resp.json().get("items", []) if resp.status_code == 200 else []
-    if not items:
+    """책 제목으로 카카오 도서 검색을 해서 가장 근접한 한 건을 반환한다."""
+    data = await search_kakao_books(query, size=1, sort="accuracy")
+    docs = data.get("documents", [])
+    if not docs:
         return None
-    item = items[0]
-    isbn = (item.get("isbn") or "").split(" ")[0].strip()
-    if not isbn:
+    book = kakao_doc_to_book(docs[0])
+    if not book["isbn"]:
         return None
-    title_clean = item.get("title", "").replace("<b>", "").replace("</b>", "").strip()
-    return {"title": title_clean, "isbn": isbn, "image": item.get("image", "")}
+    return {"title": book["title"], "isbn": book["isbn"], "image": book["image"]}

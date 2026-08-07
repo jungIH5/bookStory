@@ -10,6 +10,7 @@ import os
 import re
 import httpx
 from state import BookAnalysisState
+from kakao_books import search_kakao_books, kakao_doc_to_book
 
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
@@ -22,33 +23,20 @@ def _strip(text: str) -> str:
 
 
 async def _verify_book(title: str, author: str) -> dict:
-    """Naver Book API로 책 메타데이터 확인."""
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(
-                "https://openapi.naver.com/v1/search/book.json",
-                params={"query": f"{title} {author}".strip(), "display": 1},
-                headers={
-                    "X-Naver-Client-Id": NAVER_CLIENT_ID,
-                    "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
-                },
-            )
-            data = resp.json()
-
-        items = data.get("items", [])
-        if not items:
-            return {}
-
-        item = items[0]
-        return {
-            "isbn":        item.get("isbn", ""),
-            "title":       _strip(item.get("title", "")),
-            "author":      _strip(item.get("author", "")),
-            "publisher":   _strip(item.get("publisher", "")),
-            "description": _strip(item.get("description", "")),
-        }
-    except Exception:
+    """카카오 책 검색으로 책 메타데이터 확인."""
+    data = await search_kakao_books(f"{title} {author}".strip(), size=1, sort="accuracy")
+    docs = data.get("documents", [])
+    if not docs:
         return {}
+
+    book = kakao_doc_to_book(docs[0])
+    return {
+        "isbn":        book["isbn"],
+        "title":       _strip(book["title"]),
+        "author":      _strip(book["author"]),
+        "publisher":   _strip(book["publisher"]),
+        "description": _strip(book["description"]),
+    }
 
 
 async def _fetch_reviews(title: str, author: str) -> list[str]:

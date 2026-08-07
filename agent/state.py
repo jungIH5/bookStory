@@ -63,10 +63,10 @@ class RecommendationState(TypedDict):
 
     # Node 1: extract_preferences 결과
     preference_text: str         # 취향 요약 텍스트 (다음 노드에 전달)
-    search_keywords: List[str]   # Naver 검색 키워드
+    search_keywords: List[str]   # 카카오 책 검색 키워드
 
     # Node 2: search_book_candidates 결과
-    candidates: List[Dict]       # Naver 검색 결과
+    candidates: List[Dict]       # 카카오 책 검색 결과
 
     # Node 3: rank_recommendations 결과
     recommendations: List[Dict]  # [{title, author, image, reason}]

@@ -1,5 +1,4 @@
 import asyncio
-import os
 import re
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,11 +8,9 @@ from typing import Optional
 from db import get_db
 from graphs.book_analysis import book_analysis_graph
 from auth import get_current_user_id
+from kakao_books import search_kakao_books, kakao_doc_to_book
 
 router = APIRouter(prefix="/api/books")
-
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID")
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET")
 
 _TAG_RE = re.compile(r"<[^>]+>")
 
@@ -43,50 +40,43 @@ async def search_books(query: str, page: int = 1, display: int = 20):
         raise HTTPException(400, "query is required")
 
     page = max(1, page)
-    display = max(1, min(display, 100))
-    start = (page - 1) * display + 1
+    display = max(1, min(display, 50))  # 카카오 책 검색은 페이지당 최대 50건
 
-    # 네이버 검색 API는 start(조회 시작 위치)가 1000을 넘는 요청을 지원하지 않는다
-    if start > 1000:
-        return {"items": [], "total": 0, "start": start, "display": display, "page": page, "has_more": False}
+    tasks = [search_kakao_books(query, size=display, page=page)]
+    # OpenLibrary 보강 결과는 중복 방지가 페이지 간에 걸치면 복잡해지므로 첫 페이지에서만 덧붙인다
+    if page == 1:
+        async def _fetch_openlibrary():
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                return await client.get(
+                    "https://openlibrary.org/search.json",
+                    params={"q": query, "limit": display, "fields": "title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median"},
+                )
+        tasks.append(_fetch_openlibrary())
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        tasks = [client.get(
-            "https://openapi.naver.com/v1/search/book.json",
-            params={"query": query, "display": display, "start": start},
-            headers={
-                "X-Naver-Client-Id": NAVER_CLIENT_ID,
-                "X-Naver-Client-Secret": NAVER_CLIENT_SECRET,
-            },
-        )]
-        # OpenLibrary 보강 결과는 중복 방지가 페이지 간에 걸치면 복잡해지므로 첫 페이지에서만 덧붙인다
-        if page == 1:
-            tasks.append(client.get(
-                "https://openlibrary.org/search.json",
-                params={"q": query, "limit": display, "fields": "title,author_name,isbn,cover_i,publisher,first_publish_year,number_of_pages_median"},
-            ))
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    naver_resp = results[0]
-    naver_data = naver_resp.json() if not isinstance(naver_resp, Exception) else {"items": [], "total": 0}
-    naver_items = naver_data.get("items", [])
+    kakao_data = results[0] if not isinstance(results[0], Exception) else {"documents": [], "meta": {}}
+    kakao_items = [kakao_doc_to_book(d) for d in kakao_data.get("documents", [])]
+    meta = kakao_data.get("meta") or {}
 
     ol_items = []
     if page == 1 and len(results) > 1:
         ol_resp = results[1]
         if not isinstance(ol_resp, Exception) and ol_resp.status_code == 200:
             ol_docs = ol_resp.json().get("docs", [])
-            naver_isbns = {item.get("isbn", "").replace("-", "") for item in naver_items if item.get("isbn")}
+            kakao_isbns = {item["isbn"].replace("-", "") for item in kakao_items if item.get("isbn")}
             for doc in ol_docs:
                 doc_isbns = {isbn.replace("-", "") for isbn in (doc.get("isbn") or [])}
-                if not doc_isbns & naver_isbns:
+                if not doc_isbns & kakao_isbns:
                     ol_items.append(_ol_to_naver(doc))
 
-    naver_data["items"] = naver_items + ol_items
-    naver_data["page"] = page
-    total = naver_data.get("total") or 0
-    naver_data["has_more"] = bool(naver_items) and (start - 1 + len(naver_items)) < total
-    return naver_data
+    return {
+        "items": kakao_items + ol_items,
+        "total": meta.get("total_count", 0),
+        "start": (page - 1) * display + 1,
+        "display": display,
+        "page": page,
+        "has_more": not meta.get("is_end", True),
+    }
 
 
 @router.get("/analyze")
