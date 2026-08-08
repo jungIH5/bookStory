@@ -226,6 +226,18 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     else onClose();
   };
 
+  // 채팅 메시지를 드래그해서 선택하다가 마우스가 배경(바깥)까지 나간 채로 놓으면
+  // "배경 클릭"으로 오인되어 방이 닫혀버리는 문제 방지 — mousedown이 배경 자체에서
+  // 시작된 경우에만 진짜 배경 클릭으로 취급한다.
+  const backdropMouseDownOnSelf = useRef(false);
+  const handleBackdropMouseDown = (e) => {
+    backdropMouseDownOnSelf.current = e.target === e.currentTarget;
+  };
+  const makeBackdropClickHandler = (closeFn) => (e) => {
+    if (backdropMouseDownOnSelf.current && e.target === e.currentTarget) closeFn();
+    backdropMouseDownOnSelf.current = false;
+  };
+
   const displayImage = room.room_image || room.book_image;
 
   // 독서 종료 5분 전 경고
@@ -655,7 +667,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     return (
       <>
         {ToastEl}
-        <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
+        <div className="modal-backdrop overflow-y-auto" onMouseDown={handleBackdropMouseDown} onClick={makeBackdropClickHandler(onClose)}>
           <motion.div
             initial={{ opacity: 0, scale: 0.93, y: 32 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -820,7 +832,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     return (
       <>
         {ToastEl}
-        <div className="modal-backdrop overflow-y-auto" onClick={handleCloseOrMinimize}>
+        <div className="modal-backdrop overflow-y-auto" onMouseDown={handleBackdropMouseDown} onClick={makeBackdropClickHandler(handleCloseOrMinimize)}>
           <motion.div
             initial={{ opacity: 0, scale: 0.93, y: 32 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -968,7 +980,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   return (
     <>
       {ToastEl}
-      <div className="modal-backdrop overflow-y-auto" onClick={handleCloseOrMinimize}>
+      <div
+        className="modal-backdrop overflow-y-auto"
+        onMouseDown={handleBackdropMouseDown}
+        onClick={makeBackdropClickHandler(handleCloseOrMinimize)}
+        style={aiChatOpen ? { justifyContent: 'flex-end', paddingLeft: '424px' } : undefined}
+      >
         <motion.div
           ref={modalRef}
           initial={{ opacity: 0, scale: 0.93, y: 32 }}
@@ -976,7 +993,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           exit={{ opacity: 0, scale: 0.93, y: 32 }}
           onClick={e => e.stopPropagation()}
           className="modal-content relative my-auto"
-          style={{ width: modalW, maxWidth: '95vw', ...(modalH != null ? { height: modalH } : {}), padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          style={{ width: modalW, maxWidth: aiChatOpen ? 'calc(100vw - 448px)' : '95vw', ...(modalH != null ? { height: modalH } : {}), padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
         >
           {/* 헤더 */}
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)', flexShrink: 0 }}>
@@ -1427,7 +1444,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
       )}
 
       {aiChatOpen ? (
-          <div style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, width: '340px', maxWidth: '90vw', height: '480px', maxHeight: '70vh', background: '#FBF6EC', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ position: 'fixed', top: '24px', bottom: '24px', left: '24px', zIndex: 250, width: '376px', maxWidth: 'calc(90vw - 24px)', background: '#FBF6EC', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)', display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '9999px', overflow: 'hidden', background: '#E8DCC5', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {myPersona.image ? <img src={myPersona.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} /> : <Sparkles size={14} style={{ color: '#C4AD91' }} />}
