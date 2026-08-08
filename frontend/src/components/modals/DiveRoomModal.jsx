@@ -226,6 +226,18 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     else onClose();
   };
 
+  // 채팅 메시지를 드래그해서 선택하다가 마우스가 배경(바깥)까지 나간 채로 놓으면
+  // "배경 클릭"으로 오인되어 방이 닫혀버리는 문제 방지 — mousedown이 배경 자체에서
+  // 시작된 경우에만 진짜 배경 클릭으로 취급한다.
+  const backdropMouseDownOnSelf = useRef(false);
+  const handleBackdropMouseDown = (e) => {
+    backdropMouseDownOnSelf.current = e.target === e.currentTarget;
+  };
+  const makeBackdropClickHandler = (closeFn) => (e) => {
+    if (backdropMouseDownOnSelf.current && e.target === e.currentTarget) closeFn();
+    backdropMouseDownOnSelf.current = false;
+  };
+
   const displayImage = room.room_image || room.book_image;
 
   // 독서 종료 5분 전 경고
