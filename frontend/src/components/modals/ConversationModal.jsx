@@ -17,35 +17,35 @@ export default function ConversationModal({
         className="modal-content relative my-auto"
         style={{ maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
-              <MessageCircle size={13} style={{ color: '#A78BFA' }} />
-              <span style={{ fontSize: '9px', color: '#A78BFA', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>AI 토론 진행</span>
+              <MessageCircle size={13} style={{ color: '#D2914B' }} />
+              <span style={{ fontSize: '9px', color: '#D2914B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>AI 토론 진행</span>
             </div>
             <h2 style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-0.02em' }}>{stripHtml(selectedBook.title)}</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.12)', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8F87B8' }} className="hover:bg-white\/10 hover:text-white"><X size={16} /></button>
+          <button onClick={onClose} style={{ background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.12)', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A7460' }} className="hover:bg-white\/10 hover:text-white"><X size={16} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '55vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
           {sessionQA.map((turn, i) => (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
               <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
-                <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6C5CE7, #A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8B5A2B, #D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Sparkles size={10} color="white" />
                 </div>
-                <div style={{ flex: 1, background: 'rgba(108, 92, 231,0.07)', border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '0 0.875rem 0.875rem 0.875rem', padding: '0.75rem 1rem' }}>
-                  <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#3A3070', fontWeight: 500 }}>{turn.question}</p>
+                <div style={{ flex: 1, background: 'rgba(139, 90, 43,0.07)', border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '0 0.875rem 0.875rem 0.875rem', padding: '0.75rem 1rem' }}>
+                  <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#4A2F17', fontWeight: 500 }}>{turn.question}</p>
                 </div>
               </div>
               {turn.answer && (
                 <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start', flexDirection: 'row-reverse' }}>
-                  <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: '#E9E5F7', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '9px', fontWeight: 900, color: '#6E67A0' }}>
+                  <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: '#E8DCC5', border: '1px solid rgba(139, 90, 43,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '9px', fontWeight: 900, color: '#6E5A45' }}>
                     {(user?.name || '나')[0]}
                   </div>
-                  <div style={{ flex: 1, background: 'rgba(108, 92, 231,0.07)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.875rem 0 0.875rem 0.875rem', padding: '0.75rem 1rem' }}>
-                    <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#6E67A0', fontWeight: 500 }}>{turn.answer}</p>
+                  <div style={{ flex: 1, background: 'rgba(139, 90, 43,0.07)', border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '0.875rem 0 0.875rem 0.875rem', padding: '0.75rem 1rem' }}>
+                    <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#6E5A45', fontWeight: 500 }}>{turn.answer}</p>
                   </div>
                 </div>
               )}
@@ -53,26 +53,26 @@ export default function ConversationModal({
           ))}
           {isSubmittingAnswer && (
             <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', paddingLeft: '2.375rem' }}>
-              <Loader2 size={14} className="animate-spin" style={{ color: '#6C5CE7' }} />
-              <span style={{ fontSize: '11px', color: '#8F87B8', fontWeight: 700 }}>다음 질문 생성 중...</span>
+              <Loader2 size={14} className="animate-spin" style={{ color: '#8B5A2B' }} />
+              <span style={{ fontSize: '11px', color: '#8A7460', fontWeight: 700 }}>다음 질문 생성 중...</span>
             </div>
           )}
         </div>
 
         {sessionQA.length > 0 && sessionQA[sessionQA.length - 1].answer === null && !isSubmittingAnswer && (
-          <div style={{ display: 'flex', gap: '0.625rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(108, 92, 231,0.1)' }}>
+          <div style={{ display: 'flex', gap: '0.625rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(139, 90, 43,0.1)' }}>
             <textarea
               value={conversationInput}
               onChange={(e) => setConversationInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSubmitAnswer(); } }}
               placeholder="답변을 입력하세요... (Shift+Enter: 줄바꿈)"
               className="form-input"
-              style={{ flex: 1, height: '5rem', resize: 'none', color: '#241B45', fontSize: '0.8125rem' }}
+              style={{ flex: 1, height: '5rem', resize: 'none', color: '#2B1B0E', fontSize: '0.8125rem' }}
             />
             <button
               onClick={onSubmitAnswer}
               disabled={!conversationInput.trim()}
-              style={{ alignSelf: 'flex-end', width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem', background: conversationInput.trim() ? 'linear-gradient(135deg, #6C5CE7, #A78BFA)' : 'rgba(108, 92, 231,0.1)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: conversationInput.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s ease', flexShrink: 0 }}
+              style={{ alignSelf: 'flex-end', width: '2.5rem', height: '2.5rem', borderRadius: '0.75rem', background: conversationInput.trim() ? 'linear-gradient(135deg, #8B5A2B, #D2914B)' : 'rgba(139, 90, 43,0.1)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: conversationInput.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.2s ease', flexShrink: 0 }}
             >
               <Send size={15} color="white" />
             </button>

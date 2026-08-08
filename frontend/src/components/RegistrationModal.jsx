@@ -87,24 +87,24 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F7F5FF', padding: '1.5rem', overflowY: 'auto' }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F3E9D8', padding: '1.5rem', overflowY: 'auto' }}>
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: '55%', height: '55%', background: 'rgba(108, 92, 231,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
-        <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '55%', height: '55%', background: 'rgba(167, 139, 250,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+        <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: '55%', height: '55%', background: 'rgba(139, 90, 43,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+        <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '55%', height: '55%', background: 'rgba(210, 145, 75,0.18)', filter: 'blur(160px)', borderRadius: '9999px' }} />
       </div>
 
       <motion.div
         initial={{ scale: 0.93, y: 24 }}
         animate={{ scale: 1, y: 0 }}
-        style={{ width: '100%', maxWidth: '420px', background: '#FDFCFF', border: '2.5px solid rgba(108, 92, 231,0.2)', borderRadius: '2.5rem', padding: '2.5rem', position: 'relative', zIndex: 10, boxShadow: '8px 10px 0 rgba(108, 92, 231,0.18), 0 40px 80px rgba(0,0,0,0.5)', margin: 'auto' }}
+        style={{ width: '100%', maxWidth: '420px', background: '#FBF6EC', border: '2.5px solid rgba(139, 90, 43,0.2)', borderRadius: '2.5rem', padding: '2.5rem', position: 'relative', zIndex: 10, boxShadow: '8px 10px 0 rgba(139, 90, 43,0.18), 0 40px 80px rgba(0,0,0,0.5)', margin: 'auto' }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem', position: 'relative' }}>
           <span className="cute-float sparkle-deco" style={{ top: '-6px', left: 'calc(50% + 30px)', fontSize: '1.3rem', ['--tilt']: '12deg' }}>✨</span>
-          <div className="cute-wiggle" style={{ width: '4.5rem', height: '4.5rem', background: 'linear-gradient(135deg, #6C5CE7, #A78BFA)', borderRadius: '38% 62% 65% 35% / 55% 45% 55% 45%', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '4px 5px 0 rgba(108, 92, 231,0.35)', border: '2px solid rgba(255,255,255,0.5)' }}>
+          <div className="cute-wiggle" style={{ width: '4.5rem', height: '4.5rem', background: 'linear-gradient(135deg, #8B5A2B, #D2914B)', borderRadius: '38% 62% 65% 35% / 55% 45% 55% 45%', margin: '0 auto 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '4px 5px 0 rgba(139, 90, 43,0.35)', border: '2px solid rgba(255,255,255,0.5)' }}>
             <BookOpen size={36} color="white" />
           </div>
           <h2 className="font-black gradient-text" style={{ fontSize: '2rem', letterSpacing: '-0.04em', marginBottom: '0.5rem' }}>bookStory</h2>
-          <p style={{ color: '#8F87B8', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.6 }}>
+          <p style={{ color: '#8A7460', fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.6 }}>
             {mode === 'set-password' ? '처음 접속하는 계정을 위한 비밀번호 설정입니다.'
               : mode === 'admin' ? '관리자 비밀번호를 입력해주세요.'
               : mode === 'login' ? '기존 계정으로 로그인합니다.'
@@ -118,13 +118,13 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             <div>
               <label className="form-label">닉네임 또는 이름</label>
               <div style={{ position: 'relative' }}>
-                <LogIn style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
+                <LogIn style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
                 <input type="text" placeholder="가입할 때 사용한 이름을 입력하세요"
                   value={loginName}
                   onChange={(e) => { setLoginName(e.target.value); setLoginError(''); }}
                   onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                   className="form-input"
-                  style={{ paddingLeft: '2.75rem', color: '#241B45' }}
+                  style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }}
                   autoFocus
                 />
               </div>
@@ -132,13 +132,13 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             <div>
               <label className="form-label">비밀번호</label>
               <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
                 <input type="password" placeholder="비밀번호를 입력하세요"
                   value={loginPassword}
                   onChange={(e) => { setLoginPassword(e.target.value); setLoginError(''); }}
                   onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                   className="form-input"
-                  style={{ paddingLeft: '2.75rem', color: '#241B45' }}
+                  style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }}
                 />
               </div>
               {loginError && <p style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, marginTop: '0.375rem' }}>{loginError}</p>}
@@ -148,9 +148,9 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
               {isLoggingIn ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
               로그인
             </button>
-            <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#8F87B8', fontWeight: 600 }}>
+            <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#8A7460', fontWeight: 600 }}>
               아직 계정이 없으신가요?{' '}
-              <button onClick={() => { setMode('register'); setLoginError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C5CE7', fontWeight: 800, padding: 0 }}>
+              <button onClick={() => { setMode('register'); setLoginError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B5A2B', fontWeight: 800, padding: 0 }}>
                 회원가입
               </button>
             </p>
@@ -160,19 +160,19 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
         {/* 비밀번호 미설정 레거시 계정용 — 최초 비밀번호 설정 */}
         {mode === 'set-password' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <p style={{ fontSize: '0.8125rem', color: '#8F87B8', fontWeight: 600, lineHeight: 1.5 }}>
-              <strong style={{ color: '#6C5CE7' }}>{loginName}</strong>님은 비밀번호 도입 이전에 만들어진 계정이에요.
+            <p style={{ fontSize: '0.8125rem', color: '#8A7460', fontWeight: 600, lineHeight: 1.5 }}>
+              <strong style={{ color: '#8B5A2B' }}>{loginName}</strong>님은 비밀번호 도입 이전에 만들어진 계정이에요.
               앞으로 사용할 비밀번호를 새로 설정해주세요.
             </p>
             <div>
               <label className="form-label">새 비밀번호</label>
               <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
                 <input type="password" placeholder="4자 이상 입력하세요"
                   value={setupPassword}
                   onChange={(e) => { setSetupPassword(e.target.value); setSetupError(''); }}
                   className="form-input"
-                  style={{ paddingLeft: '2.75rem', color: '#241B45' }}
+                  style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }}
                   autoFocus
                 />
               </div>
@@ -180,13 +180,13 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             <div>
               <label className="form-label">새 비밀번호 확인</label>
               <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
                 <input type="password" placeholder="다시 한 번 입력하세요"
                   value={setupConfirm}
                   onChange={(e) => { setSetupConfirm(e.target.value); setSetupError(''); }}
                   onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
                   className="form-input"
-                  style={{ paddingLeft: '2.75rem', color: '#241B45' }}
+                  style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }}
                 />
               </div>
               {setupError && <p style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, marginTop: '0.375rem' }}>{setupError}</p>}
@@ -196,7 +196,7 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
               {isSettingPassword ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
               비밀번호 설정하고 로그인
             </button>
-            <button onClick={() => setMode('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8F87B8', fontSize: '0.8125rem', fontWeight: 700 }}>
+            <button onClick={() => setMode('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A7460', fontSize: '0.8125rem', fontWeight: 700 }}>
               ← 로그인으로 돌아가기
             </button>
           </div>
@@ -208,13 +208,13 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             <div>
               <label className="form-label">관리자 비밀번호</label>
               <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
                 <input type="password" placeholder="비밀번호를 입력하세요"
                   value={adminPassword}
                   onChange={(e) => { setAdminPassword(e.target.value); setAdminError(''); }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
                   className="form-input"
-                  style={{ paddingLeft: '2.75rem', color: '#241B45' }}
+                  style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }}
                   autoFocus
                 />
               </div>
@@ -225,7 +225,7 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
               {isAdminLoggingIn ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
               관리자로 진입
             </button>
-            <button onClick={() => { setMode('login'); setAdminPassword(''); setAdminError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8F87B8', fontSize: '0.8125rem', fontWeight: 700 }}>
+            <button onClick={() => { setMode('login'); setAdminPassword(''); setAdminError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A7460', fontSize: '0.8125rem', fontWeight: 700 }}>
               ← 로그인으로 돌아가기
             </button>
           </div>
@@ -236,8 +236,8 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
           <div>
             <label className="form-label">닉네임 또는 이름</label>
             <div style={{ position: 'relative' }}>
-              <User style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
-              <input type="text" placeholder="어떻게 불러드릴까요?" value={regForm.name} onChange={(e) => setRegForm({ ...regForm, name: e.target.value })} className="form-input" style={{ paddingLeft: '2.75rem', color: '#241B45' }} />
+              <User style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
+              <input type="text" placeholder="어떻게 불러드릴까요?" value={regForm.name} onChange={(e) => setRegForm({ ...regForm, name: e.target.value })} className="form-input" style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }} />
             </div>
           </div>
 
@@ -245,15 +245,15 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             <div>
               <label className="form-label">비밀번호</label>
               <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
-                <input type="password" placeholder="4자 이상" value={regForm.password || ''} onChange={(e) => { setRegForm({ ...regForm, password: e.target.value }); setRegisterError(''); }} className="form-input" style={{ paddingLeft: '2.75rem', color: '#241B45' }} />
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
+                <input type="password" placeholder="4자 이상" value={regForm.password || ''} onChange={(e) => { setRegForm({ ...regForm, password: e.target.value }); setRegisterError(''); }} className="form-input" style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }} />
               </div>
             </div>
             <div>
               <label className="form-label">비밀번호 확인</label>
               <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
-                <input type="password" placeholder="다시 입력" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setRegisterError(''); }} className="form-input" style={{ paddingLeft: '2.75rem', color: '#241B45' }} />
+                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
+                <input type="password" placeholder="다시 입력" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setRegisterError(''); }} className="form-input" style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }} />
               </div>
             </div>
             {registerError && <p style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#dc2626', fontWeight: 700 }}>{registerError}</p>}
@@ -262,7 +262,7 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
             <div>
               <label className="form-label">성별</label>
-              <select className="form-input appearance-none" style={{ color: '#241B45' }} value={regForm.gender} onChange={(e) => setRegForm({ ...regForm, gender: e.target.value })}>
+              <select className="form-input appearance-none" style={{ color: '#2B1B0E' }} value={regForm.gender} onChange={(e) => setRegForm({ ...regForm, gender: e.target.value })}>
                 <option>남성</option>
                 <option>여성</option>
                 <option>기타</option>
@@ -270,31 +270,31 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             </div>
             <div>
               <label className="form-label">나이</label>
-              <input type="number" placeholder="20" value={regForm.age} onChange={(e) => setRegForm({ ...regForm, age: parseInt(e.target.value) })} className="form-input" style={{ color: '#241B45' }} />
+              <input type="number" placeholder="20" value={regForm.age} onChange={(e) => setRegForm({ ...regForm, age: parseInt(e.target.value) })} className="form-input" style={{ color: '#2B1B0E' }} />
             </div>
           </div>
 
           <div style={{ position: 'relative' }}>
             <label className="form-label">주 활동 지역</label>
             <div style={{ position: 'relative' }}>
-              <MapIcon style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
-              <input type="text" placeholder="동네나 역 이름 검색 (예: 합정역, 마포구)" value={regForm.location} onChange={(e) => handleLocationChange(e.target.value)} className="form-input" style={{ paddingLeft: '2.75rem', color: '#241B45' }} />
-              {isSearchingLocation && <Loader2 style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={15} className="animate-spin" />}
+              <MapIcon style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={16} />
+              <input type="text" placeholder="동네나 역 이름 검색 (예: 합정역, 마포구)" value={regForm.location} onChange={(e) => handleLocationChange(e.target.value)} className="form-input" style={{ paddingLeft: '2.75rem', color: '#2B1B0E' }} />
+              {isSearchingLocation && <Loader2 style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} size={15} className="animate-spin" />}
             </div>
             {locationSuggestions.length > 0 && (
-              <div style={{ position: 'absolute', zIndex: 1100, top: '100%', left: 0, right: 0, marginTop: '0.5rem', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem', boxShadow: '0 16px 40px rgba(0,0,0,0.15)', maxHeight: '180px', overflowY: 'auto' }}>
+              <div style={{ position: 'absolute', zIndex: 1100, top: '100%', left: 0, right: 0, marginTop: '0.5rem', background: '#FBF6EC', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '0.875rem', boxShadow: '0 16px 40px rgba(0,0,0,0.15)', maxHeight: '180px', overflowY: 'auto' }}>
                 {locationSuggestions.map((item, i) => (
-                  <div key={i} onClick={() => selectLocation(item)} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(108, 92, 231,0.08)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
-                    <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#241B45', marginBottom: '2px' }}>{item.place_name}</p>
-                    <p style={{ fontSize: '10px', color: '#8F87B8' }}>{item.address_name}</p>
+                  <div key={i} onClick={() => selectLocation(item)} style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid rgba(139, 90, 43,0.08)', transition: 'background 0.15s ease' }} className="hover:bg-white\/5">
+                    <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2B1B0E', marginBottom: '2px' }}>{item.place_name}</p>
+                    <p style={{ fontSize: '10px', color: '#8A7460' }}>{item.address_name}</p>
                   </div>
                 ))}
               </div>
             )}
             {regForm.lat && regForm.lng && (
-              <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.875rem', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <MapPin size={11} style={{ color: '#6C5CE7' }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6C5CE7' }}>📍 위치 확인됨: {regForm.location}</span>
+              <div style={{ marginTop: '0.5rem', padding: '0.375rem 0.875rem', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MapPin size={11} style={{ color: '#8B5A2B' }} />
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8B5A2B' }}>📍 위치 확인됨: {regForm.location}</span>
               </div>
             )}
           </div>
@@ -306,9 +306,9 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
 
           {/* 소셜 로그인 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(108, 92, 231,0.15)' }} />
-            <span style={{ fontSize: '11px', color: '#C7C2E0', fontWeight: 700, whiteSpace: 'nowrap' }}>또는 소셜 로그인</span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(108, 92, 231,0.15)' }} />
+            <div style={{ flex: 1, height: '1px', background: 'rgba(139, 90, 43,0.15)' }} />
+            <span style={{ fontSize: '11px', color: '#C4AD91', fontWeight: 700, whiteSpace: 'nowrap' }}>또는 소셜 로그인</span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(139, 90, 43,0.15)' }} />
           </div>
 
           <div style={{ display: 'flex', gap: '0.625rem' }}>
@@ -332,7 +332,7 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             </button>
             <button
               onClick={() => onOAuthLogin?.('google')}
-              style={{ flex: 1, padding: '0.75rem 0', background: 'white', border: '2px solid rgba(108, 92, 231,0.2)', borderRadius: '9999px', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 900, color: '#241B45', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'opacity 0.2s' }}
+              style={{ flex: 1, padding: '0.75rem 0', background: 'white', border: '2px solid rgba(139, 90, 43,0.2)', borderRadius: '9999px', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 900, color: '#2B1B0E', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'opacity 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
@@ -341,9 +341,9 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
             </button>
           </div>
 
-          <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#8F87B8', fontWeight: 600 }}>
+          <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#8A7460', fontWeight: 600 }}>
             이미 계정이 있으신가요?{' '}
-            <button onClick={() => { setMode('login'); setRegisterError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C5CE7', fontWeight: 800, padding: 0 }}>
+            <button onClick={() => { setMode('login'); setRegisterError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B5A2B', fontWeight: 800, padding: 0 }}>
               로그인
             </button>
           </p>
@@ -353,9 +353,9 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
           <div style={{ textAlign: 'right', marginTop: '1rem' }}>
             <button
               onClick={() => { setMode('admin'); setAdminPassword(''); setAdminError(''); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C7C2E0', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0', transition: 'color 0.2s ease' }}
-              onMouseEnter={(e) => e.target.style.color = '#6C5CE7'}
-              onMouseLeave={(e) => e.target.style.color = '#C7C2E0'}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4AD91', fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0', transition: 'color 0.2s ease' }}
+              onMouseEnter={(e) => e.target.style.color = '#8B5A2B'}
+              onMouseLeave={(e) => e.target.style.color = '#C4AD91'}
             >
               관리자 유저로 진입 →
             </button>

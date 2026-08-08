@@ -184,7 +184,7 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
   };
   const friendBtnStyle = () => {
     const base = { display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.375rem 0.875rem', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', border: '1px solid' };
-    if (!friendStatus || friendStatus.status === 'none') return { ...base, background: 'rgba(108, 92, 231,0.1)', borderColor: 'rgba(108, 92, 231,0.3)', color: '#6C5CE7' };
+    if (!friendStatus || friendStatus.status === 'none') return { ...base, background: 'rgba(139, 90, 43,0.1)', borderColor: 'rgba(139, 90, 43,0.3)', color: '#8B5A2B' };
     if (friendStatus.status === 'accepted') return { ...base, background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.3)', color: '#16a34a' };
     if (friendStatus.status === 'pending' && !friendStatus.is_requester) return { ...base, background: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.3)', color: '#2563eb' };
     return { ...base, background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.2)', color: '#dc2626' };
@@ -202,13 +202,13 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
   const relationBadges = () => {
     const badges = [];
     if (!friendStatus || friendStatus.status === 'none') {
-      badges.push({ label: '친구 아님', icon: null, bg: 'rgba(143, 135, 184,0.08)', border: 'rgba(143, 135, 184,0.25)', color: '#8F87B8' });
+      badges.push({ label: '친구 아님', icon: null, bg: 'rgba(138, 116, 96,0.08)', border: 'rgba(138, 116, 96,0.25)', color: '#8A7460' });
     } else if (friendStatus.status === 'accepted') {
       badges.push({ label: '친구', icon: <UserCheck size={10} />, bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)', color: '#16a34a' });
     } else if (friendStatus.status === 'pending' && !friendStatus.is_requester) {
       badges.push({ label: '친구 요청 받음', icon: <UserCheck size={10} />, bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.3)', color: '#2563eb' });
     } else {
-      badges.push({ label: '친구 요청 보냄', icon: <UserPlus size={10} />, bg: 'rgba(167, 139, 250,0.1)', border: 'rgba(167, 139, 250,0.3)', color: '#A78BFA' });
+      badges.push({ label: '친구 요청 보냄', icon: <UserPlus size={10} />, bg: 'rgba(210, 145, 75,0.1)', border: 'rgba(210, 145, 75,0.3)', color: '#D2914B' });
     }
     if (relation.is_blocked) {
       badges.push({ label: '차단됨', icon: <Shield size={10} />, bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.25)', color: '#dc2626' });
@@ -227,14 +227,14 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
         style={{ maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: 0, padding: 0, overflow: 'hidden' }}
       >
         {/* 헤더 */}
-        <div style={{ padding: '1.5rem 1.75rem 1.25rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)' }}>
+        <div style={{ padding: '1.5rem 1.75rem 1.25rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '15px', flexShrink: 0, overflow: 'hidden' }}>
+              <div style={{ width: '2.75rem', height: '2.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '15px', flexShrink: 0, overflow: 'hidden' }}>
                 {profileImage ? <img src={profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (userName || '?')[0]}
               </div>
               <div>
-                <p style={{ fontWeight: 900, fontSize: '1.0625rem', color: '#241B45' }}>{isMe ? '내 서재' : `${userName}님의 서재`}</p>
+                <p style={{ fontWeight: 900, fontSize: '1.0625rem', color: '#2B1B0E' }}>{isMe ? '내 서재' : `${userName}님의 서재`}</p>
                 {!isMe && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '4px' }}>
                     {relationBadges().map((b, i) => (
@@ -244,7 +244,7 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                     ))}
                   </div>
                 )}
-                <p style={{ fontSize: '11px', color: '#8F87B8', fontWeight: 700, marginTop: '2px' }}>
+                <p style={{ fontSize: '11px', color: '#8A7460', fontWeight: 700, marginTop: '2px' }}>
                   읽는 중 {reading.length}권 · 완독 {finished.length}권
                 </p>
               </div>
@@ -261,25 +261,25 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
 
           {/* 통계 카드 */}
           <div style={{ display: 'flex', gap: '0.625rem' }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.14)', borderRadius: '0.75rem' }}>
-              <BookMarked size={13} style={{ color: '#6C5CE7', flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.14)', borderRadius: '0.75rem' }}>
+              <BookMarked size={13} style={{ color: '#8B5A2B', flexShrink: 0 }} />
               <div>
-                <p style={{ fontSize: '9px', color: '#8F87B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>완독</p>
-                <p style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', lineHeight: 1.2 }}>{stats?.books_count ?? finished.length}<span style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 700, marginLeft: '2px' }}>권</span></p>
+                <p style={{ fontSize: '9px', color: '#8A7460', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>완독</p>
+                <p style={{ fontSize: '1rem', fontWeight: 900, color: '#2B1B0E', lineHeight: 1.2 }}>{stats?.books_count ?? finished.length}<span style={{ fontSize: '10px', color: '#8A7460', fontWeight: 700, marginLeft: '2px' }}>권</span></p>
               </div>
             </div>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.14)', borderRadius: '0.75rem' }}>
-              <Clock size={13} style={{ color: '#A78BFA', flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.14)', borderRadius: '0.75rem' }}>
+              <Clock size={13} style={{ color: '#D2914B', flexShrink: 0 }} />
               <div>
-                <p style={{ fontSize: '9px', color: '#8F87B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>독서 시간</p>
-                <p style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', lineHeight: 1.2 }}>{stats ? formatReadingTime(stats.total_seconds) : '—'}</p>
+                <p style={{ fontSize: '9px', color: '#8A7460', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>독서 시간</p>
+                <p style={{ fontSize: '1rem', fontWeight: 900, color: '#2B1B0E', lineHeight: 1.2 }}>{stats ? formatReadingTime(stats.total_seconds) : '—'}</p>
               </div>
             </div>
           </div>
 
           {isMe && (
             <div style={{ marginTop: '0.875rem' }}>
-              <p style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+              <p style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
                 독서모임 AI 페르소나
               </p>
               <div className="custom-scroll" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
@@ -291,15 +291,15 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                     title={p.image ? p.name : `${p.name} (준비 중)`}
                     style={{
                       flexShrink: 0, width: '46px', height: '46px', borderRadius: '9999px', overflow: 'hidden',
-                      background: '#E9E5F7', cursor: p.image ? 'pointer' : 'not-allowed', padding: 0,
-                      border: `2px solid ${currentAiPersona === p.id ? '#A78BFA' : 'transparent'}`,
+                      background: '#E8DCC5', cursor: p.image ? 'pointer' : 'not-allowed', padding: 0,
+                      border: `2px solid ${currentAiPersona === p.id ? '#D2914B' : 'transparent'}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       opacity: p.image ? 1 : 0.4,
                     }}
                   >
                     {p.image
                       ? <img src={p.image} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
-                      : <Sparkles size={14} style={{ color: '#C7C2E0' }} />}
+                      : <Sparkles size={14} style={{ color: '#C4AD91' }} />}
                   </button>
                 ))}
               </div>
@@ -307,7 +307,7 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
           )}
 
           {/* 탭 바 */}
-          <div style={{ display: 'flex', gap: '0.25rem', marginTop: '1rem', background: 'rgba(108, 92, 231,0.06)', borderRadius: '0.75rem', padding: '0.25rem' }}>
+          <div style={{ display: 'flex', gap: '0.25rem', marginTop: '1rem', background: 'rgba(139, 90, 43,0.06)', borderRadius: '0.75rem', padding: '0.25rem' }}>
             {tabs.map(tab => (
               <button
                 key={tab.id}
@@ -317,7 +317,7 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                   padding: '0.5rem 0.75rem', borderRadius: '0.625rem', border: 'none',
                   fontSize: '11px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.18s',
                   background: activeTab === tab.id ? 'white' : 'transparent',
-                  color: activeTab === tab.id ? '#6C5CE7' : '#8F87B8',
+                  color: activeTab === tab.id ? '#8B5A2B' : '#8A7460',
                   boxShadow: activeTab === tab.id ? '0 1px 6px rgba(0,0,0,0.1)' : 'none',
                 }}
               >
@@ -329,18 +329,18 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
 
         {/* 받은 친구 요청 (독서 탭에만, 본인) */}
         {activeTab === 'books' && friendRequests.length > 0 && (
-          <div style={{ padding: '0.875rem 1.75rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <p style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>받은 친구 요청 {friendRequests.length}건</p>
+          <div style={{ padding: '0.875rem 1.75rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <p style={{ fontSize: '11px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.25rem' }}>받은 친구 요청 {friendRequests.length}건</p>
             {friendRequests.map(req => (
-              <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.875rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.75rem' }}>
+              <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.875rem', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '0.75rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900, overflow: 'hidden' }}>
+                  <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900, overflow: 'hidden' }}>
                     {req.requester_image ? <img src={req.requester_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (req.requester_name || '?')[0]}
                   </div>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#241B45' }}>{req.requester_name}</span>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#2B1B0E' }}>{req.requester_name}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.375rem' }}>
-                  <button onClick={() => onAcceptFriend?.(req.id)} style={{ padding: '0.3rem 0.75rem', background: 'rgba(108, 92, 231,0.1)', border: '1px solid rgba(108, 92, 231,0.25)', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color: '#6C5CE7', cursor: 'pointer' }}>수락</button>
+                  <button onClick={() => onAcceptFriend?.(req.id)} style={{ padding: '0.3rem 0.75rem', background: 'rgba(139, 90, 43,0.1)', border: '1px solid rgba(139, 90, 43,0.25)', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color: '#8B5A2B', cursor: 'pointer' }}>수락</button>
                   <button onClick={() => onRejectFriend?.(req.id)} style={{ padding: '0.3rem 0.75rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '9999px', fontSize: '11px', fontWeight: 800, color: '#dc2626', cursor: 'pointer' }}>거절</button>
                 </div>
               </div>
@@ -354,18 +354,18 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
           {/* ── 독서 탭 ── */}
           {activeTab === 'books' && (
             loading
-              ? <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}><Loader2 className="animate-spin" size={28} style={{ color: '#6C5CE7' }} /></div>
+              ? <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}><Loader2 className="animate-spin" size={28} style={{ color: '#8B5A2B' }} /></div>
               : books.length === 0
-                ? <div style={{ textAlign: 'center', padding: '3rem 0', color: '#C7C2E0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                ? <div style={{ textAlign: 'center', padding: '3rem 0', color: '#C4AD91', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                     <Library size={32} style={{ opacity: 0.4 }} />
                     <p style={{ fontSize: '0.875rem', fontWeight: 700 }}>아직 서재에 책이 없습니다.</p>
                   </div>
                 : <>
                     {reading.length > 0 && (
-                      <Section title="읽는 중" books={reading} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} userId={userId} accentColor="#A78BFA" />
+                      <Section title="읽는 중" books={reading} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} userId={userId} accentColor="#D2914B" />
                     )}
                     {finished.length > 0 && (
-                      <Section title="완독" books={finished} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} userId={userId} accentColor="#6C5CE7" />
+                      <Section title="완독" books={finished} expandedId={expandedId} onToggle={setExpandedId} isMe={isMe} userId={userId} accentColor="#8B5A2B" />
                     )}
                   </>
           )}
@@ -385,7 +385,7 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
               />
               <RoomSection
                 title="개설한 독서모임"
-                accentColor="#A78BFA"
+                accentColor="#D2914B"
                 rooms={hostedRooms}
                 expandedRoom={expandedRoom}
                 roomMessages={roomMessages}
@@ -399,10 +399,10 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
           {/* ── 친구 탭 (본인) ── */}
           {activeTab === 'friends' && isMe && (
             friendsLoading
-              ? <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}><Loader2 className="animate-spin" size={24} style={{ color: '#6C5CE7' }} /></div>
-              : <FollowSection title="친구" accentColor="#6C5CE7" users={friendsList} emptyText="아직 친구가 없습니다.">
+              ? <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}><Loader2 className="animate-spin" size={24} style={{ color: '#8B5A2B' }} /></div>
+              : <FollowSection title="친구" accentColor="#8B5A2B" users={friendsList} emptyText="아직 친구가 없습니다.">
                   {(u) => (
-                    <button onClick={() => handleRemoveFriend(u.friendshipId)} style={smallBtnStyle('#8F87B8')}>
+                    <button onClick={() => handleRemoveFriend(u.friendshipId)} style={smallBtnStyle('#8A7460')}>
                       <UserMinus size={10} /> 친구 끊기
                     </button>
                   )}
@@ -412,15 +412,15 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
           {/* ── 관계 탭 (타인) ── */}
           {activeTab === 'relation' && !isMe && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-              <p style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 {userName}님과의 관계
               </p>
 
               {/* 친구 */}
               <div style={relationCardStyle}>
                 <div>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#241B45', marginBottom: '2px' }}>친구</p>
-                  <p style={{ fontSize: '11px', color: '#8F87B8' }}>친구가 되면 서로의 독서 활동을 확인할 수 있습니다.</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#2B1B0E', marginBottom: '2px' }}>친구</p>
+                  <p style={{ fontSize: '11px', color: '#8A7460' }}>친구가 되면 서로의 독서 활동을 확인할 수 있습니다.</p>
                 </div>
                 <button onClick={() => setConfirmFriendAction(true)} disabled={friendLoading} style={friendBtnStyle()}>
                   {friendLoading ? <Loader2 size={11} className="animate-spin" /> : friendBtnIcon()}
@@ -428,22 +428,22 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                 </button>
               </div>
               {confirmFriendAction && (
-                <div style={{ padding: '0.75rem 1rem', marginTop: '-0.5rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#6C5CE7' }}>{friendConfirmText()}</p>
+                <div style={{ padding: '0.75rem 1rem', marginTop: '-0.5rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#8B5A2B' }}>{friendConfirmText()}</p>
                   <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                    <button onClick={() => setConfirmFriendAction(false)} style={smallBtnStyle('#8F87B8')}>취소</button>
-                    <button onClick={async () => { setConfirmFriendAction(false); await handleFriendAction(); }} disabled={friendLoading} style={smallBtnStyle('#6C5CE7')}>확인</button>
+                    <button onClick={() => setConfirmFriendAction(false)} style={smallBtnStyle('#8A7460')}>취소</button>
+                    <button onClick={async () => { setConfirmFriendAction(false); await handleFriendAction(); }} disabled={friendLoading} style={smallBtnStyle('#8B5A2B')}>확인</button>
                   </div>
                 </div>
               )}
 
               {/* 차단 */}
-              <div style={{ ...relationCardStyle, borderColor: relation.is_blocked ? 'rgba(239,68,68,0.3)' : 'rgba(108, 92, 231,0.12)', background: relation.is_blocked ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
+              <div style={{ ...relationCardStyle, borderColor: relation.is_blocked ? 'rgba(239,68,68,0.3)' : 'rgba(139, 90, 43,0.12)', background: relation.is_blocked ? 'rgba(239,68,68,0.04)' : 'transparent' }}>
                 <div>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#241B45', marginBottom: '2px' }}>차단</p>
-                  <p style={{ fontSize: '11px', color: '#8F87B8' }}>차단 시 귓속말·친구 요청이 차단됩니다.</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#2B1B0E', marginBottom: '2px' }}>차단</p>
+                  <p style={{ fontSize: '11px', color: '#8A7460' }}>차단 시 귓속말·친구 요청이 차단됩니다.</p>
                 </div>
-                <button onClick={() => setConfirmBlockAction(true)} disabled={relationLoading} style={smallBtnStyle(relation.is_blocked ? '#dc2626' : '#8F87B8')}>
+                <button onClick={() => setConfirmBlockAction(true)} disabled={relationLoading} style={smallBtnStyle(relation.is_blocked ? '#dc2626' : '#8A7460')}>
                   {relationLoading ? <Loader2 size={10} className="animate-spin" /> : relation.is_blocked ? <ShieldOff size={10} /> : <Shield size={10} />}
                   {relation.is_blocked ? '차단됨' : '차단'}
                 </button>
@@ -452,7 +452,7 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                 <div style={{ padding: '0.75rem 1rem', marginTop: '-0.5rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#dc2626' }}>{blockConfirmText()}</p>
                   <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                    <button onClick={() => setConfirmBlockAction(false)} style={smallBtnStyle('#8F87B8')}>취소</button>
+                    <button onClick={() => setConfirmBlockAction(false)} style={smallBtnStyle('#8A7460')}>취소</button>
                     <button onClick={async () => { setConfirmBlockAction(false); await handleBlockAction(); }} disabled={relationLoading} style={{ ...smallBtnStyle('#dc2626'), background: 'rgba(239,68,68,0.12)', fontWeight: 900 }}>확인</button>
                   </div>
                 </div>
@@ -468,15 +468,15 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
 // ── 스타일 상수 ──────────────────────────────────────────────
 const iconBtnStyle = {
   width: '2rem', height: '2rem', borderRadius: '9999px',
-  background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)',
+  background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  cursor: 'pointer', color: '#8F87B8', flexShrink: 0,
+  cursor: 'pointer', color: '#8A7460', flexShrink: 0,
 };
 
 const relationCardStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   padding: '0.875rem 1rem', background: 'transparent',
-  border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.875rem',
+  border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '0.875rem',
 };
 
 const smallBtnStyle = (color) => ({
@@ -494,19 +494,19 @@ function FollowSection({ title, accentColor, users, emptyText, children }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <div style={{ width: '3px', height: '14px', borderRadius: '9999px', background: accentColor }} />
         <span style={{ fontSize: '11px', fontWeight: 900, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{title}</span>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: '#C7C2E0' }}>{users.length}명</span>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: '#C4AD91' }}>{users.length}명</span>
       </div>
       {users.length === 0
-        ? <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600 }}>{emptyText}</p>
+        ? <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600 }}>{emptyText}</p>
         : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
             {users.map(u => (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.75rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.1)', borderRadius: '0.75rem' }}>
-                <div style={{ width: '28px', height: '28px', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0.75rem', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.1)', borderRadius: '0.75rem' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
                   {u.profile_image ? <img src={u.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.name || '?')[0]}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
-                  {u.location && <p style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 600 }}>{u.location}</p>}
+                  <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#2B1B0E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
+                  {u.location && <p style={{ fontSize: '10px', color: '#8A7460', fontWeight: 600 }}>{u.location}</p>}
                 </div>
                 {children?.(u)}
               </div>
@@ -525,51 +525,51 @@ function RoomSection({ title, accentColor, rooms, expandedRoom, roomMessages, lo
         <div style={{ width: '3px', height: '14px', borderRadius: '9999px', background: accentColor }} />
         <Waves size={12} style={{ color: accentColor }} />
         <span style={{ fontSize: '11px', fontWeight: 900, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{title}</span>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: '#C7C2E0' }}>{rooms.length}건</span>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: '#C4AD91' }}>{rooms.length}건</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {rooms.length === 0 && (
-          <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600, padding: '0.25rem 0' }}>이력이 없습니다.</p>
+          <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600, padding: '0.25rem 0' }}>이력이 없습니다.</p>
         )}
         {rooms.map(room => {
           const isOpen = expandedRoom === room.id;
           const msgs = roomMessages[room.id] || [];
           const statusLabel = room.status === 'ended' ? '종료' : room.status === 'discussion' ? '토론 중' : room.status === 'reading' ? '독서 중' : '예정';
           return (
-            <div key={room.id} style={{ border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.875rem', overflow: 'hidden' }}>
+            <div key={room.id} style={{ border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '0.875rem', overflow: 'hidden' }}>
               <div
                 onClick={() => onToggleRoom(room.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', cursor: 'pointer', background: isOpen ? 'rgba(108, 92, 231,0.06)' : 'transparent', transition: 'background 0.15s' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', cursor: 'pointer', background: isOpen ? 'rgba(139, 90, 43,0.06)' : 'transparent', transition: 'background 0.15s' }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                    <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{room.title}</p>
-                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#8F87B8', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.15)', padding: '1px 6px', borderRadius: '9999px', flexShrink: 0 }}>{statusLabel}</span>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#2B1B0E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{room.title}</p>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#8A7460', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.15)', padding: '1px 6px', borderRadius: '9999px', flexShrink: 0 }}>{statusLabel}</span>
                   </div>
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={10} />{fmtAgo(room.scheduled_at)}</span>
-                    <span style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Users size={10} />{room.participant_count}명</span>
-                    {room.host_name && <span style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 700 }}>방장: {room.host_name}</span>}
-                    <span style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MessageSquare size={10} />채팅 {msgs.length}건</span>
+                    <span style={{ fontSize: '10px', color: '#8A7460', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={10} />{fmtAgo(room.scheduled_at)}</span>
+                    <span style={{ fontSize: '10px', color: '#8A7460', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Users size={10} />{room.participant_count}명</span>
+                    {room.host_name && <span style={{ fontSize: '10px', color: '#8A7460', fontWeight: 700 }}>방장: {room.host_name}</span>}
+                    <span style={{ fontSize: '10px', color: '#8A7460', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}><MessageSquare size={10} />채팅 {msgs.length}건</span>
                   </div>
                 </div>
-                {isOpen ? <ChevronUp size={14} style={{ color: '#8F87B8', flexShrink: 0 }} /> : <ChevronDown size={14} style={{ color: '#8F87B8', flexShrink: 0 }} />}
+                {isOpen ? <ChevronUp size={14} style={{ color: '#8A7460', flexShrink: 0 }} /> : <ChevronDown size={14} style={{ color: '#8A7460', flexShrink: 0 }} />}
               </div>
               {isOpen && (
-                <div style={{ borderTop: '1px solid rgba(108, 92, 231,0.08)', padding: '0.75rem 1rem', background: 'rgba(108, 92, 231,0.02)' }}>
+                <div style={{ borderTop: '1px solid rgba(139, 90, 43,0.08)', padding: '0.75rem 1rem', background: 'rgba(139, 90, 43,0.02)' }}>
                   {loadingMsgs === room.id
-                    ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#6C5CE7' }} /></div>
+                    ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#8B5A2B' }} /></div>
                     : msgs.length === 0
-                      ? <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600, textAlign: 'center' }}>채팅 내역이 없습니다.</p>
+                      ? <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600, textAlign: 'center' }}>채팅 내역이 없습니다.</p>
                       : <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
                           {msgs.map(m => (
                             <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                              <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#A78BFA,#F59E0B)' : 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                              <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#D2914B,#F59E0B)' : 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
                                 {m.is_ai ? 'AI' : m.user_image ? <img src={m.user_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (m.user_name || '?')[0]}
                               </div>
                               <div>
-                                <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#A78BFA' : '#6C5CE7', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>
-                                <p style={{ fontSize: '0.8125rem', color: '#3A3070', lineHeight: 1.5, wordBreak: 'break-word' }}>{m.content}</p>
+                                <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#D2914B' : '#8B5A2B', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>
+                                <p style={{ fontSize: '0.8125rem', color: '#4A2F17', lineHeight: 1.5, wordBreak: 'break-word' }}>{m.content}</p>
                               </div>
                             </div>
                           ))}
@@ -592,7 +592,7 @@ function Section({ title, books, expandedId, onToggle, isMe, userId, accentColor
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
         <div style={{ width: '3px', height: '14px', borderRadius: '9999px', background: accentColor }} />
         <span style={{ fontSize: '11px', fontWeight: 900, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{title}</span>
-        <span style={{ fontSize: '11px', fontWeight: 700, color: '#C7C2E0' }}>{books.length}권</span>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: '#C4AD91' }}>{books.length}권</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {books.map((book, idx) => (
@@ -619,10 +619,10 @@ function BookCard({ book, idx, isExpanded, onToggle, isMe, userId }) {
 
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
-      style={{ borderRadius: '0.875rem', border: `1px solid ${isExpanded ? 'rgba(108, 92, 231,0.25)' : 'rgba(108, 92, 231,0.1)'}`, background: isExpanded ? 'rgba(108, 92, 231,0.04)' : 'transparent', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}
+      style={{ borderRadius: '0.875rem', border: `1px solid ${isExpanded ? 'rgba(139, 90, 43,0.25)' : 'rgba(139, 90, 43,0.1)'}`, background: isExpanded ? 'rgba(139, 90, 43,0.04)' : 'transparent', overflow: 'hidden', transition: 'border-color 0.2s, background 0.2s' }}
     >
       <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', cursor: 'pointer' }}>
-        <div style={{ width: '42px', minWidth: '42px', height: '60px', borderRadius: '5px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', background: '#E9E5F7', flexShrink: 0 }}>
+        <div style={{ width: '42px', minWidth: '42px', height: '60px', borderRadius: '5px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', background: '#E8DCC5', flexShrink: 0 }}>
           {book.image
             ? <img src={book.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg,${hexColors[idx % 10]},${hexColors[(idx+2)%10]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -630,55 +630,55 @@ function BookCard({ book, idx, isExpanded, onToggle, isMe, userId }) {
               </div>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontWeight: 900, fontSize: '0.875rem', color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '0.25rem' }}>{title}</p>
-          {book.author && <p style={{ fontSize: '11px', color: '#8F87B8', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>}
+          <p style={{ fontWeight: 900, fontSize: '0.875rem', color: '#2B1B0E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '0.25rem' }}>{title}</p>
+          {book.author && <p style={{ fontSize: '11px', color: '#8A7460', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
             {book.status === 'reading'
-              ? <span style={{ fontSize: '9px', fontWeight: 900, color: '#A78BFA', background: 'rgba(167, 139, 250,0.1)', border: '1px solid rgba(167, 139, 250,0.3)', padding: '2px 7px', borderRadius: '9999px' }}>읽는 중</span>
-              : <span style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.2)', padding: '2px 7px', borderRadius: '9999px' }}>완독</span>}
-            {book.impression && !book.is_public && isMe && <span style={{ fontSize: '9px', fontWeight: 700, color: '#C7C2E0' }}>🔒 비공개 감상</span>}
-            {book.impression && book.is_public && <span style={{ fontSize: '9px', fontWeight: 700, color: '#8F87B8' }}>감상 있음</span>}
+              ? <span style={{ fontSize: '9px', fontWeight: 900, color: '#D2914B', background: 'rgba(210, 145, 75,0.1)', border: '1px solid rgba(210, 145, 75,0.3)', padding: '2px 7px', borderRadius: '9999px' }}>읽는 중</span>
+              : <span style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.2)', padding: '2px 7px', borderRadius: '9999px' }}>완독</span>}
+            {book.impression && !book.is_public && isMe && <span style={{ fontSize: '9px', fontWeight: 700, color: '#C4AD91' }}>🔒 비공개 감상</span>}
+            {book.impression && book.is_public && <span style={{ fontSize: '9px', fontWeight: 700, color: '#8A7460' }}>감상 있음</span>}
           </div>
         </div>
-        <div style={{ flexShrink: 0, color: '#8F87B8' }}>{isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</div>
+        <div style={{ flexShrink: 0, color: '#8A7460' }}>{isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</div>
       </div>
       <AnimatePresence>
         {isExpanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} style={{ overflow: 'hidden' }}>
             <div style={{ padding: '0 1rem 1rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
               {hasImpression && (
-                <div style={{ padding: '0.875rem 1rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.75rem' }}>
-                  <p style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>감상</p>
-                  <p style={{ fontSize: '0.8125rem', color: '#332A5C', lineHeight: 1.7, fontWeight: 500, whiteSpace: 'pre-wrap' }}>{book.impression}</p>
+                <div style={{ padding: '0.875rem 1rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '0.75rem' }}>
+                  <p style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>감상</p>
+                  <p style={{ fontSize: '0.8125rem', color: '#3D2712', lineHeight: 1.7, fontWeight: 500, whiteSpace: 'pre-wrap' }}>{book.impression}</p>
                 </div>
               )}
 
-              <div style={{ padding: '0.625rem 0.75rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.15)', borderRadius: '0.625rem' }}>
-                <p style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.375rem' }}>
+              <div style={{ padding: '0.625rem 0.75rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.15)', borderRadius: '0.625rem' }}>
+                <p style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.375rem' }}>
                   {isMe ? '내가 읽은 시간' : '이 책을 읽은 시간'}
                 </p>
-                <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#241B45' }}>
+                <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#2B1B0E' }}>
                   {book.my_seconds ? formatReadingTime(book.my_seconds) : '기록 없음'}
                 </p>
               </div>
 
               <div>
-                <p style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+                <p style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
                   다른 사람들은 얼마나 읽었을까요
                 </p>
                 {otherReaders === null
-                  ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}><Loader2 size={14} className="animate-spin" style={{ color: '#6C5CE7' }} /></div>
+                  ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem 0' }}><Loader2 size={14} className="animate-spin" style={{ color: '#8B5A2B' }} /></div>
                   : otherReaders.length === 0
-                    ? <p style={{ fontSize: '11px', color: '#C7C2E0', fontWeight: 600 }}>아직 다른 사람의 기록이 없습니다.</p>
+                    ? <p style={{ fontSize: '11px', color: '#C4AD91', fontWeight: 600 }}>아직 다른 사람의 기록이 없습니다.</p>
                     : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                         {otherReaders.map(r => (
                           <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                            <div style={{ width: '18px', height: '18px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
                               {r.profile_image ? <img src={r.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (r.name || '?')[0]}
                             </div>
-                            <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: '#3A3070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
-                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#6C5CE7' }}>{formatReadingTime(r.seconds)}</span>
+                            <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: '#4A2F17', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#8B5A2B' }}>{formatReadingTime(r.seconds)}</span>
                           </div>
                         ))}
                       </div>

@@ -34,80 +34,80 @@ export default function ClubModal({
       >
         <div style={{ height: '11rem', position: 'relative' }}>
           <img src={club.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(36, 27, 69,0.75), transparent 60%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(43, 27, 14,0.75), transparent 60%)' }} />
           <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(0,0,0,0.5)', border: 'none', width: '2rem', height: '2rem', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }} className="hover:bg-black\/60"><X size={16} /></button>
         </div>
 
         <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-              <span style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.12em', background: 'rgba(108, 92, 231,0.12)', border: '1px solid rgba(108, 92, 231,0.2)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block', width: 'fit-content' }}>{club.category}</span>
+              <span style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.12em', background: 'rgba(139, 90, 43,0.12)', border: '1px solid rgba(139, 90, 43,0.2)', padding: '2px 8px', borderRadius: '6px', display: 'inline-block', width: 'fit-content' }}>{club.category}</span>
               <h2 style={{ fontSize: '1.375rem', fontWeight: 900, lineHeight: 1.2, letterSpacing: '-0.02em' }}>{club.name}</h2>
-              <p style={{ color: '#8F87B8', fontSize: '0.8125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <p style={{ color: '#8A7460', fontSize: '0.8125rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <MapPin size={11} /> {club.location}
               </p>
             </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <p className="gradient-text-accent" style={{ fontSize: '1.5rem', fontWeight: 900, fontStyle: 'italic', lineHeight: 1 }}>{club.member_count}명</p>
-              <p style={{ fontSize: '9px', color: '#8F87B8', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>Members</p>
+              <p style={{ fontSize: '9px', color: '#8A7460', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>Members</p>
               {club.avg_rating > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '3px', justifyContent: 'flex-end', marginTop: '6px' }}>
-                  <Star size={12} fill="#A78BFA" color="#A78BFA" />
-                  <span style={{ fontSize: '12px', fontWeight: 900, color: '#A78BFA' }}>{club.avg_rating}</span>
-                  <span style={{ fontSize: '10px', color: '#C7C2E0' }}>({club.review_count || 0})</span>
+                  <Star size={12} fill="#D2914B" color="#D2914B" />
+                  <span style={{ fontSize: '12px', fontWeight: 900, color: '#D2914B' }}>{club.avg_rating}</span>
+                  <span style={{ fontSize: '10px', color: '#C4AD91' }}>({club.review_count || 0})</span>
                 </div>
               )}
             </div>
           </div>
 
-          <p style={{ color: '#6E67A0', lineHeight: 1.65, fontWeight: 500, fontSize: '0.875rem', background: 'rgba(108, 92, 231,0.05)', padding: '0.875rem 1rem', borderRadius: '0.875rem', border: '1px solid rgba(108, 92, 231,0.1)' }}>{club.description}</p>
+          <p style={{ color: '#6E5A45', lineHeight: 1.65, fontWeight: 500, fontSize: '0.875rem', background: 'rgba(139, 90, 43,0.05)', padding: '0.875rem 1rem', borderRadius: '0.875rem', border: '1px solid rgba(139, 90, 43,0.1)' }}>{club.description}</p>
 
           <div>
-            <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingBottom: '0.625rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)' }}>모임 위치</h4>
-            <div id="club-map" style={{ width: '100%', height: '9rem', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(108, 92, 231,0.15)', background: '#E9E5F7' }} />
+            <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingBottom: '0.625rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)' }}>모임 위치</h4>
+            <div id="club-map" style={{ width: '100%', height: '9rem', borderRadius: '0.875rem', overflow: 'hidden', border: '1px solid rgba(139, 90, 43,0.15)', background: '#E8DCC5' }} />
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(108, 92, 231,0.08)', paddingTop: '1rem' }}>
-            <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.875rem' }}>모임 평점 & 리뷰</h4>
+          <div style={{ borderTop: '1px solid rgba(139, 90, 43,0.08)', paddingTop: '1rem' }}>
+            <h4 style={{ fontSize: '9px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.875rem' }}>모임 평점 & 리뷰</h4>
 
             {clubReviews.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1rem', maxHeight: '160px', overflowY: 'auto' }}>
                 {clubReviews.map(rv => (
-                  <div key={rv.id} style={{ padding: '0.625rem 0.875rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.1)', borderRadius: '0.75rem' }}>
+                  <div key={rv.id} style={{ padding: '0.625rem 0.875rem', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.1)', borderRadius: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'white', fontWeight: 900, overflow: 'hidden' }}>{rv.author_image ? <img src={rv.author_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (rv.author_name || '?')[0]}</div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#3A3070' }}>{rv.author_name}</span>
+                      <div style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: 'white', fontWeight: 900, overflow: 'hidden' }}>{rv.author_image ? <img src={rv.author_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (rv.author_name || '?')[0]}</div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#4A2F17' }}>{rv.author_name}</span>
                       <div style={{ display: 'flex', gap: '1px' }}>
-                        {[1, 2, 3, 4, 5].map(s => <Star key={s} size={10} fill={s <= rv.rating ? '#A78BFA' : 'none'} color={s <= rv.rating ? '#A78BFA' : 'rgba(108, 92, 231,0.3)'} />)}
+                        {[1, 2, 3, 4, 5].map(s => <Star key={s} size={10} fill={s <= rv.rating ? '#D2914B' : 'none'} color={s <= rv.rating ? '#D2914B' : 'rgba(139, 90, 43,0.3)'} />)}
                       </div>
                     </div>
-                    {rv.review_text && <p style={{ fontSize: '0.75rem', color: '#6E67A0', lineHeight: 1.5 }}>{rv.review_text}</p>}
+                    {rv.review_text && <p style={{ fontSize: '0.75rem', color: '#6E5A45', lineHeight: 1.5 }}>{rv.review_text}</p>}
                   </div>
                 ))}
               </div>
             )}
 
             {user && (
-              <div style={{ background: 'rgba(167, 139, 250,0.04)', border: '1px solid rgba(167, 139, 250,0.15)', borderRadius: '0.875rem', padding: '0.875rem' }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#5849C4', marginBottom: '0.625rem' }}>내 평점 남기기</p>
+              <div style={{ background: 'rgba(210, 145, 75,0.04)', border: '1px solid rgba(210, 145, 75,0.15)', borderRadius: '0.875rem', padding: '0.875rem' }}>
+                <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#6E4A1F', marginBottom: '0.625rem' }}>내 평점 남기기</p>
                 <div style={{ display: 'flex', gap: '3px', marginBottom: '0.625rem' }}>
                   {[1, 2, 3, 4, 5].map(s => (
                     <button key={s} onMouseEnter={() => setHoverRating(s)} onMouseLeave={() => setHoverRating(0)} onClick={() => setMyRating(s)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
-                      <Star size={20} fill={(hoverRating || myRating) >= s ? '#A78BFA' : 'none'} color={(hoverRating || myRating) >= s ? '#A78BFA' : 'rgba(108, 92, 231,0.3)'} />
+                      <Star size={20} fill={(hoverRating || myRating) >= s ? '#D2914B' : 'none'} color={(hoverRating || myRating) >= s ? '#D2914B' : 'rgba(139, 90, 43,0.3)'} />
                     </button>
                   ))}
-                  {myRating > 0 && <span style={{ fontSize: '0.75rem', color: '#A78BFA', fontWeight: 800, marginLeft: '6px', alignSelf: 'center' }}>{myRating}점</span>}
+                  {myRating > 0 && <span style={{ fontSize: '0.75rem', color: '#D2914B', fontWeight: 800, marginLeft: '6px', alignSelf: 'center' }}>{myRating}점</span>}
                 </div>
                 <textarea
                   value={myReviewText}
                   onChange={e => setMyReviewText(e.target.value)}
                   placeholder="리뷰를 남겨주세요 (선택)"
                   className="form-input"
-                  style={{ width: '100%', height: '4rem', resize: 'none', fontSize: '0.8125rem', color: '#241B45', marginBottom: '0.625rem', boxSizing: 'border-box' }}
+                  style={{ width: '100%', height: '4rem', resize: 'none', fontSize: '0.8125rem', color: '#2B1B0E', marginBottom: '0.625rem', boxSizing: 'border-box' }}
                 />
                 <button onClick={onSubmitReview} disabled={!myRating || isSubmittingReview}
-                  style={{ width: '100%', padding: '0.5rem', fontSize: '0.8125rem', fontWeight: 800, color: myRating ? '#fff' : '#C7C2E0', background: myRating ? 'linear-gradient(135deg,#6C5CE7,#A78BFA)' : 'rgba(108, 92, 231,0.08)', border: 'none', borderRadius: '0.625rem', cursor: myRating ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'all 0.2s' }}>
+                  style={{ width: '100%', padding: '0.5rem', fontSize: '0.8125rem', fontWeight: 800, color: myRating ? '#fff' : '#C4AD91', background: myRating ? 'linear-gradient(135deg,#8B5A2B,#D2914B)' : 'rgba(139, 90, 43,0.08)', border: 'none', borderRadius: '0.625rem', cursor: myRating ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', transition: 'all 0.2s' }}>
                   {isSubmittingReview ? <Loader2 size={13} className="animate-spin" /> : <Star size={13} />}
                   리뷰 등록
                 </button>
@@ -118,7 +118,7 @@ export default function ClubModal({
           <button
             onClick={() => onJoin(club.id)}
             className="premium-button"
-            style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: joinedClubs.has(club.id) ? 'rgba(108, 92, 231,0.08)' : undefined, boxShadow: joinedClubs.has(club.id) ? 'none' : undefined }}
+            style={{ width: '100%', padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: joinedClubs.has(club.id) ? 'rgba(139, 90, 43,0.08)' : undefined, boxShadow: joinedClubs.has(club.id) ? 'none' : undefined }}
           >
             <Users size={16} />
             <span>{joinedClubs.has(club.id) ? '모임 탈퇴하기' : '모임 참여하기'}</span>

@@ -1068,15 +1068,15 @@ function App() {
   ];
 
   return (
-    <div className="min-h-screen" style={{ color: '#241B45' }}>
-      <div className="fixed pointer-events-none -z-10" style={{ top: '10%', left: '-5%', width: '500px', height: '500px', background: 'rgba(108, 92, 231,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
-      <div className="fixed pointer-events-none -z-10" style={{ bottom: '10%', right: '-5%', width: '500px', height: '500px', background: 'rgba(167, 139, 250,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+    <div className="min-h-screen" style={{ color: '#2B1B0E' }}>
+      <div className="fixed pointer-events-none -z-10" style={{ top: '10%', left: '-5%', width: '500px', height: '500px', background: 'rgba(139, 90, 43,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
+      <div className="fixed pointer-events-none -z-10" style={{ bottom: '10%', right: '-5%', width: '500px', height: '500px', background: 'rgba(210, 145, 75,0.1)', filter: 'blur(160px)', borderRadius: '9999px' }} />
 
       <header className="app-header">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3" style={{ position: 'relative' }}>
             <span className="cute-float sparkle-deco" style={{ top: '-10px', left: '-6px', ['--tilt']: '-8deg' }}>✨</span>
-            <div className="cute-wiggle" style={{ width: '2.5rem', height: '2.5rem', background: 'linear-gradient(135deg, #6C5CE7, #A78BFA)', borderRadius: '45% 55% 60% 40% / 55% 45% 55% 45%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '3px 4px 0 rgba(108, 92, 231,0.3)', border: '2px solid rgba(255,255,255,0.5)' }}>
+            <div className="cute-wiggle" style={{ width: '2.5rem', height: '2.5rem', background: 'linear-gradient(135deg, #8B5A2B, #D2914B)', borderRadius: '45% 55% 60% 40% / 55% 45% 55% 45%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '3px 4px 0 rgba(139, 90, 43,0.3)', border: '2px solid rgba(255,255,255,0.5)' }}>
               <BookOpen size={17} color="white" />
             </div>
             <span className="font-black text-xl gradient-text">bookStory</span>
@@ -1084,18 +1084,18 @@ function App() {
 
           {user && (
             <div className="flex items-center gap-2">
-              <label title="목소리 샘플 등록" style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.12)', border: '1px solid rgba(108, 92, 231,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {voiceSampleUploading ? <Loader2 className="animate-spin" size={13} style={{ color: '#6C5CE7' }} /> : <Mic size={13} style={{ color: '#6C5CE7' }} />}
+              <label title="목소리 샘플 등록" style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.12)', border: '1px solid rgba(139, 90, 43,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {voiceSampleUploading ? <Loader2 className="animate-spin" size={13} style={{ color: '#8B5A2B' }} /> : <Mic size={13} style={{ color: '#8B5A2B' }} />}
                 <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={handleUploadVoiceSample} disabled={voiceSampleUploading} />
               </label>
               {friendRequests.length > 0 && (
                 <button
                   onClick={() => setUserLibrary({ userId: user.id, userName: user.name, showFriendRequests: true })}
                   title="친구 요청"
-                  style={{ position: 'relative', cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ position: 'relative', cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
-                  <UserPlus size={13} style={{ color: '#6C5CE7' }} />
-                  <span style={{ position: 'absolute', top: '-3px', right: '-3px', width: '14px', height: '14px', borderRadius: '9999px', background: '#A78BFA', color: 'white', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid white' }}>
+                  <UserPlus size={13} style={{ color: '#8B5A2B' }} />
+                  <span style={{ position: 'absolute', top: '-3px', right: '-3px', width: '14px', height: '14px', borderRadius: '9999px', background: '#D2914B', color: 'white', fontSize: '9px', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid white' }}>
                     {friendRequests.length}
                   </span>
                 </button>
@@ -1104,33 +1104,33 @@ function App() {
                 <button
                   onClick={() => setActiveTab('admin')}
                   title="관리자 페이지"
-                  style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: activeTab === 'admin' ? 'rgba(108, 92, 231,0.2)' : 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: activeTab === 'admin' ? 'rgba(139, 90, 43,0.2)' : 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
-                  <ShieldCheck size={13} style={{ color: '#6C5CE7' }} />
+                  <ShieldCheck size={13} style={{ color: '#8B5A2B' }} />
                 </button>
               )}
             <div
                 onClick={() => setUserLibrary({ userId: user.id, userName: user.name })}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', cursor: 'pointer', transition: 'background 0.2s' }}
+                style={{ background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)', cursor: 'pointer', transition: 'background 0.2s' }}
                 title="내 서재 보기"
               >
-                <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #6C5CE7, #A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0, overflow: 'hidden' }}>
+                <div style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'linear-gradient(135deg, #8B5A2B, #D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '11px', flexShrink: 0, overflow: 'hidden' }}>
                   {user.profile_image ? <img src={user.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user.name[0]}
                 </div>
                 <div className="sm:block hidden">
-                  <p style={{ fontSize: '9px', color: '#6C5CE7', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
+                  <p style={{ fontSize: '9px', color: '#8B5A2B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', lineHeight: 1 }}>Active Reader</p>
                   <p style={{ fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1.3, marginTop: '2px' }}>{user.name}</p>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
                 title="로그아웃"
-                style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
+                style={{ cursor: 'pointer', width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s ease' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(108, 92, 231,0.08)'; e.currentTarget.style.borderColor = 'rgba(108, 92, 231,0.18)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139, 90, 43,0.08)'; e.currentTarget.style.borderColor = 'rgba(139, 90, 43,0.18)'; }}
               >
-                <LogOut size={13} style={{ color: '#8F87B8' }} />
+                <LogOut size={13} style={{ color: '#8A7460' }} />
               </button>
             </div>
           )}
@@ -1148,14 +1148,14 @@ function App() {
               onFocus={() => setActiveTab('search')}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
               className="search-input w-full rounded-3xl font-bold outline-none"
-              style={{ padding: '1.125rem 1rem 1.125rem 3.25rem', fontSize: '1rem', color: '#241B45', border: '2px solid rgba(108, 92, 231, 0.18)' }}
+              style={{ padding: '1.125rem 1rem 1.125rem 3.25rem', fontSize: '1rem', color: '#2B1B0E', border: '2px solid rgba(139, 90, 43, 0.18)' }}
             />
-            <Search style={{ position: 'absolute', left: '1.1rem', top: '50%', transform: 'translateY(-50%)', color: '#8F87B8' }} size={20} />
+            <Search style={{ position: 'absolute', left: '1.1rem', top: '50%', transform: 'translateY(-50%)', color: '#8A7460' }} size={20} />
             <div style={{ position: 'absolute', right: '1.1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               {isSearching ? (
-                <Loader2 className="animate-spin" size={18} style={{ color: '#6C5CE7' }} />
+                <Loader2 className="animate-spin" size={18} style={{ color: '#8B5A2B' }} />
               ) : (
-                <kbd className="sm:flex hidden items-center gap-1 px-2 py-1 rounded-md" style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 700, background: 'rgba(108, 92, 231,0.07)', border: '1px solid rgba(108, 92, 231,0.15)' }}>↵ Enter</kbd>
+                <kbd className="sm:flex hidden items-center gap-1 px-2 py-1 rounded-md" style={{ fontSize: '10px', color: '#8A7460', fontWeight: 700, background: 'rgba(139, 90, 43,0.07)', border: '1px solid rgba(139, 90, 43,0.15)' }}>↵ Enter</kbd>
               )}
             </div>
           </div>
@@ -1173,16 +1173,16 @@ function App() {
                 <span aria-hidden="true">{tab.emoji}</span>
                 <span>{tab.label}</span>
                 {tab.dot && (
-                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', borderRadius: '9999px', background: '#A78BFA', boxShadow: '0 0 6px rgba(167, 139, 250,0.8)' }} />
+                  <span style={{ position: 'absolute', top: '4px', right: '4px', width: '6px', height: '6px', borderRadius: '9999px', background: '#D2914B', boxShadow: '0 0 6px rgba(210, 145, 75,0.8)' }} />
                 )}
               </button>
             ))}
           </div>
 
           {activeTab === 'stack' && (
-            <div className="flex p-1 rounded-xl" style={{ background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)' }}>
-              <button onClick={() => setViewMode('tower')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'tower' ? 'white' : 'transparent', color: viewMode === 'tower' ? '#241B45' : '#8F87B8', boxShadow: viewMode === 'tower' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>쌓아보기</button>
-              <button onClick={() => setViewMode('list')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'list' ? 'white' : 'transparent', color: viewMode === 'list' ? '#241B45' : '#8F87B8', boxShadow: viewMode === 'list' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>리스트</button>
+            <div className="flex p-1 rounded-xl" style={{ background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)' }}>
+              <button onClick={() => setViewMode('tower')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'tower' ? 'white' : 'transparent', color: viewMode === 'tower' ? '#2B1B0E' : '#8A7460', boxShadow: viewMode === 'tower' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>쌓아보기</button>
+              <button onClick={() => setViewMode('list')} className="rounded-lg font-black transition-all" style={{ padding: '0.4rem 1rem', fontSize: '0.75rem', background: viewMode === 'list' ? 'white' : 'transparent', color: viewMode === 'list' ? '#2B1B0E' : '#8A7460', boxShadow: viewMode === 'list' ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' }}>리스트</button>
             </div>
           )}
         </div>
@@ -1284,7 +1284,7 @@ function App() {
             initial={{ opacity: 0, y: 24, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'rgba(36, 27, 69,0.92)', backdropFilter: 'blur(16px)', border: '1px solid rgba(108, 92, 231,0.3)', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 700, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}
+            style={{ position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: 'rgba(43, 27, 14,0.92)', backdropFilter: 'blur(16px)', border: '1px solid rgba(139, 90, 43,0.3)', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: 700, boxShadow: '0 8px 32px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}
           >
             {toast.message}
           </motion.div>

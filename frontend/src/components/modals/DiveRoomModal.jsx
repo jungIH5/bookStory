@@ -28,14 +28,14 @@ function computeAutoCloseRemaining(room) {
 }
 
 const PHASE_MAP = {
-  waiting:    { label: '대기 중',   color: '#8F87B8', bg: 'rgba(143, 135, 184,0.08)', border: 'rgba(143, 135, 184,0.2)' },
-  reading:    { label: '독서 중',   color: '#A78BFA', bg: 'rgba(167, 139, 250,0.1)',   border: 'rgba(167, 139, 250,0.3)' },
+  waiting:    { label: '대기 중',   color: '#8A7460', bg: 'rgba(138, 116, 96,0.08)', border: 'rgba(138, 116, 96,0.2)' },
+  reading:    { label: '독서 중',   color: '#D2914B', bg: 'rgba(210, 145, 75,0.1)',   border: 'rgba(210, 145, 75,0.3)' },
   discussion: { label: '토론 중',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.25)' },
-  overtime:   { label: '시간 종료', color: '#C7C2E0', bg: 'rgba(199, 194, 224,0.08)', border: 'rgba(199, 194, 224,0.2)' },
+  overtime:   { label: '시간 종료', color: '#C4AD91', bg: 'rgba(196, 173, 145,0.08)', border: 'rgba(196, 173, 145,0.2)' },
 };
 
 const PHASE_TOAST = {
-  reading:    { text: '📖 독서 시간이 시작되었습니다!', color: '#A78BFA' },
+  reading:    { text: '📖 독서 시간이 시작되었습니다!', color: '#D2914B' },
   discussion: { text: '💬 토론 시간이 시작되었습니다!', color: '#22c55e' },
 };
 
@@ -426,7 +426,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     });
     await fetchRoom();
     onLeave?.();
-    setToast({ text: '모임에서 나갔어요.', color: '#8F87B8' });
+    setToast({ text: '모임에서 나갔어요.', color: '#8A7460' });
   };
 
   const handleToggleMyStatus = async () => {
@@ -568,8 +568,8 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     : computedPhase === 'overtime' ? '토론 종료 (채팅 유지)'
     : '토론 채팅';
 
-  const chatBg = chatLocked ? 'rgba(110, 103, 160,0.04)' : 'rgba(108, 92, 231,0.02)';
-  const chatBorder = chatLocked ? 'rgba(108, 92, 231,0.08)' : 'rgba(108, 92, 231,0.12)';
+  const chatBg = chatLocked ? 'rgba(110, 103, 160,0.04)' : 'rgba(139, 90, 43,0.02)';
+  const chatBorder = chatLocked ? 'rgba(139, 90, 43,0.08)' : 'rgba(139, 90, 43,0.12)';
 
   // ── 토스트 (공통) ──────────────────────────────────────────
   const ToastEl = toast && (
@@ -581,7 +581,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
         exit={{ opacity: 0, y: 8 }}
         style={{
           position: 'fixed', bottom: '5.5rem', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 2000, background: '#FDFCFF', border: `1px solid ${toast.color}40`,
+          zIndex: 2000, background: '#FBF6EC', border: `1px solid ${toast.color}40`,
           borderRadius: '9999px', padding: '0.5rem 1.25rem',
           boxShadow: `0 4px 20px rgba(0,0,0,0.12), 0 0 0 3px ${toast.color}18`,
           fontSize: '13px', fontWeight: 800, color: toast.color,
@@ -603,7 +603,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           animate={{ opacity: 1, scale: 1, y: 0 }}
           style={{
             position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 1000,
-            background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)',
+            background: '#FBF6EC', border: '1px solid rgba(139, 90, 43,0.2)',
             borderRadius: '9999px', boxShadow: '0 4px 24px rgba(0,0,0,0.14)',
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             padding: '0.5rem 0.875rem 0.5rem 0.625rem',
@@ -612,7 +612,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           onClick={() => setMinimized(false)}
         >
           {/* 방 이미지 미니 */}
-          <div style={{ width: '28px', height: '28px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '28px', height: '28px', borderRadius: '6px', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {displayImage
               ? <img src={displayImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : <span style={{ color: 'white', fontWeight: 900, fontSize: '12px' }}>{(room.host_name || '?')[0]}</span>}
@@ -624,15 +624,15 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           </span>
 
           {/* 방 제목 */}
-          <span style={{ fontSize: '13px', fontWeight: 800, color: '#241B45', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#2B1B0E', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {room.title}
           </span>
 
           {/* 남은 시간 */}
           {remainingLabel && (
             <>
-              <span style={{ width: '1px', height: '14px', background: 'rgba(108, 92, 231,0.2)', flexShrink: 0 }} />
-              <span style={{ fontSize: '12px', fontWeight: 700, color: showReadingWarning ? '#ef4444' : '#6C5CE7', whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-block', minWidth: '52px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ width: '1px', height: '14px', background: 'rgba(139, 90, 43,0.2)', flexShrink: 0 }} />
+              <span style={{ fontSize: '12px', fontWeight: 700, color: showReadingWarning ? '#ef4444' : '#8B5A2B', whiteSpace: 'nowrap', flexShrink: 0, display: 'inline-block', minWidth: '52px', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
                 {remainingLabel}
               </span>
             </>
@@ -641,7 +641,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           {/* 열기 버튼 */}
           <button
             onClick={e => { e.stopPropagation(); setMinimized(false); }}
-            style={{ width: '24px', height: '24px', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6C5CE7', flexShrink: 0, marginLeft: '0.125rem' }}
+            style={{ width: '24px', height: '24px', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8B5A2B', flexShrink: 0, marginLeft: '0.125rem' }}
           >
             <Maximize2 size={12} />
           </button>
@@ -665,25 +665,25 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             style={{ width: Math.min(modalW, 520), maxWidth: '95vw', maxHeight: '85vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
           >
             {/* 헤더 */}
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', flexShrink: 0 }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
-                    <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: '#241B45' }}>{room.title}</h2>
+                    <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: '#2B1B0E' }}>{room.title}</h2>
                     <span style={{
                       fontSize: '9px', fontWeight: 900,
-                      color: room.book_title ? '#6C5CE7' : '#16a34a',
-                      background: room.book_title ? 'rgba(108, 92, 231,0.1)' : 'rgba(34,197,94,0.1)',
-                      border: `1px solid ${room.book_title ? 'rgba(108, 92, 231,0.25)' : 'rgba(34,197,94,0.25)'}`,
+                      color: room.book_title ? '#8B5A2B' : '#16a34a',
+                      background: room.book_title ? 'rgba(139, 90, 43,0.1)' : 'rgba(34,197,94,0.1)',
+                      border: `1px solid ${room.book_title ? 'rgba(139, 90, 43,0.25)' : 'rgba(34,197,94,0.25)'}`,
                       padding: '2px 8px', borderRadius: '9999px',
                     }}>
                       {room.book_title ? '📌 지정도서' : '📖 자유도서'}
                     </span>
                   </div>
-                  {room.book_title && <p style={{ fontSize: '12px', color: '#6C5CE7', fontWeight: 700 }}>📚 {room.book_title}</p>}
-                  <p style={{ fontSize: '11px', color: '#8F87B8', fontWeight: 700, marginTop: '0.2rem' }}>방장: {room.host_name}</p>
+                  {room.book_title && <p style={{ fontSize: '12px', color: '#8B5A2B', fontWeight: 700 }}>📚 {room.book_title}</p>}
+                  <p style={{ fontSize: '11px', color: '#8A7460', fontWeight: 700, marginTop: '0.2rem' }}>방장: {room.host_name}</p>
                 </div>
-                <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8F87B8', flexShrink: 0 }}>
+                <button onClick={onClose} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A7460', flexShrink: 0 }}>
                   <X size={14} />
                 </button>
               </div>
@@ -702,7 +702,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                     warn: joinCutoffPassed,
                   }] : []),
                 ].map((item, i) => (
-                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: item.warn ? '#dc2626' : '#8F87B8', background: item.warn ? 'rgba(239,68,68,0.06)' : 'rgba(108, 92, 231,0.04)', border: `1px solid ${item.warn ? 'rgba(239,68,68,0.25)' : 'rgba(108, 92, 231,0.1)'}`, padding: '3px 8px', borderRadius: '9999px' }}>
+                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: item.warn ? '#dc2626' : '#8A7460', background: item.warn ? 'rgba(239,68,68,0.06)' : 'rgba(139, 90, 43,0.04)', border: `1px solid ${item.warn ? 'rgba(239,68,68,0.25)' : 'rgba(139, 90, 43,0.1)'}`, padding: '3px 8px', borderRadius: '9999px' }}>
                     {item.icon}{item.label}
                   </span>
                 ))}
@@ -710,36 +710,36 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
               {/* 공지 */}
               {room.notice && (
-                <div style={{ marginBottom: '1rem', padding: '0.625rem 0.875rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.2)', borderRadius: '0.75rem' }}>
-                  <p style={{ fontSize: '0.8125rem', color: '#6E67A0', lineHeight: 1.6 }}>📌 {room.notice}</p>
+                <div style={{ marginBottom: '1rem', padding: '0.625rem 0.875rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.2)', borderRadius: '0.75rem' }}>
+                  <p style={{ fontSize: '0.8125rem', color: '#6E5A45', lineHeight: 1.6 }}>📌 {room.notice}</p>
                 </div>
               )}
 
               {/* 참여인원 */}
-              <p style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
                 참가자 ({room.participants?.length || 0}명)
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '1.25rem' }}>
                 {(room.participants?.length || 0) === 0
-                  ? <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
+                  ? <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
                   : room.participants.map(p => {
                     const bookTitle = p.book_title || room.book_title;
                     const bookImage = p.book_image || room.book_image;
-                    const statusInfo = p.status === 'paused' ? { label: '일시정지', color: '#8F87B8' } : p.status === 'ended' ? { label: '종료', color: '#C7C2E0' } : { label: '독서 중', color: '#22c55e' };
+                    const statusInfo = p.status === 'paused' ? { label: '일시정지', color: '#8A7460' } : p.status === 'ended' ? { label: '종료', color: '#C4AD91' } : { label: '독서 중', color: '#22c55e' };
                     return (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: 'rgba(108, 92, 231,0.05)', border: '1px solid rgba(108, 92, 231,0.1)', borderRadius: '0.625rem' }}>
-                        <div style={{ width: '18px', height: '25px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E9E5F7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {bookImage ? <img src={bookImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BookOpen size={9} style={{ color: '#C7C2E0' }} />}
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: 'rgba(139, 90, 43,0.05)', border: '1px solid rgba(139, 90, 43,0.1)', borderRadius: '0.625rem' }}>
+                        <div style={{ width: '18px', height: '25px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E8DCC5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {bookImage ? <img src={bookImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BookOpen size={9} style={{ color: '#C4AD91' }} />}
                         </div>
-                        <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                        <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
                           {p.profile_image ? <img src={p.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || '?')[0]}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3A3070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#4A2F17', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                             {room.host_id === p.user_id && <span style={{ fontSize: '10px' }}>👑</span>}
                           </div>
-                          {bookTitle && <div style={{ fontSize: '9px', color: '#8F87B8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bookTitle}</div>}
+                          {bookTitle && <div style={{ fontSize: '9px', color: '#8A7460', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bookTitle}</div>}
                         </div>
                         <span style={{ fontSize: '9px', fontWeight: 800, color: statusInfo.color, flexShrink: 0 }}>{statusInfo.label}</span>
                       </div>
@@ -751,9 +751,9 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               {user && !isFull && !joinCutoffPassed && (
                 <div>
                   {needsBookChoice && !selectedJoinBook && (
-                    <div style={{ marginBottom: '0.625rem', padding: '0.75rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.25)', borderRadius: '0.875rem' }}>
-                      <p style={{ fontSize: '11px', fontWeight: 800, color: '#6C5CE7', marginBottom: '0.25rem' }}>📚 지정된 도서가 없는 모임이에요</p>
-                      <p style={{ fontSize: '11px', fontWeight: 600, color: '#8F87B8', marginBottom: '0.5rem' }}>아래에서 읽으실 책을 검색해 선택해야 참가할 수 있어요.</p>
+                    <div style={{ marginBottom: '0.625rem', padding: '0.75rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.25)', borderRadius: '0.875rem' }}>
+                      <p style={{ fontSize: '11px', fontWeight: 800, color: '#8B5A2B', marginBottom: '0.25rem' }}>📚 지정된 도서가 없는 모임이에요</p>
+                      <p style={{ fontSize: '11px', fontWeight: 600, color: '#8A7460', marginBottom: '0.5rem' }}>아래에서 읽으실 책을 검색해 선택해야 참가할 수 있어요.</p>
                       <div style={{ display: 'flex', gap: '0.375rem' }}>
                         <input
                           value={joinBookQuery}
@@ -761,20 +761,20 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                           onKeyDown={e => e.key === 'Enter' && handleJoinBookSearch()}
                           placeholder="책 제목 검색..."
                           className="form-input"
-                          style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#241B45' }}
+                          style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#2B1B0E' }}
                         />
-                        <button onClick={handleJoinBookSearch} disabled={isSearchingJoinBook} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(108, 92, 231,0.1)', border: '1px solid rgba(108, 92, 231,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6C5CE7', flexShrink: 0 }}>
+                        <button onClick={handleJoinBookSearch} disabled={isSearchingJoinBook} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(139, 90, 43,0.1)', border: '1px solid rgba(139, 90, 43,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8B5A2B', flexShrink: 0 }}>
                           {isSearchingJoinBook ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
                         </button>
                       </div>
                       {joinBookResults.length > 0 && (
                         <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: '160px', overflowY: 'auto' }}>
                           {joinBookResults.map((b, i) => (
-                            <div key={i} onClick={() => selectJoinBook(b)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.5rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(108, 92, 231,0.1)', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                              <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E9E5F7' }}>
+                            <div key={i} onClick={() => selectJoinBook(b)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.5rem', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(139, 90, 43,0.1)', borderRadius: '0.5rem', cursor: 'pointer' }}>
+                              <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E8DCC5' }}>
                                 {b.image && <img src={b.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                               </div>
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#3A3070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(b.title || '').replace(/<\/?[^>]+>/g, '')}</span>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#4A2F17', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(b.title || '').replace(/<\/?[^>]+>/g, '')}</span>
                             </div>
                           ))}
                         </div>
@@ -782,12 +782,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                     </div>
                   )}
                   {needsBookChoice && selectedJoinBook && (
-                    <div style={{ marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.75rem' }}>
-                      <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E9E5F7' }}>
+                    <div style={{ marginBottom: '0.625rem', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '0.75rem' }}>
+                      <div style={{ width: '20px', height: '28px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E8DCC5' }}>
                         {selectedJoinBook.image && <img src={selectedJoinBook.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                       </div>
-                      <span style={{ flex: 1, fontSize: '12px', fontWeight: 700, color: '#3A3070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedJoinBook.title}</span>
-                      <button onClick={() => setSelectedJoinBook(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8F87B8' }}><X size={13} /></button>
+                      <span style={{ flex: 1, fontSize: '12px', fontWeight: 700, color: '#4A2F17', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedJoinBook.title}</span>
+                      <button onClick={() => setSelectedJoinBook(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A7460' }}><X size={13} /></button>
                     </div>
                   )}
                   <button onClick={handleJoin} disabled={isJoining || (needsBookChoice && !selectedJoinBook)} className="premium-button" style={{ width: '100%', padding: '0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: (needsBookChoice && !selectedJoinBook) ? 0.5 : 1 }}>
@@ -800,12 +800,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                 </div>
               )}
               {isFull && (
-                <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#8F87B8', textAlign: 'center', padding: '0.75rem' }}>인원이 가득 찼습니다</p>
+                <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#8A7460', textAlign: 'center', padding: '0.75rem' }}>인원이 가득 찼습니다</p>
               )}
               {!isFull && joinCutoffPassed && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', padding: '0.75rem', background: 'rgba(143, 135, 184,0.06)', border: '1px solid rgba(143, 135, 184,0.2)', borderRadius: '0.875rem' }}>
-                  <Lock size={13} style={{ color: '#8F87B8' }} />
-                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#8F87B8' }}>참가 신청이 마감됐습니다 (독서 시작 {room.late_join_cutoff_minutes}분 전 마감)</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem', padding: '0.75rem', background: 'rgba(138, 116, 96,0.06)', border: '1px solid rgba(138, 116, 96,0.2)', borderRadius: '0.875rem' }}>
+                  <Lock size={13} style={{ color: '#8A7460' }} />
+                  <p style={{ fontSize: '0.875rem', fontWeight: 800, color: '#8A7460' }}>참가 신청이 마감됐습니다 (독서 시작 {room.late_join_cutoff_minutes}분 전 마감)</p>
                 </div>
               )}
             </div>
@@ -830,23 +830,23 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             style={{ width: Math.min(modalW, 560), maxWidth: '95vw', maxHeight: '85vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
           >
             {/* 헤더 */}
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', flexShrink: 0 }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
-                    <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: '#241B45' }}>{room.title}</h2>
+                    <h2 style={{ fontWeight: 900, fontSize: '1.05rem', color: '#2B1B0E' }}>{room.title}</h2>
                     <span className="sticker-badge" style={{ fontSize: '9px', color: badge.color, background: badge.bg, border: `2px solid ${badge.border}` }}>
                       {badge.label}{remainingLabel ? ` · ${remainingLabel}` : ''}
                     </span>
                   </div>
-                  {room.book_title && <p style={{ fontSize: '12px', color: '#6C5CE7', fontWeight: 700 }}>📚 {room.book_title}</p>}
-                  <p style={{ fontSize: '11px', color: '#8F87B8', fontWeight: 700, marginTop: '0.2rem' }}>방장: {room.host_name}</p>
+                  {room.book_title && <p style={{ fontSize: '12px', color: '#8B5A2B', fontWeight: 700 }}>📚 {room.book_title}</p>}
+                  <p style={{ fontSize: '11px', color: '#8A7460', fontWeight: 700, marginTop: '0.2rem' }}>방장: {room.host_name}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                  <button onClick={() => setMinimized(true)} title="최소화" style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8F87B8' }}>
+                  <button onClick={() => setMinimized(true)} title="최소화" style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A7460' }}>
                     <Minimize2 size={13} />
                   </button>
-                  <button onClick={handleCloseOrMinimize} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8F87B8' }}>
+                  <button onClick={handleCloseOrMinimize} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A7460' }}>
                     <X size={14} />
                   </button>
                 </div>
@@ -859,7 +859,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                   { icon: <Users size={11} />, label: `${room.participant_count || 0}/${room.max_participants}명` },
                   ...(room.late_join_cutoff_minutes > 0 ? [{ icon: <Lock size={11} />, label: `${room.late_join_cutoff_minutes}분 전 마감` }] : []),
                 ].map((item, i) => (
-                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: '#8F87B8', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.1)', padding: '3px 8px', borderRadius: '9999px' }}>
+                  <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: '#8A7460', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.1)', padding: '3px 8px', borderRadius: '9999px' }}>
                     {item.icon}{item.label}
                   </span>
                 ))}
@@ -867,37 +867,37 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
               {/* 공지 */}
               {isHost ? (
-                <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.2)', borderRadius: '0.75rem' }}>
+                <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.2)', borderRadius: '0.75rem' }}>
                   {editingNotice ? (
                     <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
-                      <textarea value={noticeInput} onChange={e => setNoticeInput(e.target.value)} rows={2} style={{ flex: 1, fontSize: '0.8125rem', color: '#241B45', background: 'transparent', border: 'none', outline: 'none', resize: 'none', lineHeight: 1.6 }} autoFocus />
+                      <textarea value={noticeInput} onChange={e => setNoticeInput(e.target.value)} rows={2} style={{ flex: 1, fontSize: '0.8125rem', color: '#2B1B0E', background: 'transparent', border: 'none', outline: 'none', resize: 'none', lineHeight: 1.6 }} autoFocus />
                       <button onClick={handleSaveNotice} disabled={isSavingNotice} style={{ ...ctrlBtnStyle('#22c55e'), flexShrink: 0 }}>
                         {isSavingNotice ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
                       </button>
-                      <button onClick={() => setEditingNotice(false)} style={{ ...ctrlBtnStyle('#8F87B8'), flexShrink: 0 }}><X size={11} /></button>
+                      <button onClick={() => setEditingNotice(false)} style={{ ...ctrlBtnStyle('#8A7460'), flexShrink: 0 }}><X size={11} /></button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                      <p style={{ flex: 1, fontSize: '0.8125rem', color: '#6E67A0', lineHeight: 1.6 }}>📌 {room.notice || <span style={{ color: '#C7C2E0' }}>공지 없음</span>}</p>
-                      <button onClick={() => { setNoticeInput(room.notice || ''); setEditingNotice(true); }} style={{ ...ctrlBtnStyle('#6C5CE7'), flexShrink: 0 }}><Pencil size={11} /></button>
+                      <p style={{ flex: 1, fontSize: '0.8125rem', color: '#6E5A45', lineHeight: 1.6 }}>📌 {room.notice || <span style={{ color: '#C4AD91' }}>공지 없음</span>}</p>
+                      <button onClick={() => { setNoticeInput(room.notice || ''); setEditingNotice(true); }} style={{ ...ctrlBtnStyle('#8B5A2B'), flexShrink: 0 }}><Pencil size={11} /></button>
                     </div>
                   )}
                 </div>
               ) : room.notice ? (
-                <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.2)', borderRadius: '0.75rem' }}>
-                  <p style={{ fontSize: '0.8125rem', color: '#6E67A0', lineHeight: 1.6 }}>📌 {room.notice}</p>
+                <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.2)', borderRadius: '0.75rem' }}>
+                  <p style={{ fontSize: '0.8125rem', color: '#6E5A45', lineHeight: 1.6 }}>📌 {room.notice}</p>
                 </div>
               ) : null}
             </div>
 
             {/* 본문: 참가 예정 명단 */}
             <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-              <p style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
                 참가 예정 ({room.participants?.length || 0}명)
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
                 {(room.participants?.length || 0) === 0
-                  ? <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
+                  ? <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600 }}>아직 참가자가 없습니다.</p>
                   : room.participants.map(p => (
                     <ParticipantRow
                       key={p.id} p={p} room={room} currentUserId={user?.id} isHost={isHost}
@@ -913,13 +913,13 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             </div>
 
             {/* 하단 */}
-            <div style={{ padding: '0.875rem 1.5rem', borderTop: '1px solid rgba(108, 92, 231,0.08)', flexShrink: 0 }}>
+            <div style={{ padding: '0.875rem 1.5rem', borderTop: '1px solid rgba(139, 90, 43,0.08)', flexShrink: 0 }}>
               {isHost ? (
                 confirmDelete ? (
                   <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <p style={{ flex: 1, fontSize: '0.8125rem', fontWeight: 800, color: '#dc2626' }}>방을 삭제하시겠습니까?</p>
                     <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                      <button onClick={() => setConfirmDelete(false)} style={ctrlBtnStyle('#8F87B8')}>취소</button>
+                      <button onClick={() => setConfirmDelete(false)} style={ctrlBtnStyle('#8A7460')}>취소</button>
                       <button onClick={handleDelete} style={{ ...ctrlBtnStyle('#ef4444'), background: 'rgba(239,68,68,0.12)', fontWeight: 900 }}>삭제 확인</button>
                     </div>
                   </div>
@@ -947,12 +947,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               className="modal-content relative my-auto"
               style={{ maxWidth: '360px', padding: '1.5rem' }}
             >
-              <p style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', marginBottom: '0.5rem' }}>참가자 추방</p>
-              <p style={{ fontSize: '0.875rem', color: '#6E67A0', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              <p style={{ fontSize: '1rem', fontWeight: 900, color: '#2B1B0E', marginBottom: '0.5rem' }}>참가자 추방</p>
+              <p style={{ fontSize: '0.875rem', color: '#6E5A45', lineHeight: 1.6, marginBottom: '1.25rem' }}>
                 <strong style={{ color: '#dc2626' }}>{kickTarget.name}</strong>님을 이 모임에서 추방하시겠습니까?
               </p>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => setKickTarget(null)} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8F87B8', cursor: 'pointer' }}>취소</button>
+                <button onClick={() => setKickTarget(null)} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8A7460', cursor: 'pointer' }}>취소</button>
                 <button onClick={handleKickParticipant} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
                   {isKicking ? <Loader2 size={13} className="animate-spin" /> : '추방하기'}
                 </button>
@@ -979,18 +979,18 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           style={{ width: modalW, maxWidth: '95vw', ...(modalH != null ? { height: modalH } : {}), padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
         >
           {/* 헤더 */}
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', flexShrink: 0 }}>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
 
               {/* 방 이미지 */}
               <div style={{ position: 'relative', flexShrink: 0 }}>
                 <div
                   onClick={isHost ? toggleImagePicker : undefined}
-                  style={{ width: '48px', minWidth: '48px', height: '68px', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', background: 'rgba(108, 92, 231,0.08)', cursor: isHost ? 'pointer' : 'default', position: 'relative' }}
+                  style={{ width: '48px', minWidth: '48px', height: '68px', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', background: 'rgba(139, 90, 43,0.08)', cursor: isHost ? 'pointer' : 'default', position: 'relative' }}
                 >
                   {displayImage
                     ? <img src={displayImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', color: 'white', fontSize: '20px', fontWeight: 900 }}>
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', color: 'white', fontSize: '20px', fontWeight: 900 }}>
                         {(room.host_name || '?')[0]}
                       </div>}
                   {isHost && (
@@ -1004,19 +1004,19 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                 {showImagePicker && (
                   <div
                     onClick={e => e.stopPropagation()}
-                    style={{ position: 'absolute', top: '100%', left: 0, zIndex: 300, marginTop: '0.375rem', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.875rem', padding: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', width: '220px' }}
+                    style={{ position: 'absolute', top: '100%', left: 0, zIndex: 300, marginTop: '0.375rem', background: '#FBF6EC', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '0.875rem', padding: '0.875rem', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', width: '220px' }}
                   >
-                    <div style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 900, color: '#8B5A2B', marginBottom: '0.5rem' }}>
                       앨범 ({albumImages.length}/{ALBUM_LIMIT})
                     </div>
                     {isLoadingAlbum
-                      ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#6C5CE7' }} /></div>
+                      ? <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem' }}><Loader2 size={16} className="animate-spin" style={{ color: '#8B5A2B' }} /></div>
                       : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.375rem', marginBottom: '0.5rem' }}>
                           <div
                             onClick={() => handlePickImage(null)}
                             title="기본 (아바타)"
-                            style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: !room.room_image ? '2px solid #6C5CE7' : '2px solid transparent' }}
+                            style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: !room.room_image ? '2px solid #8B5A2B' : '2px solid transparent' }}
                           >
                             <span style={{ color: 'white', fontWeight: 900, fontSize: '14px' }}>{(room.host_name || '?')[0]}</span>
                           </div>
@@ -1024,13 +1024,13 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                             <div
                               onClick={() => handlePickImage(room.book_image)}
                               title="책 표지"
-                              style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: room.room_image === room.book_image ? '2px solid #6C5CE7' : '2px solid transparent' }}
+                              style={{ aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: room.room_image === room.book_image ? '2px solid #8B5A2B' : '2px solid transparent' }}
                             >
                               <img src={room.book_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </div>
                           )}
                           {albumImages.map(img => (
-                            <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: room.room_image === img.image_data ? '2px solid #6C5CE7' : '2px solid transparent' }}
+                            <div key={img.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', border: room.room_image === img.image_data ? '2px solid #8B5A2B' : '2px solid transparent' }}
                               onClick={() => handlePickImage(img.image_data)}
                             >
                               <img src={img.image_data} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1045,13 +1045,13 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                         </div>
                       )}
                     {albumImages.length < ALBUM_LIMIT ? (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer', padding: '0.375rem 0.625rem', background: 'rgba(108, 92, 231,0.06)', border: '1px dashed rgba(108, 92, 231,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#6C5CE7' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer', padding: '0.375rem 0.625rem', background: 'rgba(139, 90, 43,0.06)', border: '1px dashed rgba(139, 90, 43,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#8B5A2B' }}>
                         {isUploadingImage ? <Loader2 size={11} className="animate-spin" /> : <Camera size={11} />}
                         새 이미지 추가
                         <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={isUploadingImage} />
                       </label>
                     ) : (
-                      <p style={{ fontSize: '10px', color: '#C7C2E0', fontWeight: 600, lineHeight: 1.5 }}>
+                      <p style={{ fontSize: '10px', color: '#C4AD91', fontWeight: 600, lineHeight: 1.5 }}>
                         앨범이 가득 찼습니다 (최대 {ALBUM_LIMIT}장)<br />이후 확장 가능 예정
                       </p>
                     )}
@@ -1061,29 +1061,29 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                  <h2 style={{ fontWeight: 900, fontSize: '1rem', color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{room.title}</h2>
+                  <h2 style={{ fontWeight: 900, fontSize: '1rem', color: '#2B1B0E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{room.title}</h2>
                   {/* 페이즈 배지 + 남은 시간 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
                     <span className="sticker-badge" style={{ fontSize: '9px', color: badge.color, background: badge.bg, border: `2px solid ${badge.border}` }}>
                       {badge.label}
                     </span>
                     {remainingLabel && (
-                      <span style={{ fontSize: '9px', fontWeight: 800, color: showReadingWarning ? '#ef4444' : '#8F87B8', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
+                      <span style={{ fontSize: '9px', fontWeight: 800, color: showReadingWarning ? '#ef4444' : '#8A7460', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
                         · <span style={{ display: 'inline-block', minWidth: '42px', textAlign: 'left', fontVariantNumeric: 'tabular-nums' }}>{remainingLabel}</span>
                       </span>
                     )}
                   </div>
                 </div>
-                {room.book_title && <p style={{ fontSize: '11px', color: '#6C5CE7', fontWeight: 700, marginBottom: '0.2rem' }}>📚 {room.book_title}</p>}
-                <p style={{ fontSize: '11px', color: '#8F87B8', fontWeight: 700 }}>방장: {room.host_name}</p>
+                {room.book_title && <p style={{ fontSize: '11px', color: '#8B5A2B', fontWeight: 700, marginBottom: '0.2rem' }}>📚 {room.book_title}</p>}
+                <p style={{ fontSize: '11px', color: '#8A7460', fontWeight: 700 }}>방장: {room.host_name}</p>
               </div>
 
               {/* 최소화 + 닫기 버튼 */}
               <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                <button onClick={() => setMinimized(true)} title="최소화" style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8F87B8' }}>
+                <button onClick={() => setMinimized(true)} title="최소화" style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A7460' }}>
                   <Minimize2 size={13} />
                 </button>
-                <button onClick={handleCloseOrMinimize} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8F87B8' }}>
+                <button onClick={handleCloseOrMinimize} style={{ width: '2rem', height: '2rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8A7460' }}>
                   <X size={14} />
                 </button>
               </div>
@@ -1096,7 +1096,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                 { icon: <Users size={11} />, label: `${room.participant_count || 0}/${room.max_participants}명` },
                 ...(room.late_join_cutoff_minutes > 0 ? [{ icon: <Lock size={11} />, label: `${room.late_join_cutoff_minutes}분 전 마감` }] : []),
               ].map((item, i) => (
-                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: '#8F87B8', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.1)', padding: '3px 8px', borderRadius: '9999px' }}>
+                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '10px', fontWeight: 700, color: '#8A7460', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.1)', padding: '3px 8px', borderRadius: '9999px' }}>
                   {item.icon}{item.label}
                 </span>
               ))}
@@ -1126,40 +1126,40 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
             {/* 공지 */}
             {isHost ? (
-              <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.2)', borderRadius: '0.75rem' }}>
+              <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.2)', borderRadius: '0.75rem' }}>
                 {editingNotice ? (
                   <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
-                    <textarea value={noticeInput} onChange={e => setNoticeInput(e.target.value)} rows={2} style={{ flex: 1, fontSize: '0.8125rem', color: '#241B45', background: 'transparent', border: 'none', outline: 'none', resize: 'none', lineHeight: 1.6 }} autoFocus />
+                    <textarea value={noticeInput} onChange={e => setNoticeInput(e.target.value)} rows={2} style={{ flex: 1, fontSize: '0.8125rem', color: '#2B1B0E', background: 'transparent', border: 'none', outline: 'none', resize: 'none', lineHeight: 1.6 }} autoFocus />
                     <button onClick={handleSaveNotice} disabled={isSavingNotice} style={{ ...ctrlBtnStyle('#22c55e'), flexShrink: 0 }}>
                       {isSavingNotice ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
                     </button>
-                    <button onClick={() => setEditingNotice(false)} style={{ ...ctrlBtnStyle('#8F87B8'), flexShrink: 0 }}><X size={11} /></button>
+                    <button onClick={() => setEditingNotice(false)} style={{ ...ctrlBtnStyle('#8A7460'), flexShrink: 0 }}><X size={11} /></button>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                    <p style={{ flex: 1, fontSize: '0.8125rem', color: '#6E67A0', lineHeight: 1.6 }}>📌 {room.notice || <span style={{ color: '#C7C2E0' }}>공지 없음</span>}</p>
-                    <button onClick={() => { setNoticeInput(room.notice || ''); setEditingNotice(true); }} style={{ ...ctrlBtnStyle('#6C5CE7'), flexShrink: 0 }}><Pencil size={11} /></button>
+                    <p style={{ flex: 1, fontSize: '0.8125rem', color: '#6E5A45', lineHeight: 1.6 }}>📌 {room.notice || <span style={{ color: '#C4AD91' }}>공지 없음</span>}</p>
+                    <button onClick={() => { setNoticeInput(room.notice || ''); setEditingNotice(true); }} style={{ ...ctrlBtnStyle('#8B5A2B'), flexShrink: 0 }}><Pencil size={11} /></button>
                   </div>
                 )}
               </div>
             ) : room.notice ? (
-              <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(167, 139, 250,0.06)', border: '1px solid rgba(167, 139, 250,0.2)', borderRadius: '0.75rem' }}>
-                <p style={{ fontSize: '0.8125rem', color: '#6E67A0', lineHeight: 1.6 }}>📌 {room.notice}</p>
+              <div style={{ marginTop: '0.625rem', padding: '0.5rem 0.875rem', background: 'rgba(210, 145, 75,0.06)', border: '1px solid rgba(210, 145, 75,0.2)', borderRadius: '0.75rem' }}>
+                <p style={{ fontSize: '0.8125rem', color: '#6E5A45', lineHeight: 1.6 }}>📌 {room.notice}</p>
               </div>
             ) : null}
           </div>
 
           {/* 본문 — 좌: 채팅 / 우: 참가자 (대기 단계는 별도 화면으로 분리됨) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', borderBottom: '1px solid rgba(108, 92, 231,0.08)', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', borderBottom: '1px solid rgba(139, 90, 43,0.08)', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
             {/* 좌: 채팅 */}
-            <div ref={chatColRef} style={{ padding: '1rem 1rem 1rem 1.5rem', borderRight: '1px solid rgba(108, 92, 231,0.08)', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflow: 'hidden' }}>
+            <div ref={chatColRef} style={{ padding: '1rem 1rem 1rem 1.5rem', borderRight: '1px solid rgba(139, 90, 43,0.08)', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                  {chatLocked && <Lock size={11} style={{ color: '#C7C2E0' }} />}
-                  <p style={{ fontSize: '11px', fontWeight: 900, color: chatLocked ? '#C7C2E0' : '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{chatLabel}</p>
+                  {chatLocked && <Lock size={11} style={{ color: '#C4AD91' }} />}
+                  <p style={{ fontSize: '11px', fontWeight: 900, color: chatLocked ? '#C4AD91' : '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{chatLabel}</p>
                 </div>
-                <button onClick={fetchMessages} style={{ display: 'flex', alignItems: 'center', color: '#C7C2E0', background: 'none', border: 'none', cursor: 'pointer' }}>
+                <button onClick={fetchMessages} style={{ display: 'flex', alignItems: 'center', color: '#C4AD91', background: 'none', border: 'none', cursor: 'pointer' }}>
                   <RefreshCw size={10} />
                 </button>
               </div>
@@ -1167,31 +1167,31 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               <div style={{ height: chatHeight, overflowY: 'auto', border: `1px solid ${chatBorder}`, borderRadius: '0.875rem', padding: '0.75rem', background: chatBg, display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: chatLocked ? 0.65 : 1, transition: 'opacity 0.2s' }}>
                 {!isParticipant
                   ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.375rem' }}>
-                      <Lock size={16} style={{ color: '#C7C2E0' }} />
-                      <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600 }}>참가 후 채팅을 볼 수 있어요</p>
+                      <Lock size={16} style={{ color: '#C4AD91' }} />
+                      <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600 }}>참가 후 채팅을 볼 수 있어요</p>
                     </div>
                   : isLoadingMsgs
-                  ? <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Loader2 className="animate-spin" size={18} style={{ color: '#6C5CE7' }} /></div>
+                  ? <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><Loader2 className="animate-spin" size={18} style={{ color: '#8B5A2B' }} /></div>
                   : messages.length === 0
                     ? <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.375rem' }}>
-                        {chatLocked && <Lock size={16} style={{ color: '#C7C2E0' }} />}
-                        <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600 }}>
+                        {chatLocked && <Lock size={16} style={{ color: '#C4AD91' }} />}
+                        <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600 }}>
                           {chatDisabled ? '채팅이 비허용 상태입니다' : chatLocked ? '채팅이 잠겨있습니다' : '메시지가 없습니다'}
                         </p>
                       </div>
                     : messages.map(m => (
                       <div key={m.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', opacity: m.to_user_id ? 0.85 : 1 }}>
-                        <div style={{ width: '20px', height: '20px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#A78BFA,#F59E0B)' : 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+                        <div style={{ width: '20px', height: '20px', borderRadius: '9999px', background: m.is_ai ? 'linear-gradient(135deg,#D2914B,#F59E0B)' : 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '8px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
                           {m.is_ai ? 'AI' : m.user_image ? <img src={m.user_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (m.user_name || '?')[0]}
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#A78BFA' : '#6C5CE7', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>
+                          <span style={{ fontSize: '10px', fontWeight: 800, color: m.is_ai ? '#D2914B' : '#8B5A2B', marginRight: '0.25rem' }}>{m.is_ai ? 'AI' : m.user_name}</span>
                           {m.to_user_id && (
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#A78BFA', marginRight: '0.25rem' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#D2914B', marginRight: '0.25rem' }}>
                               → {m.to_user_id === parseInt(user?.id) ? '나' : (m.to_user_name || '?')} 귓속말
                             </span>
                           )}
-                          <p style={{ fontSize: '0.8125rem', color: m.to_user_id ? '#6C5CE7' : '#3A3070', lineHeight: 1.5, wordBreak: 'break-word', fontStyle: m.to_user_id ? 'italic' : 'normal' }}>{m.content}</p>
+                          <p style={{ fontSize: '0.8125rem', color: m.to_user_id ? '#8B5A2B' : '#4A2F17', lineHeight: 1.5, wordBreak: 'break-word', fontStyle: m.to_user_id ? 'italic' : 'normal' }}>{m.content}</p>
                         </div>
                       </div>
                     ))}
@@ -1203,13 +1203,13 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                 onMouseDown={handleResizeDrag}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '12px', cursor: 'ns-resize', flexShrink: 0, userSelect: 'none' }}
               >
-                <div style={{ width: '36px', height: '3px', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.18)' }} />
+                <div style={{ width: '36px', height: '3px', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.18)' }} />
               </div>
 
               {whisperTarget && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', background: 'rgba(167, 139, 250,0.12)', border: '1px solid rgba(167, 139, 250,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#6C5CE7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.25rem 0.625rem', background: 'rgba(210, 145, 75,0.12)', border: '1px solid rgba(210, 145, 75,0.3)', borderRadius: '0.625rem', fontSize: '11px', fontWeight: 700, color: '#8B5A2B' }}>
                   <span style={{ flex: 1 }}>{whisperTarget.name}님에게 귓속말 중</span>
-                  <button onClick={() => setWhisperTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C5CE7', display: 'flex' }}>
+                  <button onClick={() => setWhisperTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B5A2B', display: 'flex' }}>
                     <X size={12} />
                   </button>
                 </div>
@@ -1225,12 +1225,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSendMsg()}
                   placeholder={chatLocked ? '🔒 토론 시작 후 채팅 가능' : whisperTarget ? `${whisperTarget.name}님에게 귓속말...` : '메시지를 입력하세요...'}
                   disabled={!canSendMsg}
-                  style={{ flex: 1, color: '#241B45', opacity: canSendMsg ? 1 : 0.5, cursor: canSendMsg ? 'text' : 'not-allowed' }}
+                  style={{ flex: 1, color: '#2B1B0E', opacity: canSendMsg ? 1 : 0.5, cursor: canSendMsg ? 'text' : 'not-allowed' }}
                 />
                 <button
                   onClick={handleSendMsg}
                   disabled={!canSendMsg || !msgInput.trim() || isSending}
-                  style={{ padding: '0 0.875rem', background: 'rgba(108, 92, 231,0.1)', border: '1px solid rgba(108, 92, 231,0.25)', borderRadius: '0.875rem', cursor: canSendMsg ? 'pointer' : 'not-allowed', color: '#6C5CE7', display: 'flex', alignItems: 'center', opacity: (!canSendMsg || !msgInput.trim() || isSending) ? 0.4 : 1 }}
+                  style={{ padding: '0 0.875rem', background: 'rgba(139, 90, 43,0.1)', border: '1px solid rgba(139, 90, 43,0.25)', borderRadius: '0.875rem', cursor: canSendMsg ? 'pointer' : 'not-allowed', color: '#8B5A2B', display: 'flex', alignItems: 'center', opacity: (!canSendMsg || !msgInput.trim() || isSending) ? 0.4 : 1 }}
                 >
                   {isSending ? <Loader2 size={14} className="animate-spin" /> : chatLocked ? <Lock size={14} /> : <Send size={14} />}
                 </button>
@@ -1239,12 +1239,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
             {/* 우: 참가자 */}
             <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflow: 'hidden' }}>
-              <p style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
+              <p style={{ fontSize: '11px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
                 참가자 ({room.participants?.length || 0}명)
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', overflowY: 'auto', flex: 1, minHeight: '160px' }}>
                 {(room.participants?.length || 0) === 0
-                  ? <p style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600 }}>없음</p>
+                  ? <p style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600 }}>없음</p>
                   : room.participants.map(p => (
                     <ParticipantRow
                       key={p.id} p={p} room={room} currentUserId={user?.id} isHost={isHost}
@@ -1264,11 +1264,11 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           <div style={{ padding: '0.875rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.625rem', flexShrink: 0 }}>
             {isHost && !isEnded && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.875rem' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', whiteSpace: 'nowrap' }}>방장 제어</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '0.875rem' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 900, color: '#8B5A2B', whiteSpace: 'nowrap' }}>방장 제어</p>
                   <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
-                    <button onClick={handleEndSession} style={ctrlBtnStyle('#8F87B8')}>세션 종료</button>
-                    <button onClick={handleToggleChat} style={ctrlBtnStyle(chatDisabled ? '#8F87B8' : '#6C5CE7')} title={chatDisabled ? '채팅 켜기' : '채팅 끄기'}>
+                    <button onClick={handleEndSession} style={ctrlBtnStyle('#8A7460')}>세션 종료</button>
+                    <button onClick={handleToggleChat} style={ctrlBtnStyle(chatDisabled ? '#8A7460' : '#8B5A2B')} title={chatDisabled ? '채팅 켜기' : '채팅 끄기'}>
                       {chatDisabled ? <MessageSquareDashed size={11} /> : <MessageSquare size={11} />}
                       {chatDisabled ? 'OFF' : 'ON'}
                     </button>
@@ -1289,7 +1289,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
-                        <button onClick={() => setConfirmDelete(false)} style={ctrlBtnStyle('#8F87B8')}>취소</button>
+                        <button onClick={() => setConfirmDelete(false)} style={ctrlBtnStyle('#8A7460')}>취소</button>
                         <button onClick={handleDelete} style={{ ...ctrlBtnStyle('#ef4444'), background: 'rgba(239,68,68,0.12)', fontWeight: 900 }}>삭제 확인</button>
                       </div>
                     </div>
@@ -1300,7 +1300,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
 
             {user && !isEnded && isParticipant && myParticipant?.status !== 'ended' && (
               <button onClick={handleToggleMyStatus} disabled={isTogglingStatus}
-                style={{ width: '100%', padding: '0.625rem', background: myParticipant?.status === 'paused' ? 'rgba(34,197,94,0.08)' : 'rgba(143, 135, 184,0.08)', border: `1px solid ${myParticipant?.status === 'paused' ? 'rgba(34,197,94,0.25)' : 'rgba(143, 135, 184,0.2)'}`, borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: myParticipant?.status === 'paused' ? '#16a34a' : '#6E67A0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                style={{ width: '100%', padding: '0.625rem', background: myParticipant?.status === 'paused' ? 'rgba(34,197,94,0.08)' : 'rgba(138, 116, 96,0.08)', border: `1px solid ${myParticipant?.status === 'paused' ? 'rgba(34,197,94,0.25)' : 'rgba(138, 116, 96,0.2)'}`, borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: myParticipant?.status === 'paused' ? '#16a34a' : '#6E5A45', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                 {isTogglingStatus ? <Loader2 size={14} className="animate-spin" /> : myParticipant?.status === 'paused' ? <Play size={14} /> : <Pause size={14} />}
                 {myParticipant?.status === 'paused' ? '독서 다시 시작하기' : '일시정지 (자리 비움)'}
               </button>
@@ -1322,7 +1322,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             {[3, 2, 1].map(n => (
               <div key={n} style={{ display: 'flex', gap: '2px' }}>
                 {Array.from({ length: n }).map((_, i) => (
-                  <div key={i} style={{ width: '3px', height: '3px', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.28)' }} />
+                  <div key={i} style={{ width: '3px', height: '3px', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.28)' }} />
                 ))}
               </div>
             ))}
@@ -1340,12 +1340,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             className="modal-content relative my-auto"
             style={{ maxWidth: '360px', padding: '1.5rem' }}
           >
-            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', marginBottom: '0.5rem' }}>참가자 추방</p>
-            <p style={{ fontSize: '0.875rem', color: '#6E67A0', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#2B1B0E', marginBottom: '0.5rem' }}>참가자 추방</p>
+            <p style={{ fontSize: '0.875rem', color: '#6E5A45', lineHeight: 1.6, marginBottom: '1.25rem' }}>
               <strong style={{ color: '#dc2626' }}>{kickTarget.name}</strong>님을 이 모임에서 추방하시겠습니까?
             </p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setKickTarget(null)} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8F87B8', cursor: 'pointer' }}>취소</button>
+              <button onClick={() => setKickTarget(null)} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8A7460', cursor: 'pointer' }}>취소</button>
               <button onClick={handleKickParticipant} disabled={isKicking} style={{ flex: 1, padding: '0.625rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
                 {isKicking ? <Loader2 size={13} className="animate-spin" /> : '추방하기'}
               </button>
@@ -1364,14 +1364,14 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             className="modal-content relative my-auto"
             style={{ maxWidth: '380px', padding: '1.5rem' }}
           >
-            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', marginBottom: '0.5rem' }}>⏰ 예정된 시간이 종료되었습니다</p>
-            <p style={{ fontSize: '0.875rem', color: '#6E67A0', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#2B1B0E', marginBottom: '0.5rem' }}>⏰ 예정된 시간이 종료되었습니다</p>
+            <p style={{ fontSize: '0.875rem', color: '#6E5A45', lineHeight: 1.6, marginBottom: '1.25rem' }}>
               독서·토론 시간이 모두 끝났어요. 바로 닫히진 않으니 조금 더 읽거나 이야기를 나누셔도 되고(1시간 후 자동 종료, 필요하면 연장 가능), 준비가 되면 방장이 바로 종료해도 됩니다.
             </p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setShowOvertimeNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8F87B8', cursor: 'pointer' }}>확인</button>
+              <button onClick={() => setShowOvertimeNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8A7460', cursor: 'pointer' }}>확인</button>
               {isHost && (
-                <button onClick={async () => { setShowOvertimeNotice(false); await handleEndSession(); }} style={{ flex: 1, padding: '0.625rem', background: 'rgba(167, 139, 250,0.12)', border: '1px solid rgba(167, 139, 250,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#6C5CE7', cursor: 'pointer' }}>지금 종료하기</button>
+                <button onClick={async () => { setShowOvertimeNotice(false); await handleEndSession(); }} style={{ flex: 1, padding: '0.625rem', background: 'rgba(210, 145, 75,0.12)', border: '1px solid rgba(210, 145, 75,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8B5A2B', cursor: 'pointer' }}>지금 종료하기</button>
               )}
             </div>
           </motion.div>
@@ -1388,13 +1388,13 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             className="modal-content relative my-auto"
             style={{ maxWidth: '380px', padding: '1.5rem' }}
           >
-            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', marginBottom: '0.5rem' }}>⏳ 곧 방이 자동으로 종료됩니다</p>
-            <p style={{ fontSize: '0.875rem', color: '#6E67A0', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#2B1B0E', marginBottom: '0.5rem' }}>⏳ 곧 방이 자동으로 종료됩니다</p>
+            <p style={{ fontSize: '0.875rem', color: '#6E5A45', lineHeight: 1.6, marginBottom: '1.25rem' }}>
               10분 후 방이 자동으로 종료돼요. 아직 대화 중이시라면 1시간 더 연장할 수 있습니다.
             </p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setShowExtendNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8F87B8', cursor: 'pointer' }}>괜찮아요</button>
-              <button onClick={handleExtendRoom} disabled={isExtending} style={{ flex: 1, padding: '0.625rem', background: 'rgba(167, 139, 250,0.12)', border: '1px solid rgba(167, 139, 250,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#6C5CE7', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+              <button onClick={() => setShowExtendNotice(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8A7460', cursor: 'pointer' }}>괜찮아요</button>
+              <button onClick={handleExtendRoom} disabled={isExtending} style={{ flex: 1, padding: '0.625rem', background: 'rgba(210, 145, 75,0.12)', border: '1px solid rgba(210, 145, 75,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8B5A2B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
                 {isExtending ? <Loader2 size={13} className="animate-spin" /> : '1시간 연장하기'}
               </button>
             </div>
@@ -1412,13 +1412,13 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             className="modal-content relative my-auto"
             style={{ maxWidth: '380px', padding: '1.5rem' }}
           >
-            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', marginBottom: '0.5rem' }}>📖 아직 아무도 참가하지 않았어요</p>
-            <p style={{ fontSize: '0.875rem', color: '#6E67A0', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '1rem', fontWeight: 900, color: '#2B1B0E', marginBottom: '0.5rem' }}>📖 아직 아무도 참가하지 않았어요</p>
+            <p style={{ fontSize: '0.875rem', color: '#6E5A45', lineHeight: 1.6, marginBottom: '1.25rem' }}>
               혼자서만 독서 시간이 시작됐어요. 이 방은 정리하고 개인 독서 타이머로 넘어가서 이어가시겠어요? 지금까지의 방 설정은 사라지지만, 독서 시간은 그대로 개인 기록으로 이어집니다.
             </p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => setShowSoloPrompt(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8F87B8', cursor: 'pointer' }}>그냥 방 유지할게요</button>
-              <button onClick={handleSwitchToPersonal} disabled={isSwitchingToPersonal} style={{ flex: 1, padding: '0.625rem', background: 'rgba(167, 139, 250,0.12)', border: '1px solid rgba(167, 139, 250,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#6C5CE7', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
+              <button onClick={() => setShowSoloPrompt(false)} style={{ flex: 1, padding: '0.625rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 800, color: '#8A7460', cursor: 'pointer' }}>그냥 방 유지할게요</button>
+              <button onClick={handleSwitchToPersonal} disabled={isSwitchingToPersonal} style={{ flex: 1, padding: '0.625rem', background: 'rgba(210, 145, 75,0.12)', border: '1px solid rgba(210, 145, 75,0.3)', borderRadius: '0.875rem', fontSize: '0.8125rem', fontWeight: 900, color: '#8B5A2B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}>
                 {isSwitchingToPersonal ? <Loader2 size={13} className="animate-spin" /> : '개인 독서로 전환'}
               </button>
             </div>
@@ -1427,28 +1427,28 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
       )}
 
       {aiChatOpen ? (
-          <div style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, width: '340px', maxWidth: '90vw', height: '480px', maxHeight: '70vh', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '9999px', overflow: 'hidden', background: '#E9E5F7', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {myPersona.image ? <img src={myPersona.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} /> : <Sparkles size={14} style={{ color: '#C7C2E0' }} />}
+          <div style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, width: '340px', maxWidth: '90vw', height: '480px', maxHeight: '70vh', background: '#FBF6EC', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid rgba(139, 90, 43,0.1)', display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '9999px', overflow: 'hidden', background: '#E8DCC5', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {myPersona.image ? <img src={myPersona.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} /> : <Sparkles size={14} style={{ color: '#C4AD91' }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '12px', fontWeight: 900, color: '#241B45' }}>{myPersona.name}</p>
-                <p style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 600 }}>토론 준비 도우미 · 나에게만 보여요</p>
+                <p style={{ fontSize: '12px', fontWeight: 900, color: '#2B1B0E' }}>{myPersona.name}</p>
+                <p style={{ fontSize: '10px', color: '#8A7460', fontWeight: 600 }}>토론 준비 도우미 · 나에게만 보여요</p>
               </div>
-              <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8F87B8' }}><X size={15} /></button>
+              <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A7460' }}><X size={15} /></button>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.875rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
               {aiChatMessages.map((m, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ maxWidth: '85%', padding: '0.5rem 0.75rem', borderRadius: '0.875rem', fontSize: '0.8125rem', lineHeight: 1.55, background: m.role === 'user' ? 'linear-gradient(135deg,#6C5CE7,#A78BFA)' : 'rgba(108, 92, 231,0.06)', color: m.role === 'user' ? 'white' : '#3A3070', border: m.role === 'user' ? 'none' : '1px solid rgba(108, 92, 231,0.12)' }}>
+                  <div style={{ maxWidth: '85%', padding: '0.5rem 0.75rem', borderRadius: '0.875rem', fontSize: '0.8125rem', lineHeight: 1.55, background: m.role === 'user' ? 'linear-gradient(135deg,#8B5A2B,#D2914B)' : 'rgba(139, 90, 43,0.06)', color: m.role === 'user' ? 'white' : '#4A2F17', border: m.role === 'user' ? 'none' : '1px solid rgba(139, 90, 43,0.12)' }}>
                     {m.content}
                   </div>
                 </div>
               ))}
               {isAiChatSending && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', borderRadius: '0.875rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.12)', overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem', borderRadius: '0.875rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.12)', overflow: 'hidden' }}>
                     <span style={{ fontSize: '16px' }}>🤔</span>
                     <motion.span
                       style={{ fontSize: '16px', display: 'inline-block' }}
@@ -1462,16 +1462,16 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
               )}
               <div ref={aiChatEndRef} />
             </div>
-            <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(108, 92, 231,0.1)', display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+            <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(139, 90, 43,0.1)', display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
               <input
                 value={aiChatInput}
                 onChange={e => setAiChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendAiChat()}
                 placeholder="메시지를 입력하세요..."
                 className="form-input"
-                style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#241B45' }}
+                style={{ flex: 1, height: '2.25rem', fontSize: '0.8125rem', color: '#2B1B0E' }}
               />
-              <button onClick={handleSendAiChat} disabled={!aiChatInput.trim() || isAiChatSending} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(108, 92, 231,0.1)', border: '1px solid rgba(108, 92, 231,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6C5CE7', flexShrink: 0 }}>
+              <button onClick={handleSendAiChat} disabled={!aiChatInput.trim() || isAiChatSending} style={{ width: '2.25rem', height: '2.25rem', borderRadius: '0.625rem', background: 'rgba(139, 90, 43,0.1)', border: '1px solid rgba(139, 90, 43,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8B5A2B', flexShrink: 0 }}>
                 <Send size={13} />
               </button>
             </div>
@@ -1482,7 +1482,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
             animate={{ opacity: 1, y: 0 }}
             onClick={() => { setAiChatOpen(true); if (aiChatMessages.length === 0) setAiChatMessages([{ role: 'assistant', content: AI_CHAT_OPENING_LINE }]); }}
             title="AI와 토론 준비 대화하기"
-            style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.125rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', border: 'none', boxShadow: '0 4px 16px rgba(108, 92, 231,0.35)', cursor: 'pointer', color: 'white' }}
+            style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.125rem', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', border: 'none', boxShadow: '0 4px 16px rgba(139, 90, 43,0.35)', cursor: 'pointer', color: 'white' }}
           >
             <Sparkles size={18} />
             <span style={{ fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap' }}>AI와 토론 준비 대화하기</span>
@@ -1500,7 +1500,7 @@ const ctrlBtnStyle = (color) => ({
 
 const menuBtnStyle = {
   width: '100%', textAlign: 'left', padding: '0.5rem 0.625rem', background: 'none', border: 'none',
-  cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#3A3070', borderRadius: '0.5rem',
+  cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: '#4A2F17', borderRadius: '0.5rem',
   display: 'flex', alignItems: 'center', gap: '0.375rem',
 };
 
@@ -1513,8 +1513,8 @@ function ParticipantRow({ p, room, currentUserId, isHost, whisperTarget, menuOpe
   // 토론 구간만 "토론 중"으로 표시한다 — 토론이 끝난 뒤(overtime) 계속 읽는 시간은 독서시간으로 집계되므로 "독서 중"으로 유지.
   const isDiscussing = roomPhase === 'discussion';
   const statusInfo =
-    p.status === 'paused' ? { label: '일시정지', color: '#8F87B8', icon: <Pause size={9} /> }
-    : p.status === 'ended' ? { label: '종료', color: '#C7C2E0', icon: null }
+    p.status === 'paused' ? { label: '일시정지', color: '#8A7460', icon: <Pause size={9} /> }
+    : p.status === 'ended' ? { label: '종료', color: '#C4AD91', icon: null }
     : isDiscussing ? { label: '토론 중', color: '#22c55e', icon: <MessageSquare size={9} /> }
     : { label: '독서 중', color: '#22c55e', icon: <BookOpen size={9} /> };
 
@@ -1522,20 +1522,20 @@ function ParticipantRow({ p, room, currentUserId, isHost, whisperTarget, menuOpe
     <div style={{ position: 'relative' }}>
       <div
         onClick={() => onToggleMenu(p.user_id)}
-        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: isWhisperTarget ? 'rgba(167, 139, 250,0.18)' : '#FDFCFF', border: `2px solid ${isWhisperTarget ? 'rgba(167, 139, 250,0.45)' : 'rgba(108, 92, 231,0.14)'}`, borderRadius: '1.25rem', cursor: 'pointer', boxShadow: '2px 2px 0 rgba(108, 92, 231,0.1)' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.625rem', background: isWhisperTarget ? 'rgba(210, 145, 75,0.18)' : '#FBF6EC', border: `2px solid ${isWhisperTarget ? 'rgba(210, 145, 75,0.45)' : 'rgba(139, 90, 43,0.14)'}`, borderRadius: '1.25rem', cursor: 'pointer', boxShadow: '2px 2px 0 rgba(139, 90, 43,0.1)' }}
       >
-        <div style={{ width: '18px', height: '25px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E9E5F7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {bookImage ? <img src={bookImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BookOpen size={9} style={{ color: '#C7C2E0' }} />}
+        <div style={{ width: '18px', height: '25px', borderRadius: '3px', overflow: 'hidden', flexShrink: 0, background: '#E8DCC5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {bookImage ? <img src={bookImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BookOpen size={9} style={{ color: '#C4AD91' }} />}
         </div>
-        <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#6C5CE7,#A78BFA)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
+        <div style={{ width: '22px', height: '22px', borderRadius: '9999px', background: 'linear-gradient(135deg,#8B5A2B,#D2914B)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '9px', fontWeight: 900, flexShrink: 0, overflow: 'hidden' }}>
           {p.profile_image ? <img src={p.profile_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (p.name || '?')[0]}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#3A3070', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#4A2F17', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
             {room.host_id === p.user_id && <span style={{ fontSize: '10px' }}>👑</span>}
           </div>
-          {bookTitle && <div style={{ fontSize: '9px', color: '#8F87B8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bookTitle}</div>}
+          {bookTitle && <div style={{ fontSize: '9px', color: '#8A7460', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bookTitle}</div>}
         </div>
         <span style={{ fontSize: '9px', fontWeight: 800, color: statusInfo.color, display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
           {statusInfo.icon}{statusInfo.label}
@@ -1545,7 +1545,7 @@ function ParticipantRow({ p, room, currentUserId, isHost, whisperTarget, menuOpe
       {menuOpen && (
         <div
           onClick={e => e.stopPropagation()}
-          style={{ position: 'absolute', top: '100%', right: 0, zIndex: 50, marginTop: '0.25rem', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '0.75rem', padding: '0.25rem', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '150px' }}
+          style={{ position: 'absolute', top: '100%', right: 0, zIndex: 50, marginTop: '0.25rem', background: '#FBF6EC', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '0.75rem', padding: '0.25rem', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '150px' }}
         >
           <button onClick={() => onOpenProfile(p.user_id, p.name)} style={menuBtnStyle}>프로필 보기</button>
           {!isSelf && (

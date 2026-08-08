@@ -113,23 +113,23 @@ export default function AdminTab({ user }) {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ width: '100%', marginTop: '0.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <ShieldCheck size={18} style={{ color: '#6C5CE7' }} />
-          <h3 style={{ fontSize: '1.0625rem', fontWeight: 900, color: '#241B45' }}>가입 유저 목록</h3>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#8F87B8' }}>{users.length}명</span>
+          <ShieldCheck size={18} style={{ color: '#8B5A2B' }} />
+          <h3 style={{ fontSize: '1.0625rem', fontWeight: 900, color: '#2B1B0E' }}>가입 유저 목록</h3>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#8A7460' }}>{users.length}명</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{ position: 'relative' }}>
-            <Search size={13} style={{ position: 'absolute', left: '0.625rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} />
+            <Search size={13} style={{ position: 'absolute', left: '0.625rem', top: '50%', transform: 'translateY(-50%)', color: '#C4AD91' }} />
             <input
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
               placeholder="이름 검색..."
               className="form-input"
-              style={{ paddingLeft: '2rem', height: '2.25rem', fontSize: '0.8125rem', color: '#241B45', width: '160px' }}
+              style={{ paddingLeft: '2rem', height: '2.25rem', fontSize: '0.8125rem', color: '#2B1B0E', width: '160px' }}
             />
           </div>
           <button onClick={fetchUsers} disabled={isLoading}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '11px', fontWeight: 800, color: '#6C5CE7', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '9999px', padding: '0.4rem 0.875rem', cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '11px', fontWeight: 800, color: '#8B5A2B', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '9999px', padding: '0.4rem 0.875rem', cursor: 'pointer' }}>
             {isLoading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
             새로고침
           </button>
@@ -153,34 +153,34 @@ export default function AdminTab({ user }) {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
             <thead>
-              <tr style={{ background: 'rgba(108, 92, 231,0.06)', borderBottom: '1px solid rgba(108, 92, 231,0.12)' }}>
+              <tr style={{ background: 'rgba(139, 90, 43,0.06)', borderBottom: '1px solid rgba(139, 90, 43,0.12)' }}>
                 {SORTABLE.map(col => (
                   <th key={col.key} onClick={() => handleSort(col.key)}
-                    style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '10px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}>
+                    style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '10px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>{col.label}{sortIcon(col.key)}</span>
                   </th>
                 ))}
                 {['나이', '지역', '이메일', '가입경로', '통계공개', '귓속말', '관리자', '가입일', ''].map(h => (
-                  <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '10px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '10px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={12} style={{ padding: '2.5rem', textAlign: 'center' }}><Loader2 size={20} className="animate-spin" style={{ color: '#6C5CE7' }} /></td></tr>
+                <tr><td colSpan={12} style={{ padding: '2.5rem', textAlign: 'center' }}><Loader2 size={20} className="animate-spin" style={{ color: '#8B5A2B' }} /></td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={12} style={{ padding: '2.5rem', textAlign: 'center', color: '#C7C2E0', fontWeight: 600 }}>해당하는 유저가 없습니다.</td></tr>
+                <tr><td colSpan={12} style={{ padding: '2.5rem', textAlign: 'center', color: '#C4AD91', fontWeight: 600 }}>해당하는 유저가 없습니다.</td></tr>
               ) : users.map(u => {
                 const isSelf = u.id === parseInt(user?.id);
                 return (
-                <tr key={u.id} style={{ borderBottom: '1px solid rgba(108, 92, 231,0.08)', background: u.is_admin ? 'rgba(167, 139, 250,0.06)' : 'transparent' }}>
-                  <td style={{ padding: '0.625rem 1rem', color: '#8F87B8' }}>{u.id}</td>
-                  <td style={{ padding: '0.625rem 1rem', fontWeight: 800, color: '#241B45' }}>{u.name}{isSelf && <span style={{ marginLeft: '0.375rem', fontSize: '9px', color: '#A78BFA', fontWeight: 900 }}>(나)</span>}</td>
-                  <td style={{ padding: '0.625rem 1rem', color: '#6E67A0' }}>{u.gender || '-'}</td>
-                  <td style={{ padding: '0.625rem 1rem', color: '#6E67A0' }}>{u.age ?? '-'}</td>
-                  <td style={{ padding: '0.625rem 1rem', color: '#6E67A0' }}>{u.location || '-'}</td>
-                  <td style={{ padding: '0.625rem 1rem', color: '#6E67A0' }}>{u.email || '-'}</td>
-                  <td style={{ padding: '0.625rem 1rem', color: '#6E67A0' }}>{u.oauth_provider || '일반'}</td>
+                <tr key={u.id} style={{ borderBottom: '1px solid rgba(139, 90, 43,0.08)', background: u.is_admin ? 'rgba(210, 145, 75,0.06)' : 'transparent' }}>
+                  <td style={{ padding: '0.625rem 1rem', color: '#8A7460' }}>{u.id}</td>
+                  <td style={{ padding: '0.625rem 1rem', fontWeight: 800, color: '#2B1B0E' }}>{u.name}{isSelf && <span style={{ marginLeft: '0.375rem', fontSize: '9px', color: '#D2914B', fontWeight: 900 }}>(나)</span>}</td>
+                  <td style={{ padding: '0.625rem 1rem', color: '#6E5A45' }}>{u.gender || '-'}</td>
+                  <td style={{ padding: '0.625rem 1rem', color: '#6E5A45' }}>{u.age ?? '-'}</td>
+                  <td style={{ padding: '0.625rem 1rem', color: '#6E5A45' }}>{u.location || '-'}</td>
+                  <td style={{ padding: '0.625rem 1rem', color: '#6E5A45' }}>{u.email || '-'}</td>
+                  <td style={{ padding: '0.625rem 1rem', color: '#6E5A45' }}>{u.oauth_provider || '일반'}</td>
                   <td style={{ padding: '0.625rem 1rem' }}>{u.stats_public ? '공개' : '비공개'}</td>
                   <td style={{ padding: '0.625rem 1rem' }}>{u.allow_whisper === false ? '거부' : '허용'}</td>
                   <td style={{ padding: '0.625rem 1rem' }}>
@@ -190,16 +190,16 @@ export default function AdminTab({ user }) {
                       title={isSelf ? '본인 권한은 여기서 변경할 수 없습니다' : (u.is_admin ? '관리자 해제' : '관리자로 지정')}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 9px', borderRadius: '9999px',
-                        background: u.is_admin ? 'rgba(108, 92, 231,0.12)' : 'rgba(143, 135, 184,0.08)',
-                        border: `1px solid ${u.is_admin ? 'rgba(108, 92, 231,0.3)' : 'rgba(143, 135, 184,0.2)'}`,
-                        fontSize: '10px', fontWeight: 800, color: u.is_admin ? '#6C5CE7' : '#8F87B8',
+                        background: u.is_admin ? 'rgba(139, 90, 43,0.12)' : 'rgba(138, 116, 96,0.08)',
+                        border: `1px solid ${u.is_admin ? 'rgba(139, 90, 43,0.3)' : 'rgba(138, 116, 96,0.2)'}`,
+                        fontSize: '10px', fontWeight: 800, color: u.is_admin ? '#8B5A2B' : '#8A7460',
                         cursor: isSelf ? 'default' : 'pointer', opacity: isSelf ? 0.6 : 1,
                       }}>
                       {updatingPermissionFor === u.id ? <Loader2 size={10} className="animate-spin" /> : u.is_admin ? <ShieldCheck size={10} /> : <ShieldOff size={10} />}
                       {u.is_admin ? '관리자' : '일반'}
                     </button>
                   </td>
-                  <td style={{ padding: '0.625rem 1rem', color: '#8F87B8', whiteSpace: 'nowrap' }}>{new Date(u.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td style={{ padding: '0.625rem 1rem', color: '#8A7460', whiteSpace: 'nowrap' }}>{new Date(u.created_at).toLocaleDateString('ko-KR')}</td>
                   <td style={{ padding: '0.625rem 1rem', position: 'relative' }}>
                     <button
                       onClick={() => setDeleteTarget(deleteTarget?.id === u.id ? null : { id: u.id, name: u.name })}
@@ -211,13 +211,13 @@ export default function AdminTab({ user }) {
                     {deleteTarget?.id === u.id && (
                       <div
                         onClick={e => e.stopPropagation()}
-                        style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: '0.25rem', background: '#FDFCFF', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.75rem', padding: '0.625rem', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', width: '180px', whiteSpace: 'normal' }}
+                        style={{ position: 'absolute', top: '100%', right: 0, zIndex: 100, marginTop: '0.25rem', background: '#FBF6EC', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '0.75rem', padding: '0.625rem', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', width: '180px', whiteSpace: 'normal' }}
                       >
                         <p style={{ fontSize: '11px', fontWeight: 800, color: '#dc2626', marginBottom: '0.5rem', lineHeight: 1.4 }}>
                           "{deleteTarget.name}"님을 탈퇴시킬까요?
                         </p>
                         <div style={{ display: 'flex', gap: '0.375rem' }}>
-                          <button onClick={() => setDeleteTarget(null)} style={{ flex: 1, padding: '4px 0', background: 'rgba(143, 135, 184,0.15)', border: '1px solid rgba(143, 135, 184,0.4)', borderRadius: '9999px', fontSize: '10px', fontWeight: 800, color: '#8F87B8', cursor: 'pointer' }}>취소</button>
+                          <button onClick={() => setDeleteTarget(null)} style={{ flex: 1, padding: '4px 0', background: 'rgba(138, 116, 96,0.15)', border: '1px solid rgba(138, 116, 96,0.4)', borderRadius: '9999px', fontSize: '10px', fontWeight: 800, color: '#8A7460', cursor: 'pointer' }}>취소</button>
                           <button onClick={() => handleDelete()} disabled={isDeleting} style={{ flex: 1, padding: '4px 0', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '9999px', fontSize: '10px', fontWeight: 900, color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
                             {isDeleting ? <Loader2 size={10} className="animate-spin" /> : '확인'}
                           </button>

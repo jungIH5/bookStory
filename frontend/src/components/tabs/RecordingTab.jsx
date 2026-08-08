@@ -97,40 +97,40 @@ export default function RecordingTab({ user }) {
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.625rem', letterSpacing: '-0.03em' }}>
-          <Mic style={{ color: '#6C5CE7' }} size={28} />
+          <Mic style={{ color: '#8B5A2B' }} size={28} />
           녹음 분석
         </h2>
-        <p style={{ color: '#8F87B8', fontWeight: 700, fontSize: '0.875rem' }}>독서모임 대화를 직접 녹음하거나 파일을 업로드해 AI가 토론 내용을 분석합니다.</p>
+        <p style={{ color: '#8A7460', fontWeight: 700, fontSize: '0.875rem' }}>독서모임 대화를 직접 녹음하거나 파일을 업로드해 AI가 토론 내용을 분석합니다.</p>
       </div>
 
-      <div style={{ border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '1.25rem', padding: '2rem', textAlign: 'center', background: isRecording ? 'rgba(220,74,60,0.03)' : 'rgba(108, 92, 231,0.03)', marginBottom: '1rem', transition: 'background 0.3s' }}>
+      <div style={{ border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '1.25rem', padding: '2rem', textAlign: 'center', background: isRecording ? 'rgba(220,74,60,0.03)' : 'rgba(139, 90, 43,0.03)', marginBottom: '1rem', transition: 'background 0.3s' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
           <motion.button
             onClick={isRecording ? stopRecording : startRecording}
             animate={isRecording ? { scale: [1, 1.07, 1], boxShadow: ['0 0 0 0 rgba(220,74,60,0.4)', '0 0 0 14px rgba(220,74,60,0)', '0 0 0 0 rgba(220,74,60,0)'] } : {}}
             transition={isRecording ? { duration: 1.4, repeat: Infinity } : {}}
-            style={{ width: 72, height: 72, borderRadius: '50%', background: isRecording ? 'linear-gradient(135deg, #dc4a3c, #e06050)' : 'linear-gradient(135deg, #6C5CE7, #A78BFA)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isRecording ? '0 4px 20px rgba(220,74,60,0.35)' : '0 4px 16px rgba(108, 92, 231,0.25)', transition: 'background 0.3s, box-shadow 0.3s' }}
+            style={{ width: 72, height: 72, borderRadius: '50%', background: isRecording ? 'linear-gradient(135deg, #dc4a3c, #e06050)' : 'linear-gradient(135deg, #8B5A2B, #D2914B)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isRecording ? '0 4px 20px rgba(220,74,60,0.35)' : '0 4px 16px rgba(139, 90, 43,0.25)', transition: 'background 0.3s, box-shadow 0.3s' }}
           >
             {isRecording ? <Square size={26} color="white" fill="white" /> : <Mic size={28} color="white" />}
           </motion.button>
 
           {(isRecording || recordingDuration > 0) ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-              <span style={{ fontSize: '2rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: isRecording ? '#dc4a3c' : '#6C5CE7', letterSpacing: '0.04em' }}>
+              <span style={{ fontSize: '2rem', fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: isRecording ? '#dc4a3c' : '#8B5A2B', letterSpacing: '0.04em' }}>
                 {formatDuration(recordingDuration)}
               </span>
-              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: isRecording ? '#dc4a3c' : '#8F87B8' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: isRecording ? '#dc4a3c' : '#8A7460' }}>
                 {isRecording ? '녹음 중 — 버튼을 눌러 정지' : '녹음 완료'}
               </span>
             </div>
           ) : (
-            <p style={{ color: '#8F87B8', fontSize: '0.875rem', fontWeight: 600 }}>버튼을 눌러 녹음을 시작하세요</p>
+            <p style={{ color: '#8A7460', fontSize: '0.875rem', fontWeight: 600 }}>버튼을 눌러 녹음을 시작하세요</p>
           )}
 
           {!isRecording && recordingDuration > 0 && (
             <button
               onClick={() => { setRecordingDuration(0); setRecordingFile(null); setRecordingResult(null); }}
-              style={{ fontSize: '11px', color: '#8F87B8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ fontSize: '11px', color: '#8A7460', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
             >
               다시 녹음
             </button>
@@ -140,7 +140,7 @@ export default function RecordingTab({ user }) {
 
       <div
         onClick={() => !isRecording && document.getElementById('recording-file-input').click()}
-        style={{ border: `1.5px dashed ${recordingFile && recordingDuration === 0 ? 'rgba(108, 92, 231,0.4)' : 'rgba(108, 92, 231,0.18)'}`, borderRadius: '0.875rem', padding: '0.75rem 1.25rem', textAlign: 'center', cursor: isRecording ? 'not-allowed' : 'pointer', background: recordingFile && recordingDuration === 0 ? 'rgba(108, 92, 231,0.05)' : 'transparent', transition: 'all 0.2s ease', marginBottom: '1.25rem', opacity: isRecording ? 0.45 : 1 }}
+        style={{ border: `1.5px dashed ${recordingFile && recordingDuration === 0 ? 'rgba(139, 90, 43,0.4)' : 'rgba(139, 90, 43,0.18)'}`, borderRadius: '0.875rem', padding: '0.75rem 1.25rem', textAlign: 'center', cursor: isRecording ? 'not-allowed' : 'pointer', background: recordingFile && recordingDuration === 0 ? 'rgba(139, 90, 43,0.05)' : 'transparent', transition: 'all 0.2s ease', marginBottom: '1.25rem', opacity: isRecording ? 0.45 : 1 }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); if (!isRecording) { const f = e.dataTransfer.files[0]; if (f) { setRecordingFile(f); setRecordingDuration(0); setRecordingResult(null); } } }}
       >
@@ -153,15 +153,15 @@ export default function RecordingTab({ user }) {
         />
         {recordingFile && recordingDuration === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <FileAudio size={15} style={{ color: '#6C5CE7', flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#5849C4' }}>{recordingFile.name}</span>
-            <span style={{ fontSize: '0.75rem', color: '#8F87B8' }}>({(recordingFile.size / 1024 / 1024).toFixed(1)} MB)</span>
-            <button onClick={(e) => { e.stopPropagation(); setRecordingFile(null); setRecordingResult(null); }} style={{ fontSize: '11px', color: '#8F87B8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginLeft: '0.25rem' }}>제거</button>
+            <FileAudio size={15} style={{ color: '#8B5A2B', flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, fontSize: '0.8125rem', color: '#6E4A1F' }}>{recordingFile.name}</span>
+            <span style={{ fontSize: '0.75rem', color: '#8A7460' }}>({(recordingFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+            <button onClick={(e) => { e.stopPropagation(); setRecordingFile(null); setRecordingResult(null); }} style={{ fontSize: '11px', color: '#8A7460', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginLeft: '0.25rem' }}>제거</button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <Upload size={13} style={{ color: '#C7C2E0' }} />
-            <span style={{ fontSize: '0.8125rem', color: '#C7C2E0', fontWeight: 600 }}>파일 업로드 (MP3, WAV, OGG, WebM)</span>
+            <Upload size={13} style={{ color: '#C4AD91' }} />
+            <span style={{ fontSize: '0.8125rem', color: '#C4AD91', fontWeight: 600 }}>파일 업로드 (MP3, WAV, OGG, WebM)</span>
           </div>
         )}
       </div>
@@ -186,13 +186,13 @@ export default function RecordingTab({ user }) {
         <div style={{ marginBottom: '2rem' }}>
           <button
             onClick={() => setShowHistory(h => !h)}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.75rem 1rem', background: 'rgba(108, 92, 231,0.05)', border: '1px solid rgba(108, 92, 231,0.15)', borderRadius: '0.875rem', cursor: 'pointer', marginBottom: showHistory ? '0.75rem' : 0, transition: 'background 0.15s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', padding: '0.75rem 1rem', background: 'rgba(139, 90, 43,0.05)', border: '1px solid rgba(139, 90, 43,0.15)', borderRadius: '0.875rem', cursor: 'pointer', marginBottom: showHistory ? '0.75rem' : 0, transition: 'background 0.15s' }}
           >
-            <History size={14} style={{ color: '#6C5CE7' }} />
-            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#6C5CE7', flex: 1, textAlign: 'left' }}>
+            <History size={14} style={{ color: '#8B5A2B' }} />
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#8B5A2B', flex: 1, textAlign: 'left' }}>
               분석 이력 {historyLoading ? '' : `(녹음 ${pastRecordings.length}건 · 대화 ${pastSessions.length}건)`}
             </span>
-            {historyLoading ? <Loader2 size={14} className="animate-spin" style={{ color: '#8F87B8' }} /> : showHistory ? <ChevronUp size={14} style={{ color: '#8F87B8' }} /> : <ChevronDown size={14} style={{ color: '#8F87B8' }} />}
+            {historyLoading ? <Loader2 size={14} className="animate-spin" style={{ color: '#8A7460' }} /> : showHistory ? <ChevronUp size={14} style={{ color: '#8A7460' }} /> : <ChevronDown size={14} style={{ color: '#8A7460' }} />}
           </button>
 
           <AnimatePresence>
@@ -203,31 +203,31 @@ export default function RecordingTab({ user }) {
                   {/* 녹음 분석 이력 */}
                   {pastRecordings.length > 0 && (
                     <div>
-                      <p style={{ fontSize: '10px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <p style={{ fontSize: '10px', fontWeight: 900, color: '#8B5A2B', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                         <Mic size={10} /> 녹음 분석
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                         {pastRecordings.map(rec => (
-                          <div key={rec.id} style={{ border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                          <div key={rec.id} style={{ border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '0.75rem', overflow: 'hidden' }}>
                             <div onClick={() => setExpandedRecording(expandedRecording === rec.id ? null : rec.id)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', cursor: 'pointer', background: expandedRecording === rec.id ? 'rgba(108, 92, 231,0.06)' : 'transparent' }}>
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', cursor: 'pointer', background: expandedRecording === rec.id ? 'rgba(139, 90, 43,0.06)' : 'transparent' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#2B1B0E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {rec.filename || `녹음 #${rec.id}`}
                                 </p>
-                                <p style={{ fontSize: '10px', color: '#8F87B8', marginTop: '1px' }}>
+                                <p style={{ fontSize: '10px', color: '#8A7460', marginTop: '1px' }}>
                                   {new Date(rec.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </p>
                               </div>
-                              {expandedRecording === rec.id ? <ChevronUp size={13} style={{ color: '#8F87B8', flexShrink: 0 }} /> : <ChevronDown size={13} style={{ color: '#8F87B8', flexShrink: 0 }} />}
+                              {expandedRecording === rec.id ? <ChevronUp size={13} style={{ color: '#8A7460', flexShrink: 0 }} /> : <ChevronDown size={13} style={{ color: '#8A7460', flexShrink: 0 }} />}
                             </div>
                             {expandedRecording === rec.id && (
-                              <div style={{ borderTop: '1px solid rgba(108, 92, 231,0.08)', padding: '0.75rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                                {rec.summary && <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#6E67A0' }}>{rec.summary}</p>}
+                              <div style={{ borderTop: '1px solid rgba(139, 90, 43,0.08)', padding: '0.75rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                                {rec.summary && <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#6E5A45' }}>{rec.summary}</p>}
                                 {rec.key_topics?.length > 0 && (
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
                                     {rec.key_topics.map((t, i) => (
-                                      <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: '#6C5CE7', background: 'rgba(108, 92, 231,0.08)', border: '1px solid rgba(108, 92, 231,0.18)', padding: '2px 8px', borderRadius: '9999px' }}>{t}</span>
+                                      <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: '#8B5A2B', background: 'rgba(139, 90, 43,0.08)', border: '1px solid rgba(139, 90, 43,0.18)', padding: '2px 8px', borderRadius: '9999px' }}>{t}</span>
                                     ))}
                                   </div>
                                 )}
@@ -242,30 +242,30 @@ export default function RecordingTab({ user }) {
                   {/* AI Q&A 세션 이력 */}
                   {pastSessions.length > 0 && (
                     <div>
-                      <p style={{ fontSize: '10px', fontWeight: 900, color: '#A78BFA', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <p style={{ fontSize: '10px', fontWeight: 900, color: '#D2914B', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                         <MessageSquare size={10} /> AI 대화 이력
                       </p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                         {pastSessions.map(session => (
-                          <div key={session.id} style={{ border: '1px solid rgba(167, 139, 250,0.15)', borderRadius: '0.75rem', overflow: 'hidden' }}>
+                          <div key={session.id} style={{ border: '1px solid rgba(210, 145, 75,0.15)', borderRadius: '0.75rem', overflow: 'hidden' }}>
                             <div onClick={() => setExpandedSession(expandedSession === session.id ? null : session.id)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', cursor: 'pointer', background: expandedSession === session.id ? 'rgba(167, 139, 250,0.06)' : 'transparent' }}>
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem 0.875rem', cursor: 'pointer', background: expandedSession === session.id ? 'rgba(210, 145, 75,0.06)' : 'transparent' }}>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '1px' }}>
-                                  <BookOpen size={10} style={{ color: '#A78BFA', flexShrink: 0 }} />
-                                  <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#241B45', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <BookOpen size={10} style={{ color: '#D2914B', flexShrink: 0 }} />
+                                  <p style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#2B1B0E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {session.resolved_title || session.book_title || '제목 없음'}
                                   </p>
                                 </div>
-                                <p style={{ fontSize: '10px', color: '#8F87B8' }}>
+                                <p style={{ fontSize: '10px', color: '#8A7460' }}>
                                   {new Date(session.created_at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
                                 </p>
                               </div>
-                              {expandedSession === session.id ? <ChevronUp size={13} style={{ color: '#8F87B8', flexShrink: 0 }} /> : <ChevronDown size={13} style={{ color: '#8F87B8', flexShrink: 0 }} />}
+                              {expandedSession === session.id ? <ChevronUp size={13} style={{ color: '#8A7460', flexShrink: 0 }} /> : <ChevronDown size={13} style={{ color: '#8A7460', flexShrink: 0 }} />}
                             </div>
                             {expandedSession === session.id && session.book_analysis && (
-                              <div style={{ borderTop: '1px solid rgba(167, 139, 250,0.1)', padding: '0.75rem 0.875rem' }}>
-                                <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#6E67A0', maxHeight: '120px', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                              <div style={{ borderTop: '1px solid rgba(210, 145, 75,0.1)', padding: '0.75rem 0.875rem' }}>
+                                <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#6E5A45', maxHeight: '120px', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
                                   {session.book_analysis.slice(0, 400)}{session.book_analysis.length > 400 ? '…' : ''}
                                 </p>
                               </div>
@@ -284,68 +284,68 @@ export default function RecordingTab({ user }) {
 
       {recordingResult && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ padding: '1.25rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '1rem' }}>
+          <div style={{ padding: '1.25rem', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
-              <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6C5CE7, #A78BFA)', borderRadius: '9999px' }} />
-              <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#5849C4', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8B5A2B, #D2914B)', borderRadius: '9999px' }} />
+              <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#6E4A1F', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
                 {recordingResult.labeled_transcript ? '화자별 전사 텍스트' : '전사 텍스트'}
               </h3>
             </div>
-            <p style={{ fontSize: '0.8125rem', lineHeight: 1.75, color: '#8F87B8', maxHeight: '10rem', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+            <p style={{ fontSize: '0.8125rem', lineHeight: 1.75, color: '#8A7460', maxHeight: '10rem', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
               {recordingResult.labeled_transcript || recordingResult.transcript}
             </p>
           </div>
 
           {recordingResult.user_contributions?.length > 0 && (
-            <div style={{ padding: '1.25rem', background: 'rgba(108, 92, 231,0.06)', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '1rem' }}>
+            <div style={{ padding: '1.25rem', background: 'rgba(139, 90, 43,0.06)', border: '1px solid rgba(139, 90, 43,0.2)', borderRadius: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
-                <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #818cf8, #6C5CE7)', borderRadius: '9999px' }} />
-                <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#5849C4', textTransform: 'uppercase', letterSpacing: '0.12em' }}>내 발언</h3>
+                <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #818cf8, #8B5A2B)', borderRadius: '9999px' }} />
+                <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#6E4A1F', textTransform: 'uppercase', letterSpacing: '0.12em' }}>내 발언</h3>
               </div>
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 {recordingResult.user_contributions.map((line, i) => (
                   <li key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                    <span style={{ flexShrink: 0, width: '1.25rem', height: '1.25rem', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.15)', border: '1px solid rgba(108, 92, 231,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 900, color: '#5849C4', marginTop: '2px' }}>{i + 1}</span>
-                    <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#6C5CE7', fontWeight: 500 }}>{line}</p>
+                    <span style={{ flexShrink: 0, width: '1.25rem', height: '1.25rem', borderRadius: '9999px', background: 'rgba(139, 90, 43,0.15)', border: '1px solid rgba(139, 90, 43,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 900, color: '#6E4A1F', marginTop: '2px' }}>{i + 1}</span>
+                    <p style={{ fontSize: '0.8125rem', lineHeight: 1.65, color: '#8B5A2B', fontWeight: 500 }}>{line}</p>
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
-          <div style={{ padding: '1.25rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '1rem' }}>
+          <div style={{ padding: '1.25rem', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
-              <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6C5CE7, #A78BFA)', borderRadius: '9999px' }} />
-              <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#5849C4', textTransform: 'uppercase', letterSpacing: '0.12em' }}>토론 요약</h3>
+              <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8B5A2B, #D2914B)', borderRadius: '9999px' }} />
+              <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#6E4A1F', textTransform: 'uppercase', letterSpacing: '0.12em' }}>토론 요약</h3>
             </div>
-            <p style={{ fontSize: '0.875rem', lineHeight: 1.7, color: '#6E67A0', fontWeight: 500 }}>{recordingResult.summary}</p>
+            <p style={{ fontSize: '0.875rem', lineHeight: 1.7, color: '#6E5A45', fontWeight: 500 }}>{recordingResult.summary}</p>
           </div>
 
           {recordingResult.key_topics?.length > 0 && (
-            <div style={{ padding: '1.25rem', background: 'rgba(108, 92, 231,0.04)', border: '1px solid rgba(108, 92, 231,0.12)', borderRadius: '1rem' }}>
+            <div style={{ padding: '1.25rem', background: 'rgba(139, 90, 43,0.04)', border: '1px solid rgba(139, 90, 43,0.12)', borderRadius: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
-                <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #6C5CE7, #A78BFA)', borderRadius: '9999px' }} />
-                <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#5849C4', textTransform: 'uppercase', letterSpacing: '0.12em' }}>핵심 주제</h3>
+                <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #8B5A2B, #D2914B)', borderRadius: '9999px' }} />
+                <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#6E4A1F', textTransform: 'uppercase', letterSpacing: '0.12em' }}>핵심 주제</h3>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {recordingResult.key_topics.map((topic, i) => (
-                  <span key={i} style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#6C5CE7', background: 'rgba(108, 92, 231,0.1)', border: '1px solid rgba(108, 92, 231,0.2)', padding: '4px 12px', borderRadius: '9999px' }}>{topic}</span>
+                  <span key={i} style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#8B5A2B', background: 'rgba(139, 90, 43,0.1)', border: '1px solid rgba(139, 90, 43,0.2)', padding: '4px 12px', borderRadius: '9999px' }}>{topic}</span>
                 ))}
               </div>
             </div>
           )}
 
           {recordingResult.followup_questions?.length > 0 && (
-            <div style={{ padding: '1.25rem', background: 'rgba(167, 139, 250,0.04)', border: '1px solid rgba(167, 139, 250,0.15)', borderRadius: '1rem' }}>
+            <div style={{ padding: '1.25rem', background: 'rgba(210, 145, 75,0.04)', border: '1px solid rgba(210, 145, 75,0.15)', borderRadius: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem' }}>
-                <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #A78BFA, #f59e0b)', borderRadius: '9999px' }} />
-                <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#A78BFA', textTransform: 'uppercase', letterSpacing: '0.12em' }}>다음 모임을 위한 질문</h3>
+                <div style={{ width: '2px', height: '0.875rem', background: 'linear-gradient(to bottom, #D2914B, #f59e0b)', borderRadius: '9999px' }} />
+                <h3 style={{ fontSize: '9px', fontWeight: 900, color: '#D2914B', textTransform: 'uppercase', letterSpacing: '0.12em' }}>다음 모임을 위한 질문</h3>
               </div>
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {recordingResult.followup_questions.map((q, i) => (
                   <li key={i} style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
-                    <span style={{ flexShrink: 0, width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(167, 139, 250,0.12)', border: '1px solid rgba(167, 139, 250,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 900, color: '#A78BFA', marginTop: '2px' }}>{i + 1}</span>
-                    <p style={{ fontSize: '0.875rem', lineHeight: 1.65, color: '#3A3070', fontWeight: 500 }}>{q}</p>
+                    <span style={{ flexShrink: 0, width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(210, 145, 75,0.12)', border: '1px solid rgba(210, 145, 75,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 900, color: '#D2914B', marginTop: '2px' }}>{i + 1}</span>
+                    <p style={{ fontSize: '0.875rem', lineHeight: 1.65, color: '#4A2F17', fontWeight: 500 }}>{q}</p>
                   </li>
                 ))}
               </ul>
