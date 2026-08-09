@@ -121,43 +121,100 @@ export default function StackTab({
 function BookTree({ books, onStackBookClick }) {
   const count = books.length;
   const width = 300;
-  const perBook = 46;
-  const topPad = 64;
-  const svgH = Math.max(360, topPad + count * perBook + 90);
-  const groundY = svgH - 28;
-  const trunkTopY = Math.max(40, groundY - 90 - count * perBook);
+  const centerX = width / 2;
+
+  // 캐노피(수관)는 책이 늘수록 sqrt로 서서히 넓어진다 — 선형으로 키우면 후반부에 잎이
+  // 너무 성기게 퍼져 보인다. 트렁크도 완만하게 함께 자라 나무가 크는 느낌을 준다.
+  const canopyRx = Math.min(148, 66 + Math.sqrt(count) * 15);
+  const canopyRy = canopyRx * 0.74;
+  const trunkHeight = 100 + Math.min(150, count * 4);
+  const svgH = Math.max(360, trunkHeight + canopyRy * 2 + 60);
+  const groundY = svgH - 24;
+  const canopyBaseY = groundY - trunkHeight;
+  const canopyCenterY = canopyBaseY - canopyRy * 0.62;
+
   // 트렁크가 완전히 곧지 않고 살짝 휘어 보이도록 y에 따라 x를 사인파로 흔든다.
-  const trunkX = (y) => width / 2 + 12 * Math.sin((groundY - y) / 70);
+  const trunkX = (y) => centerX + 9 * Math.sin((groundY - y) / 55);
+  const trunkBaseW = 30;
+  const trunkTopW = 13;
+  const trunkW = (y) => {
+    const t = Math.min(1, Math.max(0, (groundY - y) / trunkHeight));
+    return trunkBaseW + (trunkTopW - trunkBaseW) * t;
+  };
 
-  const trunkPts = [];
-  for (let y = groundY; y >= trunkTopY; y -= 14) trunkPts.push(`${trunkX(y).toFixed(1)},${y.toFixed(1)}`);
-  const trunkPath = `M ${trunkPts.join(' L ')}`;
+  // 트렁크를 얇은 선이 아니라 밑동이 두툼하고 위로 갈수록 가늘어지는 채워진 도형으로 그린다
+  // (뿌리 쪽 두 지점은 폭을 더 벌려 살짝 뿌리 플레어를 준다).
+  const steps = 12;
+  const leftPts = [];
+  const rightPts = [];
+  for (let s = 0; s <= steps; s++) {
+    const y = groundY - (trunkHeight * s) / steps;
+    const cx = trunkX(y);
+    const flare = s === 0 ? 1.6 : s === 1 ? 1.2 : 1;
+    const halfW = (trunkW(y) * flare) / 2;
+    leftPts.push(`${(cx - halfW).toFixed(1)},${y.toFixed(1)}`);
+    rightPts.push(`${(cx + halfW).toFixed(1)},${y.toFixed(1)}`);
+  }
+  const trunkPath = `M ${leftPts.join(' L ')} L ${rightPts.slice().reverse().join(' L ')} Z`;
 
+  // 캐노피 안으로 뻗는 굵은 가지 몇 개(장식용 — 잎 하나하나와 매칭시키지 않는다. 실제 나무도
+  // 가지는 굵은 몇 갈래뿐이고 그 안에서 잎/열매가 무성하게 돋아난다).
+  const branchAngles = [-64, -30, 0, 30, 64];
+  const branches = branchAngles.map((deg) => {
+    const rad = (deg * Math.PI) / 180;
+    const len = canopyRx * 0.8;
+    const endX = centerX + Math.sin(rad) * len;
+    const endY = canopyBaseY - Math.cos(rad) * len * 0.7;
+    const ctrlX = centerX + Math.sin(rad) * len * 0.5;
+    const ctrlY = canopyBaseY - len * 0.42;
+    return `M ${centerX.toFixed(1)},${canopyBaseY.toFixed(1)} Q ${ctrlX.toFixed(1)},${ctrlY.toFixed(1)} ${endX.toFixed(1)},${endY.toFixed(1)}`;
+  });
+
+  // 책(잎/열매)은 특정 가지 끝이 아니라, 해바라기 씨앗 배열(황금각 스파이럴)로 캐노피
+  // 타원 안에 자연스럽게 흩뿌린다 — 사다리처럼 규칙적으로 보이지 않게 하기 위함.
+  const goldenAngle = 137.508 * (Math.PI / 180);
   const leaves = books.map((book, i) => {
-    const rankFromBase = count - 1 - i;
-    const y = Math.max(trunkTopY + 20, groundY - 46 - rankFromBase * perBook);
-    const side = rankFromBase % 2 === 0 ? 1 : -1;
+    const r = Math.sqrt((i + 0.5) / count);
+    const theta = i * goldenAngle;
+    const x = centerX + Math.cos(theta) * r * canopyRx * 0.92;
+    const y = canopyCenterY + Math.sin(theta) * r * canopyRy * 0.92;
     const jitter = prand(i + 1);
-    const branchLen = 52 + jitter * 30;
-    const bx = trunkX(y);
-    const leafX = bx + side * branchLen;
-    const leafY = y - 10 - jitter * 12;
-    const ctrlX = bx + side * branchLen * 0.55;
-    const ctrlY = y - 16;
-    return { book, i, bx, by: y, leafX, leafY, ctrlX, ctrlY, rot: side * (6 + jitter * 6) };
+    const rot = (jitter - 0.5) * 24;
+    const stemX = x + (centerX - x) * 0.22;
+    const stemY = y + (canopyCenterY - y) * 0.22;
+    return { book, i, x, y, rot, stemX, stemY };
   });
 
   return (
     <div style={{ position: 'relative', width: `${width}px`, height: `${svgH}px`, margin: '0 auto' }}>
       <svg width={width} height={svgH} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
-        <path d={trunkPath} fill="none" stroke="#3D3163" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
-        <path d={trunkPath} fill="none" stroke="rgba(167, 139, 250,0.35)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" transform="translate(-3,-1)" />
-        {leaves.map(({ i, bx, by, leafX, leafY, ctrlX, ctrlY }) => (
-          <path key={i} d={`M ${bx},${by} Q ${ctrlX},${ctrlY} ${leafX},${leafY}`} fill="none" stroke="rgba(167, 139, 250,0.5)" strokeWidth="3" strokeLinecap="round" />
+        <defs>
+          <linearGradient id="treeTrunkFill" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#2A2050" />
+            <stop offset="45%" stopColor="#3D3163" />
+            <stop offset="100%" stopColor="#4E3F82" />
+          </linearGradient>
+          <filter id="treeCanopyGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="20" />
+          </filter>
+        </defs>
+        {/* 캐노피 은은한 발광 배경 */}
+        <ellipse cx={centerX} cy={canopyCenterY} rx={canopyRx} ry={canopyRy} fill="rgba(167, 139, 250,0.22)" filter="url(#treeCanopyGlow)" />
+        <ellipse cx={centerX - canopyRx * 0.28} cy={canopyCenterY - canopyRy * 0.22} rx={canopyRx * 0.55} ry={canopyRy * 0.55} fill="rgba(216, 180, 254,0.18)" filter="url(#treeCanopyGlow)" />
+        {/* 트렁크 */}
+        <path d={trunkPath} fill="url(#treeTrunkFill)" stroke="rgba(0,0,0,0.25)" strokeWidth="1" />
+        <path d={`M ${trunkX(groundY) - trunkW(groundY) * 0.75},${groundY} L ${trunkX(canopyBaseY) - trunkW(canopyBaseY) * 0.3},${canopyBaseY}`} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" strokeLinecap="round" />
+        {/* 굵은 가지 */}
+        {branches.map((d, bi) => (
+          <path key={bi} d={d} fill="none" stroke="url(#treeTrunkFill)" strokeWidth="7" strokeLinecap="round" opacity="0.9" />
+        ))}
+        {/* 잎/열매를 캐노피 중심에 살짝 붙들어주는 짧은 잔가지 */}
+        {leaves.map(({ i, x, y, stemX, stemY }) => (
+          <path key={i} d={`M ${x.toFixed(1)},${y.toFixed(1)} L ${stemX.toFixed(1)},${stemY.toFixed(1)}`} fill="none" stroke="rgba(167, 139, 250,0.45)" strokeWidth="2.5" strokeLinecap="round" />
         ))}
       </svg>
       <AnimatePresence initial={false}>
-        {leaves.map(({ book, i, leafX, leafY, rot }) => {
+        {leaves.map(({ book, i, x, y, rot }) => {
           const bookColor = hexColors[i % 10];
           return (
             <motion.div
@@ -169,8 +226,8 @@ function BookTree({ books, onStackBookClick }) {
               onClick={() => onStackBookClick(book)}
               className="group"
               style={{
-                position: 'absolute', left: `${leafX}px`, top: `${leafY}px`,
-                width: '44px', height: '44px', zIndex: i + 1,
+                position: 'absolute', left: `${x}px`, top: `${y}px`,
+                width: '42px', height: '42px', zIndex: i + 1,
                 transform: `translate(-50%, -50%) rotate(${rot}deg)`,
                 cursor: 'pointer',
               }}
