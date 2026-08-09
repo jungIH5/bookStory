@@ -146,12 +146,19 @@ function RoomCard({ room, idx, user, onOpen }) {
   const isSoon = diffMs > 0 && diffMin < 60;
   const isOngoing = room.status === 'reading' || room.status === 'discussion';
 
+  // 방장이 방을 열지 않아 상태가 'scheduled'에 그대로 남아있어도, 예정된 독서+토론 시간이
+  // 이미 다 지났다면(자동 종료 sweep이 아직 안 돌았을 뿐) "예정"이 아니라 "시간 종료"로 보여준다.
+  const discussionEnd = scheduledAt.getTime() + ((room.reading_minutes || 0) + (room.discussion_minutes || 0)) * 60000;
+  const isTimeUp = room.status === 'scheduled' && Date.now() > discussionEnd;
+
   const statusMap = {
     scheduled: { label: '예정', color: '#8A7460', bg: 'rgba(138, 116, 96,0.08)', border: 'rgba(138, 116, 96,0.2)' },
     reading: { label: '독서 중', color: '#D2914B', bg: 'rgba(210, 145, 75,0.1)', border: 'rgba(210, 145, 75,0.3)' },
     discussion: { label: '토론 중', color: '#22c55e', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.25)' },
   };
-  const badge = statusMap[room.status] || statusMap.scheduled;
+  const badge = isTimeUp
+    ? { label: '시간 종료', color: '#C4AD91', bg: 'rgba(196, 173, 145,0.08)', border: 'rgba(196, 173, 145,0.2)' }
+    : (statusMap[room.status] || statusMap.scheduled);
 
   const fmtTime = (dt) => {
     const d = new Date(dt);
