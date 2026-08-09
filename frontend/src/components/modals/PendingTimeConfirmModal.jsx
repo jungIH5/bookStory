@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BookOpen, Clock, X } from 'lucide-react';
-import { formatReadingTime } from '../../utils';
+
+// 위쪽 "예상 시간" 표시와 아래 입력창이 항상 같은 값·같은 단위를 쓰도록,
+// 분 단위 하나만 기준으로 두 곳 모두 표시한다(formatReadingTime은 초 단위를 버림 처리해
+// 입력창의 반올림된 분 값과 표기가 어긋날 수 있어 여기서는 쓰지 않는다).
+const fmtMinutes = (totalMin) => {
+  if (totalMin < 60) return `${totalMin}분`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m > 0 ? `${h}시간 ${m}분` : `${h}시간`;
+};
 
 export default function PendingTimeConfirmModal({ item, onConfirm, onDismiss }) {
   const estimatedMinutes = Math.round((item.estimated_seconds || 0) / 60);
@@ -42,7 +51,7 @@ export default function PendingTimeConfirmModal({ item, onConfirm, onDismiss }) 
         <div style={{ padding: '1.25rem 1.75rem', background: 'rgba(108, 92, 231,0.04)', borderBottom: '1px solid rgba(108, 92, 231,0.1)', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
           <Clock size={14} style={{ color: '#6C5CE7', flexShrink: 0 }} />
           <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#6E67A0' }}>자동 계산된 예상 시간</span>
-          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', marginLeft: 'auto' }}>{formatReadingTime(item.estimated_seconds)}</span>
+          <span style={{ fontSize: '1rem', fontWeight: 900, color: '#241B45', marginLeft: 'auto' }}>{fmtMinutes(minutes)}</span>
         </div>
 
         <div style={{ padding: '1.75rem' }}>

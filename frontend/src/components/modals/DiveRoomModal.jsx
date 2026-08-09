@@ -667,7 +667,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     return (
       <>
         {ToastEl}
-        <div className="modal-backdrop overflow-y-auto" onClick={onClose}>
+        <div className="modal-backdrop overflow-y-auto" onMouseDown={handleBackdropMouseDown} onClick={makeBackdropClickHandler(onClose)}>
           <motion.div
             initial={{ opacity: 0, scale: 0.93, y: 32 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -832,7 +832,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     return (
       <>
         {ToastEl}
-        <div className="modal-backdrop overflow-y-auto" onClick={handleCloseOrMinimize}>
+        <div className="modal-backdrop overflow-y-auto" onMouseDown={handleBackdropMouseDown} onClick={makeBackdropClickHandler(handleCloseOrMinimize)}>
           <motion.div
             initial={{ opacity: 0, scale: 0.93, y: 32 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -980,7 +980,12 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   return (
     <>
       {ToastEl}
-      <div className="modal-backdrop overflow-y-auto" onClick={handleCloseOrMinimize}>
+      <div
+        className="modal-backdrop overflow-y-auto"
+        onMouseDown={handleBackdropMouseDown}
+        onClick={makeBackdropClickHandler(handleCloseOrMinimize)}
+        style={aiChatOpen ? { justifyContent: 'flex-end', paddingLeft: '424px' } : undefined}
+      >
         <motion.div
           ref={modalRef}
           initial={{ opacity: 0, scale: 0.93, y: 32 }}
@@ -988,7 +993,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           exit={{ opacity: 0, scale: 0.93, y: 32 }}
           onClick={e => e.stopPropagation()}
           className="modal-content relative my-auto"
-          style={{ width: modalW, maxWidth: '95vw', ...(modalH != null ? { height: modalH } : {}), padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          style={{ width: modalW, maxWidth: aiChatOpen ? 'calc(100vw - 448px)' : '95vw', ...(modalH != null ? { height: modalH } : {}), padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
         >
           {/* 헤더 */}
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', flexShrink: 0 }}>
@@ -1439,7 +1444,7 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
       )}
 
       {aiChatOpen ? (
-          <div style={{ position: 'fixed', bottom: '1.5rem', left: '1.5rem', zIndex: 250, width: '340px', maxWidth: '90vw', height: '480px', maxHeight: '70vh', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ position: 'fixed', top: '24px', bottom: '24px', left: '24px', zIndex: 250, width: '376px', maxWidth: 'calc(90vw - 24px)', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '9999px', overflow: 'hidden', background: '#E9E5F7', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {myPersona.image ? <img src={myPersona.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} /> : <Sparkles size={14} style={{ color: '#C7C2E0' }} />}

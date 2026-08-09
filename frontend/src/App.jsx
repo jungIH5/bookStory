@@ -536,16 +536,6 @@ function App() {
     } finally { setIsSaving(false); }
   };
 
-  const handleUpdatePages = async (bookId, pages) => {
-    if (!user?.token) return;
-    setReadBooks(prev => prev.map(b => b.id === bookId ? { ...b, pages } : b));
-    await fetch(`${API_URL}/api/books/read/${bookId}/pages`, {
-      method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pages }),
-    });
-  };
-
   const handleDeleteBook = async (bookId) => {
     if (String(bookId).startsWith('temp-')) {
       setReadBooks(prev => prev.filter(b => b.id !== bookId));
@@ -1201,7 +1191,6 @@ function App() {
               onFetchTendency={handleFetchTendency}
               onFetchRecommendations={handleFetchRecommendations}
               onDeleteBook={handleDeleteBook}
-              onUpdatePages={user ? handleUpdatePages : null}
             />
           )}
           {activeTab === 'search' && (

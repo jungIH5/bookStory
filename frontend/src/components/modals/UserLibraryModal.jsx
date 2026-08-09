@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronDown, ChevronUp, Loader2, Library, Clock, BookMarked, UserPlus, UserCheck, UserX, Waves, Users, MessageSquare, UserCog, BookOpen, Shield, ShieldOff, UserMinus, Sparkles } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Loader2, Library, Clock, BookMarked, UserPlus, UserCheck, UserX, Waves, Users, MessageSquare, UserCog, BookOpen, Shield, ShieldOff, UserMinus, Sparkles, HelpCircle } from 'lucide-react';
 import { stripHtml, formatReadingTime } from '../../utils';
 import { API_URL } from '../../api';
 import { hexColors } from '../../constants';
@@ -26,6 +26,7 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
   const [roomMessages, setRoomMessages] = useState({});
   const [loadingMsgs, setLoadingMsgs] = useState(null);
   const [activeTab, setActiveTab] = useState('books');
+  const [showPersonaHelp, setShowPersonaHelp] = useState(false);
 
   const isMe = parseInt(currentUserId) === parseInt(userId);
 
@@ -283,6 +284,19 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                 독서모임 AI 페르소나
               </p>
               <div className="custom-scroll" style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+                <button
+                  onClick={() => setShowPersonaHelp(v => !v)}
+                  title="페르소나별 설명 보기"
+                  style={{
+                    flexShrink: 0, width: '46px', height: '46px', borderRadius: '9999px', overflow: 'hidden',
+                    cursor: 'pointer', padding: 0,
+                    background: showPersonaHelp ? '#A78BFA' : 'rgba(108, 92, 231,0.1)',
+                    border: `2px solid ${showPersonaHelp ? '#A78BFA' : 'rgba(108, 92, 231,0.25)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <HelpCircle size={18} style={{ color: showPersonaHelp ? 'white' : '#6C5CE7' }} />
+                </button>
                 {PERSONAS.map(p => (
                   <button
                     key={p.id}
@@ -303,6 +317,28 @@ export default function UserLibraryModal({ userId, userName, currentUserId, toke
                   </button>
                 ))}
               </div>
+
+              {showPersonaHelp && (
+                <div style={{
+                  marginTop: '0.625rem', padding: '0.75rem 0.875rem', borderRadius: '0.625rem',
+                  background: 'rgba(108, 92, 231,0.05)', border: '1px solid rgba(108, 92, 231,0.14)',
+                  display: 'flex', flexDirection: 'column', gap: '0.55rem',
+                }}>
+                  {PERSONAS.map(p => (
+                    <div key={p.id} style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-start' }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '9999px', overflow: 'hidden', flexShrink: 0, background: '#E9E5F7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {p.image
+                          ? <img src={p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                          : <Sparkles size={10} style={{ color: '#C7C2E0' }} />}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: '10px', fontWeight: 900, color: '#6C5CE7', marginBottom: '1px' }}>{p.name}</p>
+                        <p style={{ fontSize: '10px', color: '#6E67A0', fontWeight: 600, lineHeight: 1.5 }}>{p.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

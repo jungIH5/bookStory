@@ -13,7 +13,13 @@ def kakao_doc_to_book(doc: dict) -> dict:
     isbn_parts = (doc.get("isbn") or "").split()
     # 카카오는 "isbn10 isbn13" 형태로 함께 내려주므로 13자리를 우선한다
     isbn = next((p for p in isbn_parts if len(p) == 13), (isbn_parts[-1] if isbn_parts else ""))
-    price = doc.get("sale_price") or doc.get("price") or 0
+    # 카카오는 판매가 정보가 없는 도서(EPUB 낱권, 절판본 등)에 sale_price=-1을 내려준다.
+    # -1은 파이썬 기준 truthy라서 그대로 쓰면 "-1원"이 찍히므로 양수일 때만 채택한다.
+    sale_price = doc.get("sale_price")
+    list_price = doc.get("price")
+    price = sale_price if isinstance(sale_price, (int, float)) and sale_price > 0 else (
+        list_price if isinstance(list_price, (int, float)) and list_price > 0 else 0
+    )
     return {
         "title": doc.get("title", ""),
         "author": ", ".join(doc.get("authors") or []),

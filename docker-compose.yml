@@ -10,6 +10,7 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:5001
+      - DOCKER=true
     depends_on:
       - agent
 

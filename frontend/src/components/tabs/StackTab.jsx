@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Sparkles, Loader2, ChevronRight, X } from 'lucide-react';
+import { BookOpen, Sparkles, Loader2, ChevronRight, X, Sprout } from 'lucide-react';
 import { stripHtml } from '../../utils';
 import { hexColors } from '../../constants';
+
+// idx 기반 결정적 의사난수 — 매 렌더마다 가지 길이/기울기가 바뀌지 않도록 고정된 시드로 뽑는다.
+const prand = (seed) => {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
 
 export default function StackTab({
   user, readBooks, viewMode, recommendations,
   isFetchingTendency, isFetchingRecs,
-  onBookClick, onStackBookClick, onFetchTendency, onFetchRecommendations, onDeleteBook, onUpdatePages,
+  onBookClick, onStackBookClick, onFetchTendency, onFetchRecommendations, onDeleteBook,
 }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -117,9 +123,9 @@ export default function StackTab({
                 <span style={{ fontSize: '11px', fontWeight: 900, color: '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.1em' }}>완독</span>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#C7C2E0' }}>{readBooks.filter(b => b.status !== 'reading').length}권</span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.875rem' }}>
                 {readBooks.filter(b => b.status !== 'reading').map((book, idx) => (
-                  <BookListItem key={book.id} book={book} idx={idx} onStackBookClick={onStackBookClick} onDeleteBook={onDeleteBook} onUpdatePages={onUpdatePages} />
+                  <BookCard key={book.id} book={book} idx={idx} onStackBookClick={onStackBookClick} onDeleteBook={onDeleteBook} />
                 ))}
               </div>
             </div>
@@ -179,91 +185,45 @@ export default function StackTab({
   );
 }
 
-function BookListItem({ book, idx, onStackBookClick, onDeleteBook, onUpdatePages }) {
-  const [editingPages, setEditingPages] = useState(false);
-  const [pagesInput, setPagesInput] = useState('');
-
-  const handlePagesClick = (e) => {
-    e.stopPropagation();
-    setPagesInput(String(book.pages || ''));
-    setEditingPages(true);
-  };
-
-  const handlePagesSubmit = (e) => {
-    e.stopPropagation();
-    const val = parseInt(pagesInput, 10);
-    if (val > 0 && val !== book.pages && onUpdatePages) {
-      onUpdatePages(book.id, val);
-    }
-    setEditingPages(false);
-  };
-
+function BookCard({ book, idx, onStackBookClick, onDeleteBook }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: -16 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: idx * 0.04, duration: 0.3, ease: 'easeOut' }}
-      className="book-list-item group"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: idx * 0.03, duration: 0.3, ease: 'easeOut' }}
+      className="sticker-card group"
       onClick={() => onStackBookClick(book)}
-      style={{ cursor: 'pointer' }}
+      style={{ cursor: 'pointer', padding: '0.625rem', display: 'flex', flexDirection: 'column', position: 'relative' }}
     >
-      <div style={{ width: '3rem', minWidth: '3rem', height: '4.25rem', borderRadius: '0.5rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.4)', flexShrink: 0, background: '#E9E5F7' }}>
+      {onDeleteBook && (
+        <button
+          onClick={e => { e.stopPropagation(); onDeleteBook(book.id); }}
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', zIndex: 2, width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.85)', border: '1px solid rgba(239,68,68,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}
+        >
+          <X size={10} />
+        </button>
+      )}
+      <div style={{ width: '100%', aspectRatio: '3 / 4.2', borderRadius: '0.875rem', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.35)', marginBottom: '0.625rem', background: '#E9E5F7' }}>
         {book.image ? (
           <img src={book.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
         ) : (
           <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg,${hexColors[idx % 10]},${hexColors[(idx+2)%10]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontSize: '14px', fontWeight: 900 }}>{(book.title || '?')[0]}</span>
+            <span style={{ color: 'white', fontSize: '20px', fontWeight: 900 }}>{(book.title || '?')[0]}</span>
           </div>
         )}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.25rem' }}>
-          <h4 className="group-hover:text-amber-700 transition-colors" style={{ fontWeight: 900, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stripHtml(book.title)}</h4>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-            <span style={{ fontSize: '9px', color: '#6C5CE7', fontWeight: 900, background: 'rgba(108, 92, 231,0.1)', border: '1px solid rgba(108, 92, 231,0.2)', padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.05em' }}>
-              {new Date(book.read_at).toLocaleDateString('ko-KR')}
-            </span>
-            {onDeleteBook && (
-              <button
-                onClick={e => { e.stopPropagation(); onDeleteBook(book.id); }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ width: '1.375rem', height: '1.375rem', borderRadius: '9999px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#ef4444' }}
-              >
-                <X size={10} />
-              </button>
-            )}
-          </div>
+      <h4 className="group-hover:text-amber-700 transition-colors" style={{ fontWeight: 900, fontSize: '0.75rem', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: '0.25rem', minHeight: '2.05em' }}>
+        {stripHtml(book.title)}
+      </h4>
+      <p style={{ fontSize: '0.6875rem', color: '#8F87B8', fontWeight: 700, marginBottom: '0.5rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{book.author}</p>
+      {book.impression && (
+        <div style={{ marginTop: 'auto' }}>
+          <span style={{ fontSize: '9px', color: book.is_public ? '#6C5CE7' : '#C7C2E0', border: '1px solid rgba(108, 92, 231,0.12)', padding: '2px 7px', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.04)' }}>
+            {book.is_public ? '🌐' : '🔒'}
+          </span>
         </div>
-        <p style={{ fontSize: '0.75rem', color: '#8F87B8', fontWeight: 700, marginBottom: '0.375rem' }}>{book.author}</p>
-        {book.impression && (
-          <p style={{ fontSize: '0.75rem', color: '#6E67A0', lineHeight: 1.5, marginBottom: '0.375rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-            <span style={{ color: book.is_public ? '#6C5CE7' : '#C7C2E0', fontWeight: 700, marginRight: '4px' }}>{book.is_public ? '🌐' : '🔒'}</span>
-            {book.impression}
-          </p>
-        )}
-        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-          {editingPages ? (
-            <input
-              autoFocus
-              type="number"
-              value={pagesInput}
-              onChange={e => setPagesInput(e.target.value)}
-              onBlur={handlePagesSubmit}
-              onKeyDown={e => { if (e.key === 'Enter') handlePagesSubmit(e); if (e.key === 'Escape') { e.stopPropagation(); setEditingPages(false); } }}
-              onClick={e => e.stopPropagation()}
-              style={{ width: '64px', fontSize: '9px', padding: '2px 8px', borderRadius: '9999px', border: '1px solid rgba(108, 92, 231,0.4)', background: 'white', color: '#3A3070', outline: 'none' }}
-            />
-          ) : (
-            <span
-              onClick={onUpdatePages ? handlePagesClick : undefined}
-              title={onUpdatePages ? '클릭해서 페이지 수 수정' : undefined}
-              style={{ fontSize: '9px', color: '#8F87B8', border: '1px solid rgba(108, 92, 231,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.04)', cursor: onUpdatePages ? 'text' : 'default' }}
-            >{book.pages || 250}p</span>
-          )}
-          {book.publisher && <span style={{ fontSize: '9px', color: '#8F87B8', border: '1px solid rgba(108, 92, 231,0.12)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.04)' }}>{book.publisher}</span>}
-          {!book.impression && <span onClick={e => { e.stopPropagation(); onStackBookClick(book); }} style={{ fontSize: '9px', color: '#6C5CE7', border: '1px solid rgba(108, 92, 231,0.2)', padding: '2px 8px', borderRadius: '9999px', background: 'rgba(108, 92, 231,0.05)', cursor: 'pointer' }}>+ 감상평 쓰기</span>}
-        </div>
-      </div>
+      )}
     </motion.div>
   );
 }
