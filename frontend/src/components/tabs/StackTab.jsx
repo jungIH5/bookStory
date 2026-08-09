@@ -22,83 +22,16 @@ export default function StackTab({
           <span className="cute-float sparkle-deco" style={{ top: '10px', left: '18px', fontSize: '1.3rem', ['--tilt']: '-10deg', zIndex: 20 }}>⭐</span>
           <span className="cute-float sparkle-deco" style={{ top: '18px', right: '22px', fontSize: '1rem', ['--tilt']: '8deg', animationDelay: '0.6s', zIndex: 20 }}>✨</span>
           <div style={{ width: '100%', flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'block', position: 'relative' }}>
-            <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', padding: '60px 48px 8px 48px' }}>
+            <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', padding: '32px 20px 12px' }}>
               {readBooks && readBooks.filter(b => b.status !== 'reading').length > 0 ? (
-                <AnimatePresence initial={false}>
-                  {readBooks.filter(b => b.status !== 'reading').map((book, idx) => {
-                    const bookColor = hexColors[idx % 10];
-                    // 페이지 수에 따라 두께(높이) 결정 — 최소 36px, 최대 88px
-                    const pages = book.pages && book.pages > 0 ? book.pages : 260;
-                    const bookH = Math.max(36, Math.min(88, pages / 3.5));
-                    const xOffsets = [-8, 12, -16, 6, -10, 18, -4, 14, -12, 8];
-                    const xOff = xOffsets[idx % xOffsets.length];
-                    return (
-                      <motion.div
-                        key={book.id || book.title || idx}
-                        initial={{ scaleX: 0, opacity: 0, x: xOff }}
-                        animate={{ scaleX: 1, opacity: 1, x: xOff }}
-                        exit={{ scaleX: 0, opacity: 0, height: 0, marginBottom: 0 }}
-                        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                        style={{ width: '100%', transformOrigin: 'left center' }}
-                      >
-                        <div
-                          onClick={() => onStackBookClick(book)}
-                          className="hover:brightness-110 group"
-                          style={{
-                            width: '100%', height: `${bookH}px`, marginBottom: '3px',
-                            display: 'flex', alignItems: 'center',
-                            borderRadius: '3px 8px 8px 3px',
-                            backgroundColor: bookColor,
-                            backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.2) 2%, rgba(0,0,0,0.08) 5%, transparent 12%, transparent 82%, rgba(0,0,0,0.18) 100%)`,
-                            borderLeft: '6px solid rgba(0,0,0,0.4)',
-                            borderTop: '1px solid rgba(255,255,255,0.2)',
-                            borderBottom: '1px solid rgba(0,0,0,0.35)',
-                            boxShadow: `0 8px 16px -3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12)`,
-                            cursor: 'pointer',
-                            transition: 'filter 0.2s',
-                            position: 'relative',
-                            zIndex: idx + 1,
-                            flexShrink: 0,
-                            overflow: 'hidden',
-                          }}
-                        >
-                          {/* 책 등 광택 선 */}
-                          <div style={{ position: 'absolute', left: '10px', top: '12%', bottom: '12%', width: '2px', backgroundColor: 'rgba(255,255,255,0.1)', filter: 'blur(0.5px)' }} />
-                          {/* 커버 이미지 */}
-                          {book.image && (
-                            <img
-                              src={book.image} alt=""
-                              style={{ position: 'absolute', right: 0, top: 0, width: '80px', height: '100%', objectFit: 'cover', objectPosition: 'center top', opacity: 0.65, borderRadius: '0 7px 7px 0', borderLeft: '1px solid rgba(0,0,0,0.4)' }}
-                            />
-                          )}
-                          {/* 제목 */}
-                          <span style={{ fontSize: bookH < 44 ? '9px' : '11px', fontWeight: 900, letterSpacing: '0.03em', color: 'white', padding: `0 ${book.image ? '88px' : '16px'} 0 2rem`, userSelect: 'none', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', fontStyle: 'italic', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))', flexShrink: 1 }}>
-                            {book.title.replace(/<\/?[^>]+(>|$)/g, "")}
-                          </span>
-                          {/* 읽는 중 뱃지 */}
-                          {book.status === 'reading' && bookH >= 44 && (
-                            <div style={{ position: 'absolute', top: '50%', right: book.image ? '88px' : '10px', transform: 'translateY(-50%)', background: 'rgba(167, 139, 250,0.28)', border: '1px solid rgba(167, 139, 250,0.55)', borderRadius: '9999px', padding: '2px 7px', fontSize: '9px', fontWeight: 900, color: '#A78BFA', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
-                              읽는 중
-                            </div>
-                          )}
-                          {/* 호버 툴팁 */}
-                          <div className="hidden group-hover:flex" style={{ position: 'absolute', top: '-54px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(8px)', border: '1px solid rgba(108, 92, 231,0.3)', padding: '7px 13px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, zIndex: 300, whiteSpace: 'nowrap', boxShadow: '0 12px 32px rgba(0,0,0,0.7)', alignItems: 'center', gap: '7px' }}>
-                            <span style={{ backgroundColor: bookColor, width: '8px', height: '8px', borderRadius: '9999px', display: 'inline-block', flexShrink: 0 }} />
-                            <span style={{ color: 'white' }}>{book.title.replace(/<\/?[^>]+(>|$)/g, "").slice(0, 20)}</span>
-                            <span style={{ color: 'rgba(167, 139, 250,0.8)', fontSize: '9px' }}>{pages}p</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
+                <BookTree books={readBooks.filter(b => b.status !== 'reading')} onStackBookClick={onStackBookClick} />
               ) : (
                 <div style={{ marginBottom: '8rem', textAlign: 'center' }}>
                   <div className="cute-float" style={{ width: '68px', height: '68px', margin: '0 auto 1rem', borderRadius: '42% 58% 63% 37% / 47% 44% 56% 53%', background: 'rgba(108, 92, 231,0.1)', border: '2px solid rgba(108, 92, 231,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <BookOpen size={28} color="#A78BFA" />
+                    <Sprout size={28} color="#A78BFA" />
                   </div>
-                  <p style={{ fontWeight: 900, fontSize: '1rem', color: '#8F87B8', marginBottom: '0.375rem' }}>당신만의 지식 타워를 세우세요</p>
-                  <p style={{ fontSize: '0.8125rem', color: '#C7C2E0' }}>검색으로 책을 찾아 서재에 추가해보세요</p>
+                  <p style={{ fontWeight: 900, fontSize: '1rem', color: '#8F87B8', marginBottom: '0.375rem' }}>당신만의 독서 나무를 심어보세요</p>
+                  <p style={{ fontSize: '0.8125rem', color: '#C7C2E0' }}>책을 완독하면 나무에 잎이 돋아나요</p>
                 </div>
               )}
             </div>
@@ -182,6 +115,87 @@ export default function StackTab({
         </motion.div>
       )}
     </motion.div>
+  );
+}
+
+function BookTree({ books, onStackBookClick }) {
+  const count = books.length;
+  const width = 300;
+  const perBook = 46;
+  const topPad = 64;
+  const svgH = Math.max(360, topPad + count * perBook + 90);
+  const groundY = svgH - 28;
+  const trunkTopY = Math.max(40, groundY - 90 - count * perBook);
+  // 트렁크가 완전히 곧지 않고 살짝 휘어 보이도록 y에 따라 x를 사인파로 흔든다.
+  const trunkX = (y) => width / 2 + 12 * Math.sin((groundY - y) / 70);
+
+  const trunkPts = [];
+  for (let y = groundY; y >= trunkTopY; y -= 14) trunkPts.push(`${trunkX(y).toFixed(1)},${y.toFixed(1)}`);
+  const trunkPath = `M ${trunkPts.join(' L ')}`;
+
+  const leaves = books.map((book, i) => {
+    const rankFromBase = count - 1 - i;
+    const y = Math.max(trunkTopY + 20, groundY - 46 - rankFromBase * perBook);
+    const side = rankFromBase % 2 === 0 ? 1 : -1;
+    const jitter = prand(i + 1);
+    const branchLen = 52 + jitter * 30;
+    const bx = trunkX(y);
+    const leafX = bx + side * branchLen;
+    const leafY = y - 10 - jitter * 12;
+    const ctrlX = bx + side * branchLen * 0.55;
+    const ctrlY = y - 16;
+    return { book, i, bx, by: y, leafX, leafY, ctrlX, ctrlY, rot: side * (6 + jitter * 6) };
+  });
+
+  return (
+    <div style={{ position: 'relative', width: `${width}px`, height: `${svgH}px`, margin: '0 auto' }}>
+      <svg width={width} height={svgH} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+        <path d={trunkPath} fill="none" stroke="#3D3163" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={trunkPath} fill="none" stroke="rgba(167, 139, 250,0.35)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" transform="translate(-3,-1)" />
+        {leaves.map(({ i, bx, by, leafX, leafY, ctrlX, ctrlY }) => (
+          <path key={i} d={`M ${bx},${by} Q ${ctrlX},${ctrlY} ${leafX},${leafY}`} fill="none" stroke="rgba(167, 139, 250,0.5)" strokeWidth="3" strokeLinecap="round" />
+        ))}
+      </svg>
+      <AnimatePresence initial={false}>
+        {leaves.map(({ book, i, leafX, leafY, rot }) => {
+          const bookColor = hexColors[i % 10];
+          return (
+            <motion.div
+              key={book.id || book.title || i}
+              initial={{ opacity: 0, scale: 0.4 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.4 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 22, delay: i * 0.02 }}
+              onClick={() => onStackBookClick(book)}
+              className="group"
+              style={{
+                position: 'absolute', left: `${leafX}px`, top: `${leafY}px`,
+                width: '44px', height: '44px', zIndex: i + 1,
+                transform: `translate(-50%, -50%) rotate(${rot}deg)`,
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{
+                width: '100%', height: '100%', overflow: 'hidden', background: '#2D2456',
+                borderRadius: '46% 54% 60% 40% / 55% 45% 55% 45%',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.45)', border: '2px solid rgba(167, 139, 250,0.4)',
+              }}>
+                {book.image ? (
+                  <img src={book.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg,${bookColor},${hexColors[(i + 2) % 10]})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ color: 'white', fontSize: '13px', fontWeight: 900 }}>{(book.title || '?')[0]}</span>
+                  </div>
+                )}
+              </div>
+              <div className="hidden group-hover:flex" style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: `translateX(-50%) rotate(${-rot}deg)`, background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(8px)', border: '1px solid rgba(108, 92, 231,0.3)', padding: '6px 11px', borderRadius: '10px', fontSize: '10px', fontWeight: 900, color: 'white', zIndex: 300, whiteSpace: 'nowrap', boxShadow: '0 12px 32px rgba(0,0,0,0.7)' }}>
+                {book.title.replace(/<\/?[^>]+(>|$)/g, "").slice(0, 20)}
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
   );
 }
 
