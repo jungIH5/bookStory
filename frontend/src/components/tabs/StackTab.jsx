@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Sparkles, Loader2, ChevronRight, X, Sprout } from 'lucide-react';
+import { BookOpen, Sparkles, Loader2, ChevronRight, X, Sprout, Minus, Plus } from 'lucide-react';
 import { stripHtml } from '../../utils';
 import { hexColors } from '../../constants';
 
