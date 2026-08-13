@@ -1504,6 +1504,7 @@ function App() {
       <AnimatePresence>
         {(selectedDiveRoom || activeDiveRoom) && (
           <DiveRoomModal
+            key={`${(selectedDiveRoom || activeDiveRoom)?.id}-${!!selectedDiveRoom}`}
             room={selectedDiveRoom || activeDiveRoom}
             user={user}
             startMinimized={!selectedDiveRoom}

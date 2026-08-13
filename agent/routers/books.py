@@ -7,7 +7,7 @@ from typing import Optional
 
 from db import get_db
 from graphs.book_analysis import book_analysis_graph
-from auth import get_current_user_id
+from auth import get_current_user_id, optional_user_id
 from kakao_books import search_kakao_books, kakao_doc_to_book
 
 router = APIRouter(prefix="/api/books")
@@ -212,7 +212,11 @@ async def delete_read_book(
 
 
 @router.get("/read")
-async def get_read_books(user_id: Optional[int] = None, conn=Depends(get_db)):
+async def get_read_books(
+    user_id: Optional[int] = None,
+    conn=Depends(get_db),
+    requester_id: Optional[int] = Depends(optional_user_id),
+):
     if user_id:
         rows = await conn.fetch("""
             SELECT rb.*, COALESCE(rl.duration_seconds, 0) AS my_seconds
@@ -228,4 +232,9 @@ async def get_read_books(user_id: Optional[int] = None, conn=Depends(get_db)):
             LEFT JOIN reading_logs rl ON rl.read_book_id = rb.id
             ORDER BY rb.read_at DESC
         """)
-    return [dict(r) for r in rows]
+    books = [dict(r) for r in rows]
+    # 비공개 감상평은 본인 요청일 때만 내려준다 — 목록 자체(제목/저자 등)는 계속 공개.
+    for b in books:
+        if not b.get("is_public") and b.get("user_id") != requester_id:
+            b["impression"] = None
+    return books

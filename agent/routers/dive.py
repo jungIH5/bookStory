@@ -544,7 +544,7 @@ async def confirm_time(
     user_id: int = Depends(get_current_user_id),
 ):
     """미확인 상태로 남은 세션의 실제 독서시간을 본인이 확인/수정해서 확정한다."""
-    if body.seconds < 0:
+    if body.seconds < 0 or body.seconds > 12 * 3600:
         raise HTTPException(400, "잘못된 시간 값입니다.")
     room = await conn.fetchrow("SELECT * FROM dive_rooms WHERE id=$1", room_id)
     participant = await conn.fetchrow(

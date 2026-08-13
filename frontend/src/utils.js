@@ -36,7 +36,6 @@ export const formatReadingTime = (seconds) => {
 
 export const renderMarkdown = (text) => {
   if (!text) return '';
-  if (/<[a-z][\s\S]*?>/i.test(text)) return text;
   return text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
