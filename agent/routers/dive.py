@@ -177,25 +177,37 @@ async def _finalize_participant(conn, room, participant, mark_ended: bool):
 AUTO_CLOSE_GRACE_HOURS = 1  # 토론 종료 후 기본 유예시간. 참가자가 연장하면 이 시간만큼씩 더 늘어난다.
 
 
+_DIVE_SWEEP_LOCK_NAMESPACE = 911001  # advisory lock 네임스페이스(다른 용도와 키 충돌 방지용 고정값)
+
+
 async def _auto_close_stale_rooms(conn):
     """토론 종료 시각 + 유예시간(연장 포함)이 지난 방을 자동으로 종료 처리한다.
-    강제로 끊지는 않되(연장 가능), 무기한 방치되지도 않도록 하기 위함."""
-    stale_rooms = await conn.fetch("""
-        SELECT * FROM dive_rooms
+    강제로 끊지는 않되(연장 가능), 무기한 방치되지도 않도록 하기 위함.
+    이 함수는 GET /rooms 등 여러 엔드포인트에서 매번 호출되므로, 동시에 겹쳐 들어온
+    두 요청이 같은 방을 동시에 정리하면서 독서시간을 이중 적립하지 않도록 방별로
+    advisory lock을 걸고, 락을 얻은 뒤에도 이미 종료됐는지 다시 확인한다."""
+    stale_room_ids = await conn.fetch("""
+        SELECT id FROM dive_rooms
         WHERE status != 'ended'
           AND scheduled_at
               + (reading_minutes + discussion_minutes) * INTERVAL '1 minute'
               + (1 + extension_count) * INTERVAL '1 hour'
               <= NOW()
     """)
-    for room in stale_rooms:
-        participants = await conn.fetch(
-            "SELECT * FROM dive_participants WHERE room_id=$1 AND status != 'ended'", room["id"],
-        )
-        for p in participants:
-            await _finalize_participant(conn, room, p, mark_ended=True)
-        await conn.execute("UPDATE dive_rooms SET status='ended' WHERE id=$1", room["id"])
-        await chat_manager.broadcast_event(room["id"], {"type": "room_update"})
+    for row in stale_room_ids:
+        room_id = row["id"]
+        async with conn.transaction():
+            await conn.execute("SELECT pg_advisory_xact_lock($1, $2)", _DIVE_SWEEP_LOCK_NAMESPACE, room_id)
+            room = await conn.fetchrow("SELECT * FROM dive_rooms WHERE id=$1", room_id)
+            if not room or room["status"] == "ended":
+                continue  # 락 대기 중 다른 요청이 이미 정리를 끝냄
+            participants = await conn.fetch(
+                "SELECT * FROM dive_participants WHERE room_id=$1 AND status != 'ended'", room_id,
+            )
+            for p in participants:
+                await _finalize_participant(conn, room, p, mark_ended=True)
+            await conn.execute("UPDATE dive_rooms SET status='ended' WHERE id=$1", room_id)
+        await chat_manager.broadcast_event(room_id, {"type": "room_update"})
 
 
 class DiveRoomIn(BaseModel):
