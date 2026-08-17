@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer, Play, Pause, Square, BookOpen, Search, Loader2, X } from 'lucide-react';
+import { Play, Pause, Square, BookOpen, Search, Loader2, X } from 'lucide-react';
 import { formatTimer, stripHtml } from '../../utils';
 import { API_URL } from '../../api';
 

@@ -1481,6 +1481,7 @@ function App() {
       <AnimatePresence>
         {pendingTimeConfirmations.length > 0 && (
           <PendingTimeConfirmModal
+            key={pendingTimeConfirmations[0].room_id}
             item={pendingTimeConfirmations[0]}
             onConfirm={(seconds) => handleConfirmPendingTime(pendingTimeConfirmations[0].room_id, seconds)}
             onDismiss={() => setPendingTimeConfirmations(prev => prev.slice(1))}

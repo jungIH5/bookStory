@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Waves, BookOpen, Search, Loader2, Calendar, Clock, Users, Lock, MessageSquare, MessageSquareDashed, Camera } from 'lucide-react';
+import { X, Waves, Search, Loader2, Calendar, Clock, Users, Lock, MessageSquare, MessageSquareDashed, Camera } from 'lucide-react';
 import { API_URL } from '../../api';
 
 const TIME_OPTIONS = [30, 60, 90];

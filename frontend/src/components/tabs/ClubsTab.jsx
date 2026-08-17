@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, MapPin, Plus, Star } from 'lucide-react';
+import { MapPin, Plus, Star } from 'lucide-react';
 import { getValidUserId } from '../../utils';
 
 export default function ClubsTab({ user, clubs, joinedClubs, onSelectClub, onCreateClub }) {

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, BookOpen, Heart, Loader2, Send, CornerDownRight, Trash2, Pencil, Search } from 'lucide-react';
+import { X, BookOpen, Heart, Loader2, Send, CornerDownRight, Trash2, Search } from 'lucide-react';
 import { renderMarkdown, stripHtml } from '../../utils';
 import { API_URL } from '../../api';
 

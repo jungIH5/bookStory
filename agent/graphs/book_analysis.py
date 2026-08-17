@@ -4,7 +4,7 @@
 흐름:
   START
     ↓
-  prepare_book_analysis   ← Naver Book API(verify) + Blog API(fetch) 병렬 실행
+  prepare_book_analysis   ← 카카오 책 검색 API(verify) + Naver Blog API(fetch) 병렬 실행
     ↓
   validate_reviews        ← 길이 + 제목 키워드 관련성 판단
     ↓ (조건부 엣지)
@@ -19,7 +19,7 @@
 
 개선 포인트:
   - prepare_book_analysis: asyncio.gather로 verify_book + fetch_blog_reviews 병렬 실행
-    → 기존 순차 대비 Naver API 레이턴시 추가 없음
+    → 기존 순차 대비 API(카카오/네이버) 레이턴시 추가 없음
   - validate_reviews: 단순 길이 체크 → 제목 키워드 포함 여부까지 확인
   - fetch_blog_reviews(retry): book_metadata의 출판사/확정 제목으로 정확도 향상
   - Claude 추가 호출 없음 → 전체 레이턴시 변화 없음

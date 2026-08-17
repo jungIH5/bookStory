@@ -178,6 +178,18 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
     if (chatHeight > maxH) setChatHeight(Math.max(160, maxH));
   }, [modalH]);
 
+  // 리사이즈 드래그 도중(마우스를 놓기 전) 모달이 닫히는 등으로 언마운트되면 window
+  // 리스너가 그대로 남는 걸 막기 위한 참조 + 정리.
+  const resizeListenersRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      if (resizeListenersRef.current) {
+        window.removeEventListener('mousemove', resizeListenersRef.current.onMove);
+        window.removeEventListener('mouseup', resizeListenersRef.current.onUp);
+      }
+    };
+  }, []);
+
   const handleResizeDrag = (e) => {
     e.preventDefault();
     const startY = e.clientY;
@@ -186,9 +198,14 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
       const maxH = chatColRef.current ? chatColRef.current.clientHeight - 90 : 600;
       setChatHeight(Math.max(160, Math.min(maxH, startH + ev.clientY - startY)));
     };
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      resizeListenersRef.current = null;
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    resizeListenersRef.current = { onMove, onUp };
   };
 
   const handleModalResize = (e) => {
@@ -202,9 +219,14 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
       setModalW(Math.max(520, startW + ev.clientX - startX));
       setModalH(Math.max(400, startH + ev.clientY - startY));
     };
-    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      resizeListenersRef.current = null;
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    resizeListenersRef.current = { onMove, onUp };
   };
 
   const isHost = user && room.host_id === parseInt(user.id);

@@ -28,7 +28,19 @@ export default function StackTab({
   const [treePan, setTreePan] = useState({ x: 0, y: 0 });
   const [isDraggingTree, setIsDraggingTree] = useState(false);
   const treeViewportRef = useRef(null);
+  const dragListenersRef = useRef(null);
   const completedBooks = readBooks ? readBooks.filter(b => b.status !== 'reading') : [];
+
+  // 드래그 도중 탭 전환 등으로 컴포넌트가 언마운트되면(마우스를 놓기 전) window
+  // 리스너가 그대로 남는 걸 막기 위한 정리.
+  useEffect(() => {
+    return () => {
+      if (dragListenersRef.current) {
+        window.removeEventListener('mousemove', dragListenersRef.current.onMove);
+        window.removeEventListener('mouseup', dragListenersRef.current.onUp);
+      }
+    };
+  }, []);
 
   // 휠 = 확대/축소(이동은 드래그로 이미 되므로 ctrl 없이 바로). React의 합성 wheel
   // 이벤트는 passive라서 preventDefault가 안 먹기 때문에 네이티브 리스너로 직접 붙인다.
@@ -58,9 +70,11 @@ export default function StackTab({
       setIsDraggingTree(false);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      dragListenersRef.current = null;
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    dragListenersRef.current = { onMove, onUp };
   };
 
   return (
@@ -364,7 +378,7 @@ function BookTree({ books, onStackBookClick }) {
                   )}
                 </div>
                 <div className="hidden group-hover:flex" style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: `translateX(-50%) rotate(${-rot}deg)`, background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(8px)', border: '1px solid rgba(94, 201, 140,0.35)', padding: '6px 11px', borderRadius: '10px', fontSize: '10px', fontWeight: 900, color: 'white', zIndex: 300, whiteSpace: 'nowrap', boxShadow: '0 12px 32px rgba(0,0,0,0.7)' }}>
-                  {book.title.replace(/<\/?[^>]+(>|$)/g, "").slice(0, 20)}
+                  {stripHtml(book.title).slice(0, 20)}
                 </div>
               </motion.div>
             );

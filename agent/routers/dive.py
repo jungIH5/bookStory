@@ -178,6 +178,7 @@ AUTO_CLOSE_GRACE_HOURS = 1  # 토론 종료 후 기본 유예시간. 참가자�
 
 
 _DIVE_SWEEP_LOCK_NAMESPACE = 911001  # advisory lock 네임스페이스(다른 용도와 키 충돌 방지용 고정값)
+_DIVE_JOIN_LOCK_NAMESPACE = 911002  # 정원 체크+INSERT용 advisory lock 네임스페이스(위와 별개 용도)
 
 
 async def _auto_close_stale_rooms(conn):
@@ -451,39 +452,44 @@ async def join_room(
         if datetime.now() >= cutoff_time:
             raise HTTPException(400, f"참가 마감 시간이 지났습니다. (독서 시작 {room['late_join_cutoff_minutes']}분 전까지만 참가 가능)")
 
-    count = await conn.fetchval(
-        "SELECT COUNT(*) FROM dive_participants WHERE room_id=$1", room_id
-    )
-    if count >= room['max_participants']:
-        raise HTTPException(400, "최대 인원이 초과되었습니다.")
-
-    existing = await conn.fetchrow(
-        "SELECT id FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
-    )
-    if existing:
-        return {"already_joined": True}
-
-    # 다른 활성 방에 이미 참가 중인지 확인
-    other = await conn.fetchrow("""
-        SELECT dp.room_id FROM dive_participants dp
-        JOIN dive_rooms dr ON dp.room_id = dr.id
-        WHERE dp.user_id = $1 AND dp.room_id != $2 AND dr.status != 'ended'
-        LIMIT 1
-    """, user_id, room_id)
-    if other:
-        raise HTTPException(400, "이미 다른 모임에 참가 중입니다. 나가신 후 참가해주세요.")
-
     book_title = book_image = book_isbn = ''
     if not room['book_title']:
         if not body or not body.book_title:
             raise HTTPException(400, "이 모임은 지정된 도서가 없어 참가 시 읽으실 책을 선택해야 합니다.")
         book_title, book_image, book_isbn = body.book_title, body.book_image or '', body.book_isbn or ''
 
-    row = await conn.fetchrow(
-        """INSERT INTO dive_participants (room_id, user_id, book_title, book_image, book_isbn)
-           VALUES ($1,$2,$3,$4,$5) RETURNING *""",
-        room_id, user_id, book_title, book_image, book_isbn,
-    )
+    # 정원 확인부터 INSERT까지를 방별 advisory lock으로 묶어, 동시에 들어온 join 요청들이
+    # 서로의 COUNT 결과를 못 보고 겹쳐서 정원을 넘기는(TOCTOU) 상황을 막는다.
+    async with conn.transaction():
+        await conn.execute("SELECT pg_advisory_xact_lock($1, $2)", _DIVE_JOIN_LOCK_NAMESPACE, room_id)
+
+        existing = await conn.fetchrow(
+            "SELECT id FROM dive_participants WHERE room_id=$1 AND user_id=$2", room_id, user_id,
+        )
+        if existing:
+            return {"already_joined": True}
+
+        count = await conn.fetchval(
+            "SELECT COUNT(*) FROM dive_participants WHERE room_id=$1", room_id
+        )
+        if count >= room['max_participants']:
+            raise HTTPException(400, "최대 인원이 초과되었습니다.")
+
+        # 다른 활성 방에 이미 참가 중인지 확인
+        other = await conn.fetchrow("""
+            SELECT dp.room_id FROM dive_participants dp
+            JOIN dive_rooms dr ON dp.room_id = dr.id
+            WHERE dp.user_id = $1 AND dp.room_id != $2 AND dr.status != 'ended'
+            LIMIT 1
+        """, user_id, room_id)
+        if other:
+            raise HTTPException(400, "이미 다른 모임에 참가 중입니다. 나가신 후 참가해주세요.")
+
+        row = await conn.fetchrow(
+            """INSERT INTO dive_participants (room_id, user_id, book_title, book_image, book_isbn)
+               VALUES ($1,$2,$3,$4,$5) RETURNING *""",
+            room_id, user_id, book_title, book_image, book_isbn,
+        )
     await chat_manager.broadcast_event(room_id, {"type": "room_update"})
     return dict(row)
 
@@ -740,9 +746,16 @@ async def delete_room(
     conn=Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
-    room = await conn.fetchrow("SELECT host_id FROM dive_rooms WHERE id=$1", room_id)
+    room = await conn.fetchrow("SELECT * FROM dive_rooms WHERE id=$1", room_id)
     if not room or room['host_id'] != user_id:
         raise HTTPException(403, "방장만 방을 삭제할 수 있습니다.")
+    # 삭제도 종료와 마찬가지로, 참가자들의 미확정 독서시간을 먼저 확정 기록해야 한다.
+    # dive_participants는 ON DELETE CASCADE라 방을 지우면 같이 사라지므로 그 전에 처리한다.
+    participants = await conn.fetch(
+        "SELECT * FROM dive_participants WHERE room_id=$1 AND status != 'ended'", room_id,
+    )
+    for p in participants:
+        await _finalize_participant(conn, room, p, mark_ended=True)
     await chat_manager.broadcast_event(room_id, {"type": "room_deleted"})
     await conn.execute("DELETE FROM dive_rooms WHERE id=$1", room_id)
     return {"deleted": True}
