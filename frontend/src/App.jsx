@@ -445,27 +445,6 @@ function App() {
     }
   };
 
-  const handleSetInitialPassword = async (name, password, onError) => {
-    try {
-      const response = await fetch(`${API_URL}/api/users/set-initial-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, password }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        const stored = { ...data.user, token: data.token };
-        setUser(stored);
-        localStorage.setItem('bookstory_user', JSON.stringify(stored));
-        window.location.reload();
-      } else {
-        onError?.(typeof data.detail === 'string' ? data.detail : '비밀번호 설정에 실패했습니다.');
-      }
-    } catch {
-      onError?.('서버에 연결할 수 없습니다.');
-    }
-  };
-
   const handleAdminLogin = async (password, onError) => {
     try {
       const response = await fetch(`${API_URL}/api/users/admin-login`, {
@@ -778,7 +757,9 @@ function App() {
     if (!user) return alert('로그인이 필요합니다.');
     setIsFetchingTendency(true);
     try {
-      const res = await fetch(`${API_URL}/api/tendency/${user.id}`);
+      const res = await fetch(`${API_URL}/api/tendency/${user.id}`, {
+        headers: { 'Authorization': `Bearer ${user.token}` },
+      });
       const data = await res.json();
       setTendencyResult(data);
       setShowTendencyModal(true);
@@ -790,7 +771,9 @@ function App() {
     if (!user) return;
     setIsFetchingRecs(true);
     try {
-      const res = await fetch(`${API_URL}/api/recommendations/${user.id}`);
+      const res = await fetch(`${API_URL}/api/recommendations/${user.id}`, {
+        headers: { 'Authorization': `Bearer ${user.token}` },
+      });
       const data = await res.json();
       setRecommendations(data.recommendations || []);
     } catch { console.error('추천 로드 실패'); }
@@ -817,9 +800,11 @@ function App() {
       }
       const response = await fetch(`${API_URL}/api/sessions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user?.token ? { 'Authorization': `Bearer ${user.token}` } : {}),
+        },
         body: JSON.stringify({
-          user_id: user?.id || null,
           read_book_id: readBookId,
           book_title: selectedBook ? stripHtml(selectedBook.title) : null,
           book_analysis: analysisResult,
@@ -843,7 +828,7 @@ function App() {
       const response = await fetch(`${API_URL}/api/sessions/${sessionId}/answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answer, user_id: user?.id || null }),
+        body: JSON.stringify({ answer }),
       });
       const data = await response.json();
       setSessionQA(prev => [...prev, { question: data.next_question, answer: null, turn_order: data.turn }]);
@@ -1288,7 +1273,6 @@ function App() {
             setRegForm={setRegForm}
             onRegister={handleRegisterUser}
             onLogin={handleLoginUser}
-            onSetInitialPassword={handleSetInitialPassword}
             onAdminLogin={handleAdminLogin}
             onOAuthLogin={handleOAuthLogin}
           />

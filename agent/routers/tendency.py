@@ -1,12 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 import db
+from auth import get_current_user_id
 from graphs.tendency_analysis import tendency_graph
+from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/tendency", tags=["tendency"])
 
 
 @router.get("/{user_id}")
-async def get_tendency(user_id: int, conn=Depends(db.get_db)):
+@limiter.limit("20/hour")
+async def get_tendency(
+    request: Request,
+    user_id: int,
+    conn=Depends(db.get_db),
+    caller_id: int = Depends(get_current_user_id),
+):
+    # get_recommendations와 동일한 이유로 본인 확인 추가 — 인증 없는 Claude 호출 엔드포인트 방지.
+    if caller_id != user_id:
+        raise HTTPException(403, "본인 계정의 성향 분석만 조회할 수 있습니다.")
     row = await conn.fetchrow("SELECT id FROM users WHERE id = $1", user_id)
     if not row:
         raise HTTPException(404, "User not found")

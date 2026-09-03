@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 import db
 from graphs.conversation import conversation_graph
 from auth import optional_user_id
+from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -13,12 +14,12 @@ class SessionCreate(BaseModel):
     book_title: Optional[str] = None   # fallback when not logged in
     book_analysis: str
     first_question: str
-    user_id: Optional[int] = None
+    # user_id는 여기서 받지 않는다 — 로그인 여부/신원은 Authorization 헤더의 토큰(optional_user_id)만
+    # 신뢰한다. 예전엔 클라이언트가 보낸 user_id를 그대로 믿어서 남의 user_id로 세션을 만들 수 있었다.
 
 
 class AnswerSubmit(BaseModel):
     answer: str
-    user_id: Optional[int] = None
 
 
 _SESSION_SELECT = """
@@ -46,16 +47,17 @@ async def list_sessions(user_id: Optional[int] = None, conn=Depends(db.get_db)):
 
 
 @router.post("")
+@limiter.limit("30/hour")
 async def create_session(
+    request: Request,
     body: SessionCreate,
     conn=Depends(db.get_db),
     token_uid: Optional[int] = Depends(optional_user_id),
 ):
-    uid = token_uid or body.user_id
     session_id = await conn.fetchval(
         """INSERT INTO reading_sessions (user_id, read_book_id, book_title, book_analysis)
            VALUES ($1,$2,$3,$4) RETURNING id""",
-        uid, body.read_book_id, body.book_title, body.book_analysis,
+        token_uid, body.read_book_id, body.book_title, body.book_analysis,
     )
     await conn.execute(
         "INSERT INTO session_qa (session_id, question, question_type, turn_order) VALUES ($1,$2,'initial',1)",
@@ -65,7 +67,9 @@ async def create_session(
 
 
 @router.post("/{session_id}/answer")
+@limiter.limit("30/hour")
 async def submit_answer(
+    request: Request,
     session_id: int,
     body: AnswerSubmit,
     conn=Depends(db.get_db),

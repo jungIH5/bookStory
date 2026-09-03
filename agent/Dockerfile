@@ -17,6 +17,13 @@ COPY . .
 
 RUN mkdir -p /app/uploads/voice_samples
 
+# root로 실행하지 않는다 — 컨테이너가 뚫려도 피해 범위를 줄이기 위한 배포 기본기.
+RUN useradd --create-home --shell /bin/bash appuser && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 5001
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5001", "--reload"]
+# --reload는 로컬 개발 전용(파일 변경 시 자동 재시작)이라 항상 켜두면 안 된다 — 로컬 docker-compose.yml이
+# UVICORN_EXTRA_ARGS=--reload를 넘겨줄 때만 켜지고, 프로덕션(Render 등)에서는 이 값이 안 넘어오므로
+# --reload 없이 뜬다. $PORT는 Render가 배포 시 주입하는 포트 — 로컬에선 안 넘어오니 5001로 대체한다.
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-5001} $UVICORN_EXTRA_ARGS

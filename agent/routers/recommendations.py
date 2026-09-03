@@ -1,12 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 import db
+from auth import get_current_user_id
 from graphs.book_recommendation import recommendation_graph
+from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/recommendations", tags=["recommendations"])
 
 
 @router.get("/{user_id}")
-async def get_recommendations(user_id: int, conn=Depends(db.get_db)):
+@limiter.limit("20/hour")
+async def get_recommendations(
+    request: Request,
+    user_id: int,
+    conn=Depends(db.get_db),
+    caller_id: int = Depends(get_current_user_id),
+):
+    # 프론트에서 항상 본인 user_id로만 호출하는 "내 추천 도서" 기능 — 인증 없이 아무 user_id로나
+    # 호출하면 매번 Claude를 호출하는 값비싼 엔드포인트라 남용될 수 있어 본인 확인을 추가한다.
+    if caller_id != user_id:
+        raise HTTPException(403, "본인 계정의 추천만 조회할 수 있습니다.")
     row = await conn.fetchrow("SELECT id FROM users WHERE id = $1", user_id)
     if not row:
         raise HTTPException(404, "User not found")

@@ -1,9 +1,10 @@
 import os
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, Field
 from typing import Optional
 import db
 from auth import create_token, get_current_user_id, hash_password, verify_password
+from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/users")
 
@@ -34,7 +35,6 @@ class LoginIn(BaseModel):
 
 
 class SetInitialPasswordIn(BaseModel):
-    name: str
     password: str = Field(min_length=4)
 
 
@@ -58,7 +58,8 @@ class UserUpdate(BaseModel):
 
 
 @router.post("")
-async def register_user(body: UserIn, conn=Depends(db.get_db)):
+@limiter.limit("10/hour")
+async def register_user(request: Request, body: UserIn, conn=Depends(db.get_db)):
     existing = await conn.fetchval("SELECT 1 FROM users WHERE name = $1", body.name)
     if existing:
         raise HTTPException(409, "이미 사용 중인 이름입니다.")
@@ -73,7 +74,8 @@ async def register_user(body: UserIn, conn=Depends(db.get_db)):
 
 
 @router.post("/login")
-async def login_user(body: LoginIn, conn=Depends(db.get_db)):
+@limiter.limit("20/15minutes")
+async def login_user(request: Request, body: LoginIn, conn=Depends(db.get_db)):
     rows = await conn.fetch(
         "SELECT * FROM users WHERE name = $1 ORDER BY created_at DESC", body.name,
     )
@@ -91,22 +93,28 @@ async def login_user(body: LoginIn, conn=Depends(db.get_db)):
             needs_setup = True
 
     if needs_setup:
-        raise HTTPException(409, "비밀번호가 설정되지 않은 계정입니다. 비밀번호를 설정해주세요.")
+        raise HTTPException(409, "비밀번호가 설정되지 않은 소셜 로그인 계정입니다. 카카오/네이버/구글 로그인을 이용해주세요.")
     raise HTTPException(401, "이름 또는 비밀번호가 일치하지 않습니다.")
 
 
 @router.post("/set-initial-password")
-async def set_initial_password(body: SetInitialPasswordIn, conn=Depends(db.get_db)):
-    """비밀번호 도입 이전에 만들어진 계정(password_hash 없음)에 처음으로 비밀번호를 설정한다."""
-    row = await conn.fetchrow(
-        "SELECT * FROM users WHERE name = $1 AND password_hash IS NULL ORDER BY created_at DESC LIMIT 1",
-        body.name,
-    )
+@limiter.limit("10/hour")
+async def set_initial_password(
+    request: Request,
+    body: SetInitialPasswordIn,
+    conn=Depends(db.get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    """비밀번호 없이 가입한 계정(대부분 소셜 로그인)에 처음으로 비밀번호를 설정해, 이후 이름+비밀번호로도
+    로그인할 수 있게 한다. 반드시 본인(로그인 토큰의 user_id) 계정에만 적용된다 — 예전에는 공개된
+    표시 이름(name)만 알면 password_hash가 비어있는 아무 계정에나 비밀번호를 걸 수 있는 계정 탈취
+    구멍이었다(이름은 게시글/댓글 등에서 누구나 볼 수 있으므로)."""
+    row = await conn.fetchrow("SELECT * FROM users WHERE id = $1 AND password_hash IS NULL", user_id)
     if not row:
-        raise HTTPException(404, "비밀번호 설정이 필요한 계정을 찾을 수 없습니다.")
+        raise HTTPException(400, "이미 비밀번호가 설정된 계정이거나 존재하지 않는 계정입니다.")
     updated = await conn.fetchrow(
         "UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING *",
-        hash_password(body.password), row["id"],
+        hash_password(body.password), user_id,
     )
     user = _public_user(updated)
     token = create_token(user["id"])
@@ -122,7 +130,8 @@ class AdminLoginIn(BaseModel):
 
 
 @router.post("/admin-login")
-async def admin_login(body: AdminLoginIn, conn=Depends(db.get_db)):
+@limiter.limit("5/minute")
+async def admin_login(request: Request, body: AdminLoginIn, conn=Depends(db.get_db)):
     """고정된 관리자 계정으로 진입. 일반 로그인/회원가입과는 별개의 우회 경로."""
     if body.password != ADMIN_ENTRY_PASSWORD:
         raise HTTPException(401, "비밀번호가 일치하지 않습니다.")

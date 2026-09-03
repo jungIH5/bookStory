@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 from typing import Optional
@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from db import get_db, get_pool
 from auth import get_current_user_id, decode_token
 from nodes.persona_chat import get_persona_reply, DEFAULT_PERSONA
+from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/dive", tags=["dive"])
 
@@ -767,7 +768,9 @@ class AiChatIn(BaseModel):
 
 
 @router.post("/rooms/{room_id}/ai-chat")
+@limiter.limit("30/hour")
 async def ai_chat(
+    request: Request,
     room_id: int,
     body: AiChatIn,
     conn=Depends(get_db),

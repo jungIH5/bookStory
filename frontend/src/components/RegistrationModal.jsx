@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, User, MapPin, ChevronRight, Loader2, MapIcon, LogIn, Lock } from 'lucide-react';
 import { searchKakaoLocation } from '../utils';
 
-export default function RegistrationModal({ regForm, setRegForm, onRegister, onLogin, onSetInitialPassword, onAdminLogin, onOAuthLogin }) {
+export default function RegistrationModal({ regForm, setRegForm, onRegister, onLogin, onAdminLogin, onOAuthLogin }) {
   const [mode, setMode] = useState('login'); // 'register' | 'login' | 'set-password' | 'admin'
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -11,10 +11,6 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [registerError, setRegisterError] = useState('');
-  const [setupPassword, setSetupPassword] = useState('');
-  const [setupConfirm, setSetupConfirm] = useState('');
-  const [setupError, setSetupError] = useState('');
-  const [isSettingPassword, setIsSettingPassword] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminError, setAdminError] = useState('');
   const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
@@ -27,9 +23,6 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
     setLoginError('');
     try {
       await onLogin(loginName.trim(), loginPassword, (err) => setLoginError(err), () => {
-        setSetupPassword('');
-        setSetupConfirm('');
-        setSetupError('');
         setMode('set-password');
       });
     } finally {
@@ -46,22 +39,6 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
     }
     setRegisterError('');
     onRegister((err) => setRegisterError(err));
-  };
-
-  const handleSetPassword = async () => {
-    if (!setupPassword || setupPassword.length < 4) {
-      return setSetupError('비밀번호는 4자 이상 입력해주세요.');
-    }
-    if (setupPassword !== setupConfirm) {
-      return setSetupError('비밀번호가 일치하지 않습니다.');
-    }
-    setIsSettingPassword(true);
-    setSetupError('');
-    try {
-      await onSetInitialPassword(loginName.trim(), setupPassword, (err) => setSetupError(err));
-    } finally {
-      setIsSettingPassword(false);
-    }
   };
 
   const handleAdminLogin = async () => {
@@ -157,45 +134,33 @@ export default function RegistrationModal({ regForm, setRegForm, onRegister, onL
           </div>
         )}
 
-        {/* 비밀번호 미설정 레거시 계정용 — 최초 비밀번호 설정 */}
+        {/* 비밀번호가 없는 계정(소셜 로그인으로 가입) — 이름+비밀번호로는 못 들어가니 소셜 로그인 안내 */}
         {mode === 'set-password' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <p style={{ fontSize: '0.8125rem', color: '#8F87B8', fontWeight: 600, lineHeight: 1.5 }}>
-              <strong style={{ color: '#6C5CE7' }}>{loginName}</strong>님은 비밀번호 도입 이전에 만들어진 계정이에요.
-              앞으로 사용할 비밀번호를 새로 설정해주세요.
+              <strong style={{ color: '#6C5CE7' }}>{loginName}</strong>님은 비밀번호가 설정되지 않은 계정이에요.
+              카카오/네이버/구글 소셜 로그인으로 가입하셨다면 아래 버튼으로 로그인해주세요.
             </p>
-            <div>
-              <label className="form-label">새 비밀번호</label>
-              <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
-                <input type="password" placeholder="4자 이상 입력하세요"
-                  value={setupPassword}
-                  onChange={(e) => { setSetupPassword(e.target.value); setSetupError(''); }}
-                  className="form-input"
-                  style={{ paddingLeft: '2.75rem', color: '#241B45' }}
-                  autoFocus
-                />
-              </div>
+            <div style={{ display: 'flex', gap: '0.625rem' }}>
+              <button
+                onClick={() => onOAuthLogin?.('kakao')}
+                style={{ flex: 1, padding: '0.75rem 0', background: '#FEE500', border: 'none', borderRadius: '9999px', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 900, color: '#191919', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}
+              >
+                카카오
+              </button>
+              <button
+                onClick={() => onOAuthLogin?.('naver')}
+                style={{ flex: 1, padding: '0.75rem 0', background: '#03C75A', border: 'none', borderRadius: '9999px', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}
+              >
+                네이버
+              </button>
+              <button
+                onClick={() => onOAuthLogin?.('google')}
+                style={{ flex: 1, padding: '0.75rem 0', background: 'white', border: '2px solid rgba(108, 92, 231,0.2)', borderRadius: '9999px', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 900, color: '#241B45', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem' }}
+              >
+                구글
+              </button>
             </div>
-            <div>
-              <label className="form-label">새 비밀번호 확인</label>
-              <div style={{ position: 'relative' }}>
-                <Lock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#C7C2E0' }} size={16} />
-                <input type="password" placeholder="다시 한 번 입력하세요"
-                  value={setupConfirm}
-                  onChange={(e) => { setSetupConfirm(e.target.value); setSetupError(''); }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
-                  className="form-input"
-                  style={{ paddingLeft: '2.75rem', color: '#241B45' }}
-                />
-              </div>
-              {setupError && <p style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700, marginTop: '0.375rem' }}>{setupError}</p>}
-            </div>
-            <button onClick={handleSetPassword} disabled={!setupPassword || !setupConfirm || isSettingPassword} className="premium-button disabled:opacity-50"
-              style={{ width: '100%', padding: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.625rem' }}>
-              {isSettingPassword ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
-              비밀번호 설정하고 로그인
-            </button>
             <button onClick={() => setMode('login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8F87B8', fontSize: '0.8125rem', fontWeight: 700 }}>
               ← 로그인으로 돌아가기
             </button>
