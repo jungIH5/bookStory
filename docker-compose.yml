@@ -18,10 +18,16 @@ services:
     build:
       context: ./agent
       dockerfile: Dockerfile
+    # 로컬 개발용 오버라이드: Dockerfile은 프로덕션 기본값으로 비-root 사용자(appuser)를 쓰지만,
+    # 여기서는 ./agent를 호스트에서 그대로 바인드 마운트하므로 컨테이너 안 UID가 호스트 파일에
+    # 쓰기 권한이 없을 수 있다 — 로컬 전용으로 root로 되돌린다(배포 시 실제 이미지에는 영향 없음).
+    user: "root"
     ports:
       - "5001:5001"
     volumes:
       - ./agent:/app
+    environment:
+      - UVICORN_EXTRA_ARGS=--reload
     env_file:
       - ./backend/.env
     depends_on:

@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: bookstory-agent
+    runtime: docker
+    dockerfilePath: ./agent/Dockerfile
+    dockerContext: ./agent
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # DB — Supabase 프로젝트 Settings > Database > Connection string (반드시 값 입력)
+      - key: DATABASE_URL
+        sync: false
+      # 인증 — JWT_SECRET은 Render가 배포 시 안전한 랜덤값을 자동 생성
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_ENTRY_PASSWORD
+        sync: false
+      # CORS — 프론트를 Vercel에 배포한 뒤 실제 도메인으로 채울 것 (쉼표로 여러 개 가능)
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # AI API 키
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      # 책 검색(카카오) / 블로그 서평(네이버)
+      - key: KAKAO_REST_API_KEY
+        sync: false
+      - key: NAVER_CLIENT_ID
+        sync: false
+      - key: NAVER_CLIENT_SECRET
+        sync: false
+      # 소셜 로그인 — 사용하는 provider만 채우면 됨(나머지는 해당 로그인 버튼만 비활성)
+      - key: KAKAO_CLIENT_ID
+        sync: false
+      - key: NAVER_OAUTH_CLIENT_ID
+        sync: false
+      - key: NAVER_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # OAuth 콜백 redirect_uri에 쓰이는 프론트 도메인
+      - key: FRONTEND_URL
+        sync: false
