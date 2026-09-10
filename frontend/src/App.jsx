@@ -9,7 +9,6 @@ import SearchTab from './components/tabs/SearchTab';
 import ClubsTab from './components/tabs/ClubsTab';
 import CommunityTab from './components/tabs/CommunityTab';
 import DiveTab from './components/tabs/DiveTab';
-import RecordingTab from './components/tabs/RecordingTab';
 import TimerTab from './components/tabs/TimerTab';
 import AdminTab from './components/tabs/AdminTab';
 
