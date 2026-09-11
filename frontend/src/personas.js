@@ -1,4 +1,4 @@
-// CHARACTER_PERSONAS.md 와 동일한 8종 페르소나 (프론트 공용 — RecordingTab / UserLibraryModal / DiveRoomModal에서 사용)
+// CHARACTER_PERSONAS.md 와 동일한 8종 페르소나 (프론트 공용 — UserLibraryModal / DiveRoomModal에서 사용)
 // description은 CHARACTER_PERSONAS.md의 "질문 목적/질문 스타일 예시"를 한 줄로 요약한 것 — 페르소나 선택 UI의 설명(?)에 쓰인다.
 export const PERSONAS = [
   { id: 'child', name: '호기심 많은 어린이', image: '/characters/1_curious_child.png', description: '정답이 하나가 아님을 깨닫게 하는, 순수하고 직관적인 "왜?" 질문을 던져요.' },

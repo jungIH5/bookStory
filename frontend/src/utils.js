@@ -13,12 +13,6 @@ export const getDistance = (lat1, lon1, lat2, lon2) => {
   return parseFloat((R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(1));
 };
 
-export const formatDuration = (seconds) => {
-  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-  const s = (seconds % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
-};
-
 export const formatTimer = (seconds) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');

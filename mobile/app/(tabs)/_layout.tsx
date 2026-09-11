@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookOpen, Search, Users, MessageSquare, Mic, UserCircle, Waves, Timer } from 'lucide-react-native';
+import { BookOpen, Search, Users, MessageSquare, UserCircle, Waves, Timer } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -79,14 +79,6 @@ export default function TabLayout() {
           title: '커뮤니티',
           tabBarIcon: ({ color, size }) => <MessageSquare color={color} size={size} />,
           headerTitle: '커뮤니티',
-        }}
-      />
-      <Tabs.Screen
-        name="recording"
-        options={{
-          title: '녹음분석',
-          tabBarIcon: ({ color, size }) => <Mic color={color} size={size} />,
-          headerTitle: '모임 녹음 분석',
         }}
       />
       <Tabs.Screen

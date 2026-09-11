@@ -1036,8 +1036,6 @@ function App() {
     { id: 'stack', label: '책쌓기', emoji: '📚', icon: <BookOpen size={15} /> },
     { id: 'board', label: '게시판', emoji: '💌', icon: <MessageSquare size={15} /> },
     { id: 'community', label: '독서모임', emoji: '🌊', icon: <Waves size={15} /> },
-    // 'recording' 탭: 백엔드 녹음 분석 기능이 이미지 용량 절감을 위해 비활성화되어 있어 임시로 숨김.
-    // 다시 켤 때 이 줄만 복원하면 됨: { id: 'recording', label: '녹음 분석', icon: <Mic size={15} /> },
     { id: 'timer', label: '독서 타이머', emoji: '⏰', icon: <Timer size={15} />, dot: !!timerBook },
   ];
 
@@ -1225,9 +1223,6 @@ function App() {
               onOpenRoom={setSelectedDiveRoom}
               onOpenUserLibrary={(userId, userName) => setUserLibrary({ userId, userName })}
             />
-          )}
-          {activeTab === 'recording' && (
-            <RecordingTab user={user} />
           )}
           {activeTab === 'timer' && (
             <TimerTab

@@ -119,34 +119,6 @@ export const communityApi = {
     request(`/api/community/posts/${postId}/like`, { method: 'POST' }),
 };
 
-// Recordings
-export const recordingsApi = {
-  upload: async (uri: string, userId?: number, clubId?: number) => {
-    const token = useUserStore.getState().token;
-    const ext = uri.split('.').pop()?.toLowerCase() ?? 'm4a';
-    const mimeMap: Record<string, string> = {
-      mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/m4a',
-      ogg: 'audio/ogg', webm: 'audio/webm',
-    };
-    const mimeType = mimeMap[ext] ?? 'audio/m4a';
-
-    const formData = new FormData();
-    formData.append('file', { uri, name: `recording.${ext}`, type: mimeType } as any);
-    if (userId) formData.append('user_id', String(userId));
-    if (clubId) formData.append('club_id', String(clubId));
-
-    const response = await fetch(`${API_URL}/api/recordings`, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: formData,
-    });
-    if (!response.ok) throw new Error('Upload failed');
-    return response.json();
-  },
-
-  get: (id: number) => request<RecordingResult>(`/api/recordings/${id}`),
-};
-
 // Sessions (Q&A)
 export const sessionsApi = {
   create: (bookTitle: string, analysis: string) =>
@@ -314,16 +286,6 @@ export interface Post {
   comment_count: number;
   created_at: string;
   liked_by_user?: boolean;
-}
-
-export interface RecordingResult {
-  id: number;
-  transcript?: string;
-  labeled_transcript?: string;
-  summary?: string;
-  key_topics?: string[];
-  followup_questions?: string[];
-  user_contributions?: Record<string, string>;
 }
 
 export interface Session {
