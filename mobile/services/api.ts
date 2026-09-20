@@ -71,7 +71,7 @@ export const usersApi = {
     return result.user;
   },
 
-  update: (userId: number, updates: Partial<UserForm> & { ai_persona?: string }) =>
+  update: (userId: number, updates: Partial<UserForm>) =>
     request<User>(`/api/users/${userId}`, { method: 'PATCH', body: JSON.stringify(updates) }),
 
   uploadVoiceSample: async (userId: number, uri: string) => {
@@ -249,7 +249,6 @@ export interface User {
   lat?: number;
   lng?: number;
   profile_image?: string;
-  ai_persona?: string;
 }
 
 export interface UserForm {

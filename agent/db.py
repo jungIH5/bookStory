@@ -459,8 +459,6 @@ async def _init_db():
                 )
             """)
 
-            await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_persona VARCHAR(20) DEFAULT ''")
-
             # 토론까지 끝난 뒤 방을 무기한 방치하지 않도록 — 유예시간(연장 포함) 지나면 자동 종료
             await conn.execute("ALTER TABLE dive_rooms ADD COLUMN IF NOT EXISTS extension_count INTEGER DEFAULT 0")
 

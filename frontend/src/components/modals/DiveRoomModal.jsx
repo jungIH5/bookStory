@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Waves, Users, Clock, Calendar, Lock, Loader2, Send, RefreshCw, Trash2, MessageSquare, MessageSquareDashed, Pencil, Check, Camera, Minimize2, Maximize2, BookOpen, Pause, Play, Search, UserX, Sparkles } from 'lucide-react';
 import { API_URL } from '../../api';
-import { getPersona } from '../../personas';
+import { AI_CHARACTER_NAME, OWL_READING_IMAGE } from '../../character';
 
 const AI_CHAT_OPENING_LINE = '책은 다 읽으셨나요? 오늘 토론에서 다뤄볼 만한 주제가 필요하시거나, 생각을 좀 정리해보고 싶은 게 있으면 편하게 이야기해주세요.';
 
@@ -309,9 +309,6 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   useEffect(() => {
     aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiChatMessages]);
-
-  const myPersonaId = user?.ai_persona;
-  const myPersona = getPersona(myPersonaId);
 
   const handleSendAiChat = async () => {
     if (!aiChatInput.trim() || !user?.token || isAiChatSending) return;
@@ -1469,10 +1466,10 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
           <div style={{ position: 'fixed', top: '24px', bottom: '24px', left: '24px', zIndex: 250, width: '376px', maxWidth: 'calc(90vw - 24px)', background: '#FDFCFF', border: '1px solid rgba(108, 92, 231,0.2)', borderRadius: '1.25rem', boxShadow: '0 12px 40px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid rgba(108, 92, 231,0.1)', display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
               <div style={{ width: '32px', height: '32px', borderRadius: '9999px', overflow: 'hidden', background: '#E9E5F7', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {myPersona.image ? <img src={myPersona.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} /> : <Sparkles size={14} style={{ color: '#C7C2E0' }} />}
+                <img src={OWL_READING_IMAGE} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '12px', fontWeight: 900, color: '#241B45' }}>{myPersona.name}</p>
+                <p style={{ fontSize: '12px', fontWeight: 900, color: '#241B45' }}>{AI_CHARACTER_NAME}</p>
                 <p style={{ fontSize: '10px', color: '#8F87B8', fontWeight: 600 }}>토론 준비 도우미 · 나에게만 보여요</p>
               </div>
               <button onClick={() => setAiChatOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8F87B8' }}><X size={15} /></button>

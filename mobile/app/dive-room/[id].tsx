@@ -10,6 +10,7 @@ import {
   Pencil, Check, MoreVertical, LogOut,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, BorderRadius, Shadow } from '@/constants/theme';
+import { AI_CHARACTER_NAME, OWL_READING_IMAGE } from '@/constants/character';
 import {
   Book, DiveRoom, DiveMessage, booksApi, diveApi,
 } from '@/services/api';
@@ -528,7 +529,13 @@ export default function DiveRoomScreen() {
         <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => setAiChatOpen(false)} style={styles.headerBtn}><ArrowLeft size={18} color={Colors.text} /></TouchableOpacity>
-            <Text style={styles.headerTitle}>AI와 토론 준비 대화</Text>
+            <View style={styles.aiChatHeaderInfo}>
+              <Image source={OWL_READING_IMAGE} style={styles.aiChatAvatar} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.headerTitle}>{AI_CHARACTER_NAME}</Text>
+                <Text style={styles.aiChatSubtitle}>토론 준비 도우미 · 나에게만 보여요</Text>
+              </View>
+            </View>
             <View style={{ width: 32 }} />
           </View>
           <FlatList
@@ -574,6 +581,9 @@ const styles = StyleSheet.create({
   },
   headerBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(139,107,66,0.08)', alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, fontSize: FontSize.md, fontWeight: '900', color: Colors.text },
+  aiChatHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aiChatAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surfaceAlt },
+  aiChatSubtitle: { fontSize: FontSize.xs, color: Colors.textMuted, fontWeight: '600' },
 
   chatContent: { padding: Spacing.md, gap: 10, paddingBottom: Spacing.xl },
 

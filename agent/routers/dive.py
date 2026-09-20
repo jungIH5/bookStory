@@ -5,7 +5,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 from db import get_db, get_pool
 from auth import get_current_user_id, decode_token
-from nodes.persona_chat import get_persona_reply, DEFAULT_PERSONA
+from nodes.ai_character_chat import get_ai_chat_reply
 from rate_limiter import limiter
 
 router = APIRouter(prefix="/api/dive", tags=["dive"])
@@ -786,9 +786,7 @@ async def ai_chat(
     if not room:
         raise HTTPException(404, "방을 찾을 수 없습니다.")
 
-    user_row = await conn.fetchrow("SELECT ai_persona FROM users WHERE id=$1", user_id)
-    persona_id = (user_row["ai_persona"] if user_row else "") or DEFAULT_PERSONA
     book_title = participant["book_title"] or room["book_title"] or ""
 
-    reply = await get_persona_reply(persona_id, book_title, body.history, body.message)
-    return {"reply": reply, "persona_id": persona_id}
+    reply = await get_ai_chat_reply(book_title, body.history, body.message)
+    return {"reply": reply}

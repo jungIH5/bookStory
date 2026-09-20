@@ -3,6 +3,7 @@ import { Search, BookOpen, MessageSquare, Loader2, Mic, LogOut, Timer, UserPlus,
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_URL } from './api';
 import { stripHtml, getDistance, getValidUserId } from './utils';
+import { OWL_WAVING_IMAGE } from './character';
 
 import StackTab from './components/tabs/StackTab';
 import SearchTab from './components/tabs/SearchTab';
@@ -1052,6 +1053,7 @@ function App() {
               <BookOpen size={17} color="white" />
             </div>
             <span className="font-black text-xl gradient-text">bookStory</span>
+            <img src={OWL_WAVING_IMAGE} alt="안경 올빼미" style={{ height: '2.75rem', width: 'auto', flexShrink: 0 }} />
           </div>
 
           {user && (
@@ -1436,8 +1438,6 @@ function App() {
             onRejectFriend={handleRejectFriend}
             onClose={() => setUserLibrary(null)}
             onEditProfile={userLibrary.userId === user?.id ? () => { setUserLibrary(null); setShowProfile(true); } : undefined}
-            currentAiPersona={user?.ai_persona}
-            onUpdatePersona={(personaId) => handleUpdateProfile({ ai_persona: personaId })}
           />
         )}
       </AnimatePresence>

@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
+import { Image, StyleSheet } from 'react-native';
 import { BookOpen, Search, Users, MessageSquare, UserCircle, Waves, Timer } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
+import { OWL_WAVING_IMAGE } from '@/constants/character';
 
 export default function TabLayout() {
   return (
@@ -31,6 +33,7 @@ export default function TabLayout() {
           fontWeight: '700',
         },
         headerTintColor: Colors.primary,
+        headerRight: () => <Image source={OWL_WAVING_IMAGE} style={styles.headerOwl} />,
       }}
     >
       <Tabs.Screen
@@ -92,3 +95,7 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerOwl: { width: 40, height: 40, marginRight: 12 },
+});
