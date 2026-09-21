@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Waves, Users, Clock, Calendar, Lock, Loader2, Send, RefreshCw, Trash2, MessageSquare, MessageSquareDashed, Pencil, Check, Camera, Minimize2, Maximize2, BookOpen, Pause, Play, Search, UserX, Sparkles } from 'lucide-react';
+import { X, Waves, Users, Clock, Calendar, Lock, Loader2, Send, RefreshCw, Trash2, MessageSquare, MessageSquareDashed, Pencil, Check, Camera, Minimize2, Maximize2, BookOpen, Pause, Play, Search, UserX, Sparkles, Bell } from 'lucide-react';
 import { API_URL } from '../../api';
 import { AI_CHARACTER_NAME, OWL_READING_IMAGE } from '../../character';
 
