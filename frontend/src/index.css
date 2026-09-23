@@ -602,6 +602,25 @@ img { max-width: 100%; display: block; }
   75% { transform: rotate(2deg); }
 }
 
+@keyframes bell-ring-loop-kf {
+  0%, 5%, 100% { transform: rotate(0deg); }
+  0.5% { transform: rotate(-16deg); }
+  1.5% { transform: rotate(14deg); }
+  2.5% { transform: rotate(-10deg); }
+  3.5% { transform: rotate(6deg); }
+  4.5% { transform: rotate(-2deg); }
+}
+@keyframes bell-ring-once-kf {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(-16deg); }
+  30% { transform: rotate(14deg); }
+  50% { transform: rotate(-10deg); }
+  70% { transform: rotate(6deg); }
+  90% { transform: rotate(-2deg); }
+}
+.bell-ring-loop { transform-origin: 50% 20%; animation: bell-ring-loop-kf 10s ease-in-out infinite; }
+.bell-ring-once { transform-origin: 50% 20%; animation: bell-ring-once-kf 0.7s ease-in-out; }
+
 .blob-card {
   background: #FDFCFF;
   border: 2px solid rgba(108, 92, 231, 0.14);

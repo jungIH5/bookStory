@@ -92,6 +92,9 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
   const [showExtendNotice, setShowExtendNotice] = useState(false);
   const [isExtending, setIsExtending] = useState(false);
   const extendWarningShownForRef = useRef(null); // 이 extension_count 값에 대해 이미 경고를 띄웠는지
+  const [discussionBellDismissed, setDiscussionBellDismissed] = useState(false); // 토론 종료 10분 전 종 알림을 X로 껐는지
+  const [showOneMinBell, setShowOneMinBell] = useState(false);
+  const oneMinBellFiredForRef = useRef(null); // 이 room.id에 대해 1분 전 알림을 이미 띄웠는지
   const [showSoloPrompt, setShowSoloPrompt] = useState(false);
   const [isSwitchingToPersonal, setIsSwitchingToPersonal] = useState(false);
   const soloPromptShownRef = useRef(false);
@@ -148,6 +151,22 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
       setShowExtendNotice(true);
     }
   }, [computedPhase, autoCloseRemaining, room.extension_count]);
+
+  // 토론 종료 10분 전 — 채팅창에 종 알림을 띄워 지속적으로 상기시킴 (X로 끄면 이번 토론에선 다시 안 뜸)
+  const showTenMinBell = computedPhase === 'discussion' && phaseRemaining > 60 * 1000 && phaseRemaining <= 10 * 60 * 1000 && !discussionBellDismissed;
+
+  // 토론 종료 1분 전 — 위에서 껐더라도 한 번은 다시 띄워주고, 반복 없이 잠시 후 스스로 사라짐
+  const inOneMinWindow = computedPhase === 'discussion' && phaseRemaining > 0 && phaseRemaining <= 60 * 1000;
+  useEffect(() => {
+    if (!inOneMinWindow) return;
+    if (oneMinBellFiredForRef.current === room.id) return;
+    oneMinBellFiredForRef.current = room.id;
+    setShowOneMinBell(true);
+    const t = setTimeout(() => setShowOneMinBell(false), 6000);
+    return () => clearTimeout(t);
+  }, [inOneMinWindow, room.id]);
+
+  const showDiscussionBell = showTenMinBell || showOneMinBell;
 
   // 시간 종료(overtime) 상태에선 다른 참가자의 연장 요청이나 서버 자동 종료를 감지하기 위해 주기적으로 재조회
   useEffect(() => {
@@ -1195,9 +1214,38 @@ export default function DiveRoomModal({ room: initialRoom, user, onClose, onJoin
                   {chatLocked && <Lock size={11} style={{ color: '#C7C2E0' }} />}
                   <p style={{ fontSize: '11px', fontWeight: 900, color: chatLocked ? '#C7C2E0' : '#6C5CE7', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{chatLabel}</p>
                 </div>
-                <button onClick={fetchMessages} style={{ display: 'flex', alignItems: 'center', color: '#C7C2E0', background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <RefreshCw size={10} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AnimatePresence>
+                    {showDiscussionBell && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.6 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.6 }}
+                        style={{ position: 'relative', display: 'flex' }}
+                      >
+                        <div
+                          title="토론 종료가 얼마 남지 않았어요"
+                          className={showTenMinBell ? 'bell-ring-loop' : 'bell-ring-once'}
+                          style={{ width: '20px', height: '20px', borderRadius: '9999px', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <Bell size={11} style={{ color: '#F59E0B' }} />
+                        </div>
+                        {showTenMinBell && (
+                          <button
+                            onClick={() => setDiscussionBellDismissed(true)}
+                            title="이번 토론에서 알림 끄기"
+                            style={{ position: 'absolute', top: '-5px', right: '-5px', width: '13px', height: '13px', borderRadius: '9999px', background: '#8F87B8', border: '1.5px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}
+                          >
+                            <X size={8} color="white" strokeWidth={3} />
+                          </button>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <button onClick={fetchMessages} style={{ display: 'flex', alignItems: 'center', color: '#C7C2E0', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <RefreshCw size={10} />
+                  </button>
+                </div>
               </div>
 
               <div style={{ height: chatHeight, overflowY: 'auto', border: `1px solid ${chatBorder}`, borderRadius: '0.875rem', padding: '0.75rem', background: chatBg, display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: chatLocked ? 0.65 : 1, transition: 'opacity 0.2s' }}>

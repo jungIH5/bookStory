@@ -17,6 +17,7 @@ import {
 import { useUserStore } from '@/store/useUserStore';
 import { useDiveStore } from '@/store/useDiveStore';
 import { useTimerStore } from '@/store/useTimerStore';
+import { scheduleDiscussionReminders, cancelDiscussionReminders } from '@/services/discussionReminders';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001';
 const stripHtml = (str?: string) => str?.replace(/<\/?[^>]+(>|$)/g, '') ?? '';
@@ -89,6 +90,7 @@ export default function DiveRoomScreen() {
   const [aiInput, setAiInput] = useState('');
   const [isAiSending, setIsAiSending] = useState(false);
   const soloPromptShown = useRef(false);
+  const remindersScheduledForRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const listRef = useRef<FlatList>(null);
 
@@ -140,6 +142,7 @@ export default function DiveRoomScreen() {
           if (msg.type === 'room_update') { fetchRoom(); return; }
           if (msg.type === 'room_deleted') {
             Alert.alert('알림', '방장이 이 모임을 삭제했어요.');
+            cancelDiscussionReminders(roomId).catch(() => {});
             fetchDiveRooms();
             router.back();
             return;
@@ -179,6 +182,7 @@ export default function DiveRoomScreen() {
             text: '개인 독서로 전환', onPress: async () => {
               const book = { title: myParticipant?.book_title || room.book_title || '', author: '', image: myParticipant?.book_image || room.book_image || '', isbn: myParticipant?.book_isbn || room.book_isbn };
               try { await diveApi.deleteRoom(room.id); } catch {}
+              cancelDiscussionReminders(room.id).catch(() => {});
               startTimer(book);
               fetchDiveRooms();
               router.back();
@@ -188,6 +192,14 @@ export default function DiveRoomScreen() {
       );
     }
   }, [room, isHost]);
+
+  // 토론 종료 10분 전 / 1분 전 로컬 알림 예약 (참가자로 확정된 방에 대해 한 번만)
+  useEffect(() => {
+    if (!room || !isParticipant) return;
+    if (remindersScheduledForRef.current === room.id) return;
+    remindersScheduledForRef.current = room.id;
+    scheduleDiscussionReminders(room).catch(() => {});
+  }, [room, isParticipant]);
 
   if (!room) {
     return (
@@ -228,6 +240,8 @@ export default function DiveRoomScreen() {
   const handleLeave = async () => {
     if (!token) return;
     await diveApi.leaveRoom(room.id);
+    cancelDiscussionReminders(room.id).catch(() => {});
+    remindersScheduledForRef.current = null;
     await fetchRoom();
   };
 
@@ -271,6 +285,7 @@ export default function DiveRoomScreen() {
       {
         text: '삭제', style: 'destructive', onPress: async () => {
           await diveApi.deleteRoom(room.id);
+          cancelDiscussionReminders(room.id).catch(() => {});
           await fetchDiveRooms();
           router.back();
         },
