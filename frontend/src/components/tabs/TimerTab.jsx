@@ -73,7 +73,7 @@ export default function TimerTab({ user, readBooks, timerBook, timerSeconds, tim
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ width: '100%' }}>
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.625rem', letterSpacing: '-0.03em' }}>
-          <span className="cute-float" style={{ display: 'inline-block', fontSize: '1.5rem' }}>⏰</span>
+          <Timer size={24} style={{ color: '#6C5CE7' }} />
           독서 타이머
         </h2>
         <p style={{ color: '#8F87B8', fontWeight: 700, fontSize: '0.875rem' }}>독서 시간을 기록하고 나만의 독서 습관을 만들어보세요.</p>
@@ -92,7 +92,6 @@ export default function TimerTab({ user, readBooks, timerBook, timerSeconds, tim
             boxShadow: '6px 8px 0 rgba(108, 92, 231,0.2), 0 24px 60px rgba(0,0,0,0.5)',
           }}
         >
-          <span className="cute-float sparkle-deco" style={{ top: '-4px', right: '18px', ['--tilt']: '10deg' }}>⏰</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
             <div style={{
               width: '64px', minWidth: '64px', height: '92px',
@@ -115,18 +114,52 @@ export default function TimerTab({ user, readBooks, timerBook, timerSeconds, tim
           </div>
 
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div style={{
-              fontFamily: 'monospace', fontSize: '3.75rem', fontWeight: 900,
-              color: timerRunning ? '#A78BFA' : '#6E67A0',
-              letterSpacing: '0.04em', lineHeight: 1,
-              textShadow: timerRunning ? '0 0 40px rgba(167, 139, 250,0.35)' : 'none',
-              transition: 'all 0.3s ease',
-            }}>
-              {formatTimer(timerSeconds)}
+            <div style={{ position: 'relative', width: '210px', height: '210px', margin: '0 auto' }}>
+              <svg width="210" height="210" style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)' }}>
+                <circle cx="105" cy="105" r="96" fill="none" stroke="rgba(108, 92, 231,0.14)" strokeWidth="2.5" />
+                {Array.from({ length: 60 }).map((_, i) => {
+                  const major = i % 5 === 0;
+                  const angle = (i * 6) * Math.PI / 180;
+                  const outerR = 96;
+                  const innerR = major ? 86 : 90;
+                  const x1 = 105 + outerR * Math.cos(angle);
+                  const y1 = 105 + outerR * Math.sin(angle);
+                  const x2 = 105 + innerR * Math.cos(angle);
+                  const y2 = 105 + innerR * Math.sin(angle);
+                  return (
+                    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke={major ? 'rgba(108, 92, 231,0.4)' : 'rgba(108, 92, 231,0.18)'}
+                      strokeWidth={major ? 2 : 1} />
+                  );
+                })}
+                {timerRunning && (
+                  <circle cx="105" cy="105" r="96" fill="none" stroke="#A78BFA" strokeWidth="3"
+                    strokeDasharray={`${2 * Math.PI * 96}`}
+                    strokeDashoffset={`${2 * Math.PI * 96 * (1 - (timerSeconds % 60) / 60)}`}
+                    strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s linear' }} />
+                )}
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: timerRunning ? '#A78BFA' : '#574C8C',
+                  marginBottom: '0.625rem',
+                  boxShadow: timerRunning ? '0 0 8px rgba(167, 139, 250,0.8)' : 'none',
+                  animation: timerRunning ? 'timer-pulse 1s ease-in-out infinite' : 'none',
+                }} />
+                <div style={{
+                  fontFamily: 'monospace', fontSize: '2.25rem', fontWeight: 900,
+                  color: timerRunning ? '#A78BFA' : '#6E67A0',
+                  letterSpacing: '0.02em', lineHeight: 1,
+                  transition: 'all 0.3s ease',
+                }}>
+                  {formatTimer(timerSeconds)}
+                </div>
+                <p style={{ fontSize: '10px', color: '#574C8C', fontWeight: 700, marginTop: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {timerRunning ? '독서 중' : '일시 정지됨'}
+                </p>
+              </div>
             </div>
-            <p style={{ fontSize: '11px', color: '#574C8C', fontWeight: 700, marginTop: '0.5rem' }}>
-              {timerRunning ? '독서 중...' : '일시 정지됨'}
-            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -172,7 +205,7 @@ export default function TimerTab({ user, readBooks, timerBook, timerSeconds, tim
       ) : (
         /* ── 타이머 시작 설정 ── */
         <div style={{ maxWidth: '480px', margin: '0 auto' }}>
-          <div className="blob-card" style={{ padding: '1.75rem', background: '#F7F5FF', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="timer-setup-card" style={{ padding: '1.75rem', background: '#F7F5FF', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
             {/* 통합 검색 인풋 */}
             <div>

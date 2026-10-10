@@ -1412,7 +1412,7 @@ function App() {
 
       {/* Reading timer */}
       <AnimatePresence>
-        {timerBook && !timerWidgetHidden && (
+        {timerBook && !timerWidgetHidden && activeTab !== 'timer' && (
           <ReadingTimer
             book={timerBook}
             seconds={timerSeconds}
