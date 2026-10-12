@@ -69,6 +69,7 @@ export async function scheduleDiscussionReminders(room: ReminderRoom) {
         title: '⏰ 토론 종료 10분 전',
         body: '슬슬 이야기를 마무리할 준비를 해주세요.',
         sound: 'default',
+        data: { roomId: room.id },
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(tenMinAt), channelId: 'discussion-reminders' },
     });
@@ -82,6 +83,7 @@ export async function scheduleDiscussionReminders(room: ReminderRoom) {
       title: '🔔 토론 종료 1분 전',
       body: '곧 토론이 끝나요!',
       sound: 'default',
+      data: { roomId: room.id },
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(oneMinAt), channelId: 'discussion-reminders' },
   });

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, Image, StyleSheet,
-  ActivityIndicator, Alert, Platform, KeyboardAvoidingView, Modal,
+  ActivityIndicator, Alert, Platform, KeyboardAvoidingView, Modal, AppState,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MotiView } from 'moti';
+import * as Haptics from 'expo-haptics';
 import {
-  ArrowLeft, BookOpen, Users, Clock, Calendar, Send, Sparkles, X,
+  ArrowLeft, BookOpen, Users, Clock, Calendar, Send, Sparkles, X, Bell,
   Pencil, Check, MoreVertical, LogOut,
 } from 'lucide-react-native';
 import { Colors, Spacing, FontSize, BorderRadius, Shadow } from '@/constants/theme';
@@ -17,7 +18,7 @@ import {
 import { useUserStore } from '@/store/useUserStore';
 import { useDiveStore } from '@/store/useDiveStore';
 import { useTimerStore } from '@/store/useTimerStore';
-import { scheduleDiscussionReminders, cancelDiscussionReminders } from '@/services/discussionReminders';
+import { scheduleDiscussionReminders, cancelDiscussionReminders, setActiveDiveRoom } from '@/services/discussionReminders';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001';
 const stripHtml = (str?: string) => str?.replace(/<\/?[^>]+(>|$)/g, '') ?? '';
@@ -78,7 +79,7 @@ export default function DiveRoomScreen() {
   const [whisperTarget, setWhisperTarget] = useState<{ id: number; name: string } | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   const [joinBookQuery, setJoinBookQuery] = useState('');
   const [joinBookResults, setJoinBookResults] = useState<Book[]>([]);
   const [selectedJoinBook, setSelectedJoinBook] = useState<{ title: string; image?: string; isbn?: string } | null>(null);
@@ -89,8 +90,11 @@ export default function DiveRoomScreen() {
   const [aiMessages, setAiMessages] = useState<{ role: string; content: string }[]>([]);
   const [aiInput, setAiInput] = useState('');
   const [isAiSending, setIsAiSending] = useState(false);
+  const [reminderBanner, setReminderBanner] = useState<string | null>(null);
   const soloPromptShown = useRef(false);
   const remindersScheduledForRef = useRef<number | null>(null);
+  const tenMinBannerFiredForRef = useRef<number | null>(null);
+  const oneMinBannerFiredForRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const listRef = useRef<FlatList>(null);
 
@@ -98,6 +102,19 @@ export default function DiveRoomScreen() {
     const iv = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(iv);
   }, []);
+
+  // 이 화면이 떠 있는 동안만 "이 방을 보고 있음"으로 표시 → 포그라운드 중복 알림(OS+인앱) 방지
+  useEffect(() => {
+    setActiveDiveRoom(roomId);
+    return () => setActiveDiveRoom(null);
+  }, [roomId]);
+
+  // 배너는 뜬 뒤 일정 시간 후 스스로 사라짐
+  useEffect(() => {
+    if (!reminderBanner) return;
+    const t = setTimeout(() => setReminderBanner(null), 5000);
+    return () => clearTimeout(t);
+  }, [reminderBanner]);
 
   const fetchRoom = useCallback(async () => {
     try {
@@ -200,6 +217,23 @@ export default function DiveRoomScreen() {
     remindersScheduledForRef.current = room.id;
     scheduleDiscussionReminders(room).catch(() => {});
   }, [room, isParticipant]);
+
+  // 포그라운드에서 이 화면을 보고 있을 때는 OS 알림 대신 진동 한 번 + 인앱 배너로 대체 (중복 방지는 discussionReminders의 setActiveDiveRoom이 처리)
+  useEffect(() => {
+    if (!room || !isParticipant || AppState.currentState !== 'active') return;
+    const { phase: p, remaining: r } = computePhaseInfo(room);
+    if (p !== 'discussion') return;
+    if (r > 60000 && r <= 10 * 60000 && tenMinBannerFiredForRef.current !== room.id) {
+      tenMinBannerFiredForRef.current = room.id;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      setReminderBanner('⏰ 토론 종료 10분 전이에요');
+    }
+    if (r > 0 && r <= 60000 && oneMinBannerFiredForRef.current !== room.id) {
+      oneMinBannerFiredForRef.current = room.id;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      setReminderBanner('🔔 토론 종료 1분 전이에요');
+    }
+  }, [room, isParticipant, tick]);
 
   if (!room) {
     return (
@@ -357,6 +391,17 @@ export default function DiveRoomScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {reminderBanner && (
+        <MotiView
+          from={{ opacity: 0, translateY: -8 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          style={styles.reminderBanner}
+        >
+          <Bell size={14} color="white" />
+          <Text style={styles.reminderBannerText}>{reminderBanner}</Text>
+        </MotiView>
+      )}
 
       <FlatList
         ref={listRef}
@@ -599,6 +644,13 @@ const styles = StyleSheet.create({
   aiChatHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   aiChatAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surfaceAlt },
   aiChatSubtitle: { fontSize: FontSize.xs, color: Colors.textMuted, fontWeight: '600' },
+  reminderBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: Spacing.md, marginTop: Spacing.sm,
+    backgroundColor: '#F59E0B', borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md, paddingVertical: 10,
+  },
+  reminderBannerText: { flex: 1, fontSize: FontSize.xs, color: 'white', fontWeight: '800' },
 
   chatContent: { padding: Spacing.md, gap: 10, paddingBottom: Spacing.xl },
 
