@@ -1,13 +1,24 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
+
+// 지금 화면에 떠 있는 다이브룸의 id. 포그라운드에서 그 방을 보고 있을 때 온 알림은
+// 인앱 배너(+진동)로 대체하고, OS 알림 배너/사운드는 억제해 중복 알림을 막는다.
+let activeRoomId: number | null = null;
+export function setActiveDiveRoom(roomId: number | null) {
+  activeRoomId = roomId;
+}
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as { roomId?: number } | undefined;
+    const suppress = !!data?.roomId && data.roomId === activeRoomId && AppState.currentState === 'active';
+    return {
+      shouldShowBanner: !suppress,
+      shouldShowList: true,
+      shouldPlaySound: !suppress,
+      shouldSetBadge: false,
+    };
+  },
 });
 
 let channelReady = false;
