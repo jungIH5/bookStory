@@ -36,7 +36,6 @@ services:
 
   db:
     image: postgres:15-alpine
-    restart: always
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=password
