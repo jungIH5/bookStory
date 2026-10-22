@@ -11,6 +11,13 @@ services:
     environment:
       - VITE_API_URL=http://localhost:5001
       - DOCKER=true
+      # 소셜 로그인 버튼이 쓰는 클라이언트 ID — backend/.env의 KAKAO_CLIENT_ID/NAVER_OAUTH_CLIENT_ID/
+      # GOOGLE_CLIENT_ID와 같은 값을 여기에도 넣어야 한다(시크릿이 아니라 공개돼도 되는 클라이언트 ID라
+      # 코드에 직접 적어도 안전함 — 카카오 지도 JS 키도 index.html에 같은 방식으로 들어있음). 값을 채워야
+      # 소셜 로그인 버튼이 "준비 중입니다" 대신 실제 로그인 페이지로 리다이렉트된다.
+      - VITE_KAKAO_CLIENT_ID=
+      - VITE_NAVER_CLIENT_ID=
+      - VITE_GOOGLE_CLIENT_ID=
     depends_on:
       - agent
 
