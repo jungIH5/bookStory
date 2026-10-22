@@ -46,6 +46,7 @@
 2. Root Directory를 `frontend`로 지정 (Vite 프레임워크 자동 감지됨, 빌드 커맨드/출력 폴더 기본값 그대로 두면 됨)
 3. Environment Variables에 추가:
    - `VITE_API_URL` = 2번에서 나온 Render 백엔드 URL (예: `https://bookstory-agent.onrender.com`)
+   - 소셜 로그인 쓰면: `VITE_KAKAO_CLIENT_ID`, `VITE_NAVER_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` — Render에 넣은 `KAKAO_CLIENT_ID`/`NAVER_OAUTH_CLIENT_ID`/`GOOGLE_CLIENT_ID`와 각각 같은 값(시크릿 아님, 프론트에 노출돼도 되는 클라이언트 ID)
 4. Deploy. 완료되면 나온 도메인(`https://xxx.vercel.app`)을 다시 Render의 `ALLOWED_ORIGINS`/`FRONTEND_URL`에 반영 (2번 값 업데이트 후 재배포)
 
 ## 4. 외부 서비스 설정 — 배포 도메인 등록
